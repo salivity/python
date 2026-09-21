@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Sequence Types in Python Using Dunder Methods - python</title>
+    <meta name="description" content="Python implements sequences through the sequence protocol, a set of standard conventions powered by container special methods, commonly known as dunder (double underscore) methods. By defining specific methods like len, getitem, setitem, and delitem on a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/custom-sequence-types-in-python-using-dunder-methods">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Custom Sequence Types in Python Using Dunder Methods - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/custom-sequence-types-in-python-using-dunder-methods" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python implements sequences through the sequence protocol, a set of standard conventions powered by container special methods, commonly known as dunder (double underscore) methods. By defining specific methods like len, getitem, setitem, and delitem on a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="custom-sequence-types-in-python-using-dunder-methods">Custom
+Sequence Types in Python Using Dunder Methods</h1>
+<p>Python implements sequences through the sequence protocol, a set of
+standard conventions powered by container special methods, commonly
+known as dunder (double underscore) methods. By defining specific
+methods like <code>__len__</code>, <code>__getitem__</code>,
+<code>__setitem__</code>, and <code>__delitem__</code> on a class,
+developers can create custom objects that behave identically to built-in
+types like lists and tuples. This guide explains the core dunder methods
+required to build both immutable and mutable custom sequences, how
+Python processes indexing and slicing, and how to leverage standard
+library abstractions to simplify implementation.</p>
+<h2 id="the-sequence-protocol">The Sequence Protocol</h2>
+<p>In Python, duck typing governs how collections behave. Python does
+not require a class to inherit from a specific interface to act as a
+sequence; instead, it checks whether the object implements the sequence
+protocol.</p>
+<p>The sequence protocol is split into two primary categories:</p>
+<ul>
+<li><strong>Immutable Sequences</strong>: Require <code>__len__</code>
+and <code>__getitem__</code>.</li>
+<li><strong>Mutable Sequences</strong>: Require <code>__len__</code>,
+<code>__getitem__</code>, <code>__setitem__</code>, and
+<code>__delitem__</code>.</li>
+</ul>
+<h2 id="building-immutable-sequences">Building Immutable Sequences</h2>
+<p>An immutable sequence allows elements to be counted, retrieved by
+index, sliced, and iterated over, but does not allow elements to be
+modified or deleted.</p>
+<h3 id="__len__self"><code>__len__(self)</code></h3>
+<p>The <code>__len__</code> method is invoked by the built-in
+<code>len()</code> function. It must return a non-negative integer
+representing the number of items in the container.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> <span class="fu">__len__</span>(<span class="va">self</span>):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">len</span>(<span class="va">self</span>._data)</span></code></pre></div>
+<h3
+id="__getitem__self-index"><code>__getitem__(self, index)</code></h3>
+<p>The <code>__getitem__</code> method handles element retrieval via
+bracket notation (<code>obj[index]</code>). When a user accesses an
+index, Python passes that value directly to
+<code>__getitem__</code>.</p>
+<p>To create a robust sequence, <code>__getitem__</code> must handle
+both integer indices and <code>slice</code> objects:</p>
+<ol type="1">
+<li><strong>Integer Indexing</strong>: Handles standard zero-based
+access and negative indices (e.g., <code>-1</code> for the last
+item).</li>
+<li><strong>Slicing</strong>: When syntax like <code>obj[1:4:2]</code>
+is used, Python passes a <code>slice</code> instance to
+<code>__getitem__</code>. The method should check if <code>index</code>
+is an instance of <code>slice</code> and return a new instance of the
+custom sequence containing the sliced elements.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> <span class="fu">__getitem__</span>(<span class="va">self</span>, index):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">isinstance</span>(index, <span class="bu">slice</span>):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.<span class="va">__class__</span>(<span class="va">self</span>._data[index])</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>._data[index]</span></code></pre></div>
+<h3 id="implicit-iteration-and-membership">Implicit Iteration and
+Membership</h3>
+<p>If a class defines <code>__len__</code> and <code>__getitem__</code>,
+Python provides iteration (<code>for item in obj</code>) and membership
+testing (<code>item in obj</code>) automatically:</p>
+<ul>
+<li><strong>Iteration</strong>: Python calls <code>__getitem__</code>
+starting at index <code>0</code> and increments the index until an
+<code>IndexError</code> is raised.</li>
+<li><strong>Membership</strong>: Python uses linear search via iteration
+to evaluate <code>in</code> operations unless an explicit
+<code>__contains__</code> method is defined.</li>
+</ul>
+<h2 id="building-mutable-sequences">Building Mutable Sequences</h2>
+<p>To make a custom sequence mutable, you must implement methods that
+allow assigning and removing elements.</p>
+<h3
+id="__setitem__self-index-value"><code>__setitem__(self, index, value)</code></h3>
+<p>Invoked when assigning to an indexed position (e.g.,
+<code>obj[0] = "new"</code> or <code>obj[1:3] = [1, 2]</code>). It
+receives the key/index and the value being assigned.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> <span class="fu">__setitem__</span>(<span class="va">self</span>, index, value):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>._data[index] <span class="op">=</span> value</span></code></pre></div>
+<h3
+id="__delitem__self-index"><code>__delitem__(self, index)</code></h3>
+<p>Invoked when using the <code>del</code> statement on an element
+(e.g., <code>del obj[0]</code> or <code>del obj[1:3]</code>).</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> <span class="fu">__delitem__</span>(<span class="va">self</span>, index):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">del</span> <span class="va">self</span>._data[index]</span></code></pre></div>
+<h2 id="complete-example-a-custom-list-wrapper">Complete Example: A
+Custom List Wrapper</h2>
+<p>The following example demonstrates a custom mutable sequence that
+wraps a standard Python list:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CustomList:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, iterable<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._items <span class="op">=</span> <span class="bu">list</span>(iterable) <span class="cf">if</span> iterable <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="cf">else</span> []</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__len__</span>(<span class="va">self</span>):</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">len</span>(<span class="va">self</span>._items)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__getitem__</span>(<span class="va">self</span>, index):</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(index, <span class="bu">slice</span>):</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">self</span>.<span class="va">__class__</span>(<span class="va">self</span>._items[index])</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>._items[index]</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__setitem__</span>(<span class="va">self</span>, index, value):</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._items[index] <span class="op">=</span> value</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__delitem__</span>(<span class="va">self</span>, index):</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">del</span> <span class="va">self</span>._items[index]</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__repr__</span>(<span class="va">self</span>):</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f&quot;</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span><span class="va">__class__</span><span class="sc">.</span><span class="va">__name__</span><span class="sc">}</span><span class="ss">(</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>_items<span class="sc">}</span><span class="ss">)&quot;</span></span></code></pre></div>
+<p>With only these four methods implemented, <code>CustomList</code>
+supports:</p>
+<ul>
+<li>Item access: <code>cl[0]</code></li>
+<li>Slicing: <code>cl[1:3]</code></li>
+<li>Assignment: <code>cl[0] = 10</code></li>
+<li>Deletion: <code>del cl[0]</code></li>
+<li>Iteration: <code>[x for x in cl]</code></li>
+<li>Membership checks: <code>10 in cl</code></li>
+<li>Length checking: <code>len(cl)</code></li>
+<li>Reverse iteration: <code>reversed(cl)</code></li>
+</ul>
+<h2 id="using-collectionsabc-for-full-sequence-features">Using
+<code>collections.abc</code> for Full Sequence Features</h2>
+<p>While implementing dunder methods manually satisfies basic
+requirements, production code typically inherits from Python's abstract
+base classes in the <code>collections.abc</code> module:
+<code>Sequence</code> and <code>MutableSequence</code>.</p>
+<p>Subclassing <code>collections.abc.Sequence</code> requires defining
+only <code>__len__</code> and <code>__getitem__</code>. In return, the
+base class automatically provides concrete implementations for:</p>
+<ul>
+<li><code>__iter__</code> (efficient iteration)</li>
+<li><code>__contains__</code></li>
+<li><code>__reversed__</code></li>
+<li><code>index()</code></li>
+<li><code>count()</code></li>
+</ul>
+<p>Subclassing <code>collections.abc.MutableSequence</code> requires
+<code>__len__</code>, <code>__getitem__</code>,
+<code>__setitem__</code>, <code>__delitem__</code>, and
+<code>insert()</code>. The base class automatically supplies:</p>
+<ul>
+<li><code>append()</code></li>
+<li><code>extend()</code></li>
+<li><code>pop()</code></li>
+<li><code>remove()</code></li>
+<li><code>reverse()</code></li>
+<li><code>__iadd__</code></li>
+</ul>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> collections.abc <span class="im">import</span> MutableSequence</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> SmartSequence(MutableSequence):</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, initial<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._data <span class="op">=</span> <span class="bu">list</span>(initial) <span class="cf">if</span> initial <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="cf">else</span> []</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__len__</span>(<span class="va">self</span>):</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">len</span>(<span class="va">self</span>._data)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__getitem__</span>(<span class="va">self</span>, index):</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>._data[index]</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__setitem__</span>(<span class="va">self</span>, index, value):</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._data[index] <span class="op">=</span> value</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__delitem__</span>(<span class="va">self</span>, index):</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">del</span> <span class="va">self</span>._data[index]</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> insert(<span class="va">self</span>, index, value):</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._data.insert(index, value)</span></code></pre></div>
+<p>By defining the container dunder methods directly or subclassing
+abstract base classes, Python seamlessly integrates custom data
+structures into the broader language ecosystem.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

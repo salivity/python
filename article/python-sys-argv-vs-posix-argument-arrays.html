@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python sys.argv vs POSIX Argument Arrays - python</title>
+    <meta name="description" content="While both Python's sys.argv and standard POSIX argument arrays (argv) provide programs with access to command-line inputs, they differ fundamentally in their underlying data structures, character encoding, lifecycle mutability, and how they handle the i">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-sys-argv-vs-posix-argument-arrays">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python sys.argv vs POSIX Argument Arrays - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-sys-argv-vs-posix-argument-arrays" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="While both Python's sys.argv and standard POSIX argument arrays (argv) provide programs with access to command-line inputs, they differ fundamentally in their underlying data structures, character encoding, lifecycle mutability, and how they handle the i" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-sysargv-vs-posix-argument-arrays">Python sys.argv vs
+POSIX Argument Arrays</h1>
+<p>While both Python's <code>sys.argv</code> and standard POSIX argument
+arrays (<code>argv</code>) provide programs with access to command-line
+inputs, they differ fundamentally in their underlying data structures,
+character encoding, lifecycle mutability, and how they handle the
+invoking command. POSIX defines argument vectors at the system level as
+raw, null-terminated byte pointers passed via system calls, whereas
+Python abstracts these inputs into a high-level, Unicode-decoded list of
+dynamic objects managed by the interpreter.</p>
+<h3 id="data-types-and-memory-representation">Data Types and Memory
+Representation</h3>
+<p>In standard POSIX environments (typically seen in C programs),
+command-line arguments are represented as an array of pointers to
+null-terminated character arrays (<code>char *argv[]</code>),
+accompanied by an integer argument count (<code>int argc</code>). The
+end of the array is designated by a <code>NULL</code> pointer. These
+pointers refer directly to memory allocated on the process stack by the
+operating system kernel during the <code>execve</code> system call.</p>
+<p>Python’s <code>sys.argv</code> is an instance of a standard Python
+<code>list</code> containing Unicode <code>str</code> objects. Python
+hides pointer arithmetic, buffer boundaries, and manual counting.
+Developers determine the number of arguments using Python's standard
+<code>len(sys.argv)</code> rather than relying on a separate
+<code>argc</code> variable.</p>
+<h3 id="encoding-and-byte-handling">Encoding and Byte Handling</h3>
+<p>POSIX makes no assumptions about string encoding. The bytes placed
+into the <code>char*</code> buffers are passed directly from the calling
+environment to the receiving process without validation or conversion.
+The application itself is responsible for parsing these bytes according
+to UTF-8, ASCII, or local conventions.</p>
+<p>Python automatically decodes the operating system's raw command-line
+bytes into Unicode strings when populating <code>sys.argv</code>. On
+modern Unix-like platforms, Python uses the filesystem encoding (usually
+UTF-8) combined with the <code>surrogateescape</code> error handler (PEP
+383). This mechanism maps un-decodable bytes to isolated Unicode
+surrogate code points, allowing the script to manipulate or round-trip
+invalid byte sequences without raising immediate decoding errors. For
+applications strictly requiring raw, undecoded bytes, Python provides
+alternate APIs like <code>os.fsencode()</code>.</p>
+<h3 id="representation-of-the-invocation-name-argv0">Representation of
+the Invocation Name (<code>argv[0]</code>)</h3>
+<p>In a POSIX program, <code>argv[0]</code> traditionally holds the path
+or command name used to execute the binary. However, because
+<code>argv</code> is passed directly through <code>execve()</code>, the
+calling process can technically set <code>argv[0]</code> to any
+arbitrary string or even leave it empty.</p>
+<p>In Python, <code>sys.argv[0]</code> is explicitly managed by the
+Python runtime to reflect how the script was invoked:</p>
+<ul>
+<li><strong>Running a script file (<code>python app.py</code>):</strong>
+<code>sys.argv[0]</code> contains the path to the script
+(<code>app.py</code>), not the path to the Python interpreter
+binary.</li>
+<li><strong>Running a module (<code>python -m module</code>):</strong>
+<code>sys.argv[0]</code> contains the full filesystem path to the
+located module file.</li>
+<li><strong>Running inline code (<code>python -c "..."</code>):</strong>
+<code>sys.argv[0]</code> is set to the literal string
+<code>"-c"</code>.</li>
+<li><strong>Standard input (<code>python -</code>):</strong>
+<code>sys.argv[0]</code> is set to <code>"-"</code>.</li>
+</ul>
+<p>The true low-level argument array passed to the Python process
+itself—including the Python binary and its runtime flags—is excluded
+from <code>sys.argv</code>. Starting in Python 3.10, this original
+vector is separately accessible via <code>sys.orig_argv</code>.</p>
+<h3 id="mutability-and-process-state">Mutability and Process State</h3>
+<p>Under POSIX, modifying the <code>argv</code> array alters the memory
+space of the running process. Some utilities overwrite
+<code>argv[0]</code> to change how the process appears in system
+monitoring tools like <code>ps</code>.</p>
+<p>In contrast, Python’s <code>sys.argv</code> is an independent list
+object created during interpreter initialization. Modifying, appending
+to, or reassigning <code>sys.argv</code> affects only the Python
+runtime's internal list reference. It has no effect on the underlying OS
+process table, the output of external process inspection tools, or the
+C-level arguments stored in the runtime.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

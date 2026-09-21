@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Django User Authentication and Permissions - python</title>
+    <meta name="description" content="Django provides a built-in, comprehensive security framework through its django.contrib.auth package to manage user identity, access control, and rights enforcement. Authentication verifies who a user is, authorization determines what that user is allowe">
+    <link rel="canonical" href="https://salivity.github.io/python/article/django-user-authentication-and-permissions">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Django User Authentication and Permissions - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/django-user-authentication-and-permissions" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Django provides a built-in, comprehensive security framework through its django.contrib.auth package to manage user identity, access control, and rights enforcement. Authentication verifies who a user is, authorization determines what that user is allowe" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="django-user-authentication-and-permissions">Django User
+Authentication and Permissions</h1>
+<p>Django provides a built-in, comprehensive security framework through
+its <code>django.contrib.auth</code> package to manage user identity,
+access control, and rights enforcement. Authentication verifies who a
+user is, authorization determines what that user is allowed to do, and
+permission enforcement ensures that views, templates, and database
+queries restrict unauthorized actions. This article explains how Django
+coordinates these systems through models, session backends, group
+permissions, and view-level access controls.</p>
+<h3 id="the-core-authentication-architecture">The Core Authentication
+Architecture</h3>
+<p>Django decouples credential verification from session management. The
+process relies on three primary elements:</p>
+<ol type="1">
+<li><strong>The User Model</strong>: By default, Django provides
+<code>django.contrib.auth.models.User</code>, which contains standard
+fields like <code>username</code>, <code>password</code>,
+<code>email</code>, and operational flags such as
+<code>is_active</code>, <code>is_staff</code>, and
+<code>is_superuser</code>. Applications with non-standard requirements
+can extend <code>AbstractUser</code> to add fields or subclass
+<code>AbstractBaseUser</code> to redesign the identity structure
+entirely (e.g., using email as the unique identifier).</li>
+<li><strong>Password Hashing</strong>: Django never stores plain-text
+passwords. It uses an adaptable hashing system based on PBKDF2 with a
+SHA-256 hash by default, automatically handling salting and key
+stretching.</li>
+<li><strong>Authentication Backends</strong>: Credential verification is
+abstracted using backend classes defined in
+<code>settings.AUTHENTICATION_BACKENDS</code>. The default
+<code>ModelBackend</code> queries the database, but developers can
+configure custom backends to authenticate via LDAP, OAuth, or external
+identity providers.</li>
+</ol>
+<h3 id="the-authentication-flow-authenticate-and-login">The
+Authentication Flow: <code>authenticate()</code> and
+<code>login()</code></h3>
+<p>When processing user credentials, Django typically uses two main
+functions:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.contrib.auth <span class="im">import</span> authenticate, login, logout</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 1: Verification</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>user <span class="op">=</span> authenticate(request, username<span class="op">=</span>username, password<span class="op">=</span>password)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> user <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Step 2: Establish the session</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    login(request, user)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Invalid credentials</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<ul>
+<li><code>authenticate()</code> loops through the configured
+authentication backends to validate the provided credentials. If valid,
+it returns the corresponding <code>User</code> instance.</li>
+<li><code>login()</code> takes the authenticated user and their session
+data, rotates the session key to protect against session fixation
+attacks, and saves the user ID in the HTTP session. Subsequent requests
+access this user via <code>request.user</code>.</li>
+<li><code>logout()</code> flushes the session data, clearing all session
+cookies.</li>
+</ul>
+<h3 id="authorization-permissions-and-groups">Authorization: Permissions
+and Groups</h3>
+<p>Django's authorization layer determines what an authenticated user is
+permitted to do across the system.</p>
+<ul>
+<li><strong>Model Permissions</strong>: Whenever a model is migrated,
+Django's <code>django.contrib.auth</code> app automatically generates
+four standard permissions for it: <code>add</code>, <code>change</code>,
+<code>delete</code>, and <code>view</code>. These take the naming format
+<code>&lt;app_label&gt;.&lt;action&gt;_&lt;modelname&gt;</code> (e.g.,
+<code>blog.add_post</code>). Custom permissions can be defined inside
+the model's <code>Meta</code> class via the <code>permissions</code>
+attribute.</li>
+<li><strong>Groups</strong>: The <code>Group</code> model allows
+administrators to categorize users and assign permissions collectively.
+If a user belongs to the "Editors" group, they automatically inherit all
+permissions granted to that group.</li>
+<li><strong>Superusers and Staff</strong>: Flags on the
+<code>User</code> model bypass standard checks. A user with
+<code>is_superuser=True</code> inherently passes all permission checks
+without explicit assignments, while <code>is_staff=True</code> grants
+access to the Django admin dashboard.</li>
+</ul>
+<h3 id="permission-enforcement">Permission Enforcement</h3>
+<p>Django allows permissions to be enforced at multiple layers of an
+application.</p>
+<h4 id="1-view-enforcement-function-based-views">1. View Enforcement
+(Function-Based Views)</h4>
+<p>Django provides decorators to gate access to function views:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.contrib.auth.decorators <span class="im">import</span> login_required, permission_required</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="at">@login_required</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> profile_view(request):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> render(request, <span class="st">&#39;profile.html&#39;</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="at">@permission_required</span>(<span class="st">&#39;blog.add_post&#39;</span>, raise_exception<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> create_post(request):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> render(request, <span class="st">&#39;create_post.html&#39;</span>)</span></code></pre></div>
+<p>Setting <code>raise_exception=True</code> returns an HTTP 403
+Forbidden response instead of redirecting the user to the login URL.</p>
+<h4 id="2-view-enforcement-class-based-views">2. View Enforcement
+(Class-Based Views)</h4>
+<p>For Class-Based Views (CBVs), Django provides mixins that inherit
+from access control mechanisms:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.contrib.auth.mixins <span class="im">import</span> LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.views.generic <span class="im">import</span> CreateView</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> .models <span class="im">import</span> Post</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> PostCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    model <span class="op">=</span> Post</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    fields <span class="op">=</span> [<span class="st">&#39;title&#39;</span>, <span class="st">&#39;content&#39;</span>]</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    permission_required <span class="op">=</span> <span class="st">&#39;blog.add_post&#39;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    model <span class="op">=</span> Post</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    fields <span class="op">=</span> [<span class="st">&#39;title&#39;</span>, <span class="st">&#39;content&#39;</span>]</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> test_func(<span class="va">self</span>):</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Custom object-level authorization</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        post <span class="op">=</span> <span class="va">self</span>.get_object()</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.request.user <span class="op">==</span> post.author</span></code></pre></div>
+<p><code>UserPassesTestMixin</code> allows writing arbitrary logic to
+handle object-level ownership checks that standard model-level
+permissions do not cover.</p>
+<h4 id="3-template-layer-enforcement">3. Template Layer Enforcement</h4>
+<p>Django injects an authorization helper directly into the template
+context via <code>django.contrib.auth.context_processors.auth</code>.
+Templates can adapt user interfaces dynamically:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>{% if perms.blog.add_post %}</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">a</span><span class="ot"> href</span><span class="op">=</span><span class="st">&quot;{% url &#39;post_create&#39; %}&quot;</span><span class="dt">&gt;</span>Create New Post<span class="dt">&lt;/</span><span class="kw">a</span><span class="dt">&gt;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>{% endif %}</span></code></pre></div>
+<h4 id="4-programmatic-checks">4. Programmatic Checks</h4>
+<p>In business logic, forms, or API endpoints, permissions can be
+checked directly against the user object using methods like
+<code>user.has_perm('app_label.permission_name')</code> or
+<code>user.has_perms(['perm1', 'perm2'])</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

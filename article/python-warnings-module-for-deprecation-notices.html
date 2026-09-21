@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Warnings Module for Deprecation Notices - python</title>
+    <meta name="description" content="The Python warnings module provides a standardized, non-disruptive mechanism to alert developers that certain parts of a codebase are obsolete and scheduled for removal. Unlike exceptions, which halt program execution, warnings communicate impending API">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-warnings-module-for-deprecation-notices">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Warnings Module for Deprecation Notices - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-warnings-module-for-deprecation-notices" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Python warnings module provides a standardized, non-disruptive mechanism to alert developers that certain parts of a codebase are obsolete and scheduled for removal. Unlike exceptions, which halt program execution, warnings communicate impending API" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-warnings-module-for-deprecation-notices">Python Warnings
+Module for Deprecation Notices</h1>
+<p>The Python <code>warnings</code> module provides a standardized,
+non-disruptive mechanism to alert developers that certain parts of a
+codebase are obsolete and scheduled for removal. Unlike exceptions,
+which halt program execution, warnings communicate impending API
+changes, outdated practices, and future incompatibilities while allowing
+the software to continue running. This guide explains the core purpose
+of the <code>warnings</code> module in handling deprecation notices, how
+to issue them correctly, and how to configure filters during development
+and testing.</p>
+<h2 id="why-use-the-warnings-module-instead-of-alternatives">Why Use the
+Warnings Module Instead of Alternatives?</h2>
+<p>Using custom print statements or standard logging to notify users of
+deprecated code leads to messy outputs and cannot be programmatically
+managed. Raising standard exceptions, on the other hand, immediately
+breaks backward compatibility.</p>
+<p>The <code>warnings</code> module solves this by offering:</p>
+<ul>
+<li><strong>Non-terminating notifications:</strong> Code continues to
+execute without crashing existing pipelines or user applications.</li>
+<li><strong>Granular control:</strong> Users and developers can
+programmatically silence, ignore, display once, or escalate warnings
+into exceptions.</li>
+<li><strong>Contextual reporting:</strong> Warnings automatically
+capture and report the file name and line number where the deprecated
+function was invoked, rather than where it was defined.</li>
+</ul>
+<h2 id="key-deprecation-warning-classes">Key Deprecation Warning
+Classes</h2>
+<p>Python includes built-in warning categories specifically designed to
+signal different stages of the deprecation lifecycle:</p>
+<ul>
+<li><code>DeprecationWarning</code>: Used to indicate that a feature is
+deprecated and will be removed in a future release. By default, Python
+ignores this warning in user-facing code to prevent polluting terminal
+output, but developers can surface it during development.</li>
+<li><code>PendingDeprecationWarning</code>: Signals that a feature will
+be deprecated in the future, but is not yet formally marked for
+immediate deprecation. It is rarely used outside of very large
+frameworks.</li>
+<li><code>FutureWarning</code>: Used instead of
+<code>DeprecationWarning</code> when the intended audience is end-users
+of a library or application, rather than library developers. Unlike
+<code>DeprecationWarning</code>, <code>FutureWarning</code> is shown by
+default.</li>
+</ul>
+<h2 id="issuing-a-deprecation-notice">Issuing a Deprecation Notice</h2>
+<p>To emit a deprecation warning, use the <code>warnings.warn()</code>
+function. Setting the <code>stacklevel</code> argument is critical when
+writing reusable libraries so the warning points to the user's code
+rather than the library's internal implementation.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> old_function():</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    warnings.warn(</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;old_function() is deprecated and will be removed in version 2.0. Use new_function() instead.&quot;</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        category<span class="op">=</span><span class="pp">DeprecationWarning</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        stacklevel<span class="op">=</span><span class="dv">2</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Original functionality continues below</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;Result&quot;</span></span></code></pre></div>
+<p>Setting <code>stacklevel=2</code> ensures that Python reports the
+file and line number of the code that <em>called</em>
+<code>old_function()</code>, making it straightforward for the caller to
+locate and update their deprecated usage.</p>
+<h2 id="managing-and-filtering-warnings">Managing and Filtering
+Warnings</h2>
+<p>Because <code>DeprecationWarning</code> is silenced by default in
+standard Python execution, developers must explicitly enable it to audit
+their code.</p>
+<h3 id="command-line-configuration">Command-Line Configuration</h3>
+<p>You can control warning visibility when running Python scripts using
+the <code>-W</code> flag:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Show all warnings, including DeprecationWarning</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-Wd</span> script.py</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Treat all warnings as errors to prevent deprecated code in CI/CD</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-Werror</span> script.py</span></code></pre></div>
+<h3 id="programmatic-filtering">Programmatic Filtering</h3>
+<p>You can configure warning behaviors dynamically using
+<code>warnings.filterwarnings()</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Show all deprecation warnings</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>warnings.filterwarnings(<span class="st">&quot;always&quot;</span>, category<span class="op">=</span><span class="pp">DeprecationWarning</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Ignore a specific deprecation warning message</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>warnings.filterwarnings(<span class="st">&quot;ignore&quot;</span>, message<span class="op">=</span><span class="st">&quot;.*old_function.*&quot;</span>, category<span class="op">=</span><span class="pp">DeprecationWarning</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert deprecation warnings to exceptions during test suites</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>warnings.filterwarnings(<span class="st">&quot;error&quot;</span>, category<span class="op">=</span><span class="pp">DeprecationWarning</span>)</span></code></pre></div>
+<p>By leveraging the <code>warnings</code> module, library authors can
+maintain backwards compatibility while steadily guiding consumers toward
+modern APIs without breaking operational code.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

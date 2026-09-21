@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debugging Python with GDB and libpython.py - python</title>
+    <meta name="description" content="Debugging a running Python process that is hung, deadlocked, or consuming excessive CPU requires visibility into both the underlying C runtime and the high-level Python code execution. GDB (GNU Debugger) operates at the native system level, granting the">
+    <link rel="canonical" href="https://salivity.github.io/python/article/debugging-python-with-gdb-and-libpython-py">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Debugging Python with GDB and libpython.py - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/debugging-python-with-gdb-and-libpython-py" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Debugging a running Python process that is hung, deadlocked, or consuming excessive CPU requires visibility into both the underlying C runtime and the high-level Python code execution. GDB (GNU Debugger) operates at the native system level, granting the" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="debugging-python-with-gdb-and-libpythonpy">Debugging Python with
+GDB and libpython.py</h1>
+<p>Debugging a running Python process that is hung, deadlocked, or
+consuming excessive CPU requires visibility into both the underlying C
+runtime and the high-level Python code execution. GDB (GNU Debugger)
+operates at the native system level, granting the ability to attach to
+running processes, freeze execution, and inspect memory, while the
+<code>libpython.py</code> extension script translates raw CPython data
+structures into human-readable Python stack traces and variables.
+Together, they provide a non-invasive way to diagnose complex bugs in
+production environments without needing to modify source code or restart
+the application.</p>
+<h3 id="the-role-of-gdb-native-process-control">The Role of GDB: Native
+Process Control</h3>
+<p>GDB operates underneath the Python virtual machine at the OS and
+machine-code level. When an application becomes unresponsive, standard
+Python profiling tools or debuggers (like <code>pdb</code>) cannot
+intervene if the process is stuck inside a native C extension, blocked
+on a kernel system call, or caught in an unyielding Global Interpreter
+Lock (GIL) contention.</p>
+<p>GDB provides the low-level infrastructure to:</p>
+<ul>
+<li><strong>Attach to live processes:</strong> Using
+<code>gdb -p &lt;PID&gt;</code>, GDB attaches to any running process via
+OS-level tracing interfaces (such as <code>ptrace</code> on Linux).</li>
+<li><strong>Control execution:</strong> It can pause, resume, and step
+through threads at the native instruction level.</li>
+<li><strong>Inspect C-level frames:</strong> GDB identifies whether a
+thread is blocked inside standard C libraries (e.g.,
+<code>pthread_mutex_lock</code>), network socket operations, or custom
+C/C++ extensions.</li>
+<li><strong>Analyze core dumps:</strong> If a Python process crashes
+with a segmentation fault, GDB reads the resulting core dump to
+determine the exact native instruction that triggered the failure.</li>
+</ul>
+<h3 id="the-role-of-libpythonpy-bridging-the-python-abstraction">The
+Role of <code>libpython.py</code>: Bridging the Python Abstraction</h3>
+<p>While GDB can inspect native C code, standard CPython frames appear
+in GDB as deeply nested, repetitive calls to internal evaluation loops
+such as <code>_PyEval_EvalFrameDefault</code> or
+<code>PyEval_EvalFrameEx</code>. At this level, Python variables are
+obscured as generic <code>PyObject*</code> pointers, making it difficult
+to determine which Python file, line number, or function is currently
+executing.</p>
+<p>The <code>libpython.py</code> script—provided by the CPython
+distribution and GDB Python scripting support—acts as an introspection
+bridge. It registers custom hooks and pretty-printers inside GDB to
+parse the C structures of the CPython runtime, giving developers
+Python-level visibility:</p>
+<ul>
+<li><strong><code>py-bt</code>:</strong> Reconstructs the Python call
+stack from the native frame, displaying <code>.py</code> filenames, line
+numbers, and function arguments instead of C symbols.</li>
+<li><strong><code>py-list</code>:</strong> Shows the Python source code
+context surrounding the current line being executed by the selected
+thread.</li>
+<li><strong><code>py-locals</code>:</strong> Extracts and prints the
+names and values of local Python variables defined in the active
+scope.</li>
+<li><strong><code>py-up</code> and <code>py-down</code>:</strong>
+Navigates up and down the Python-specific call frames, independent of
+the underlying C stack depth.</li>
+</ul>
+<h3 id="combined-diagnostic-capabilities">Combined Diagnostic
+Capabilities</h3>
+<p>Using GDB in tandem with <code>libpython.py</code> enables specific
+troubleshooting workflows that neither tool could achieve
+independently:</p>
+<ol type="1">
+<li><strong>Diagnosing GIL and Thread Deadlocks:</strong> GDB can
+inspect all operating system threads via <code>info threads</code>. By
+executing <code>thread apply all py-bt</code>, an engineer can
+immediately view the Python-level stack trace for every thread in the
+system, identifying which thread holds the GIL and which threads are
+waiting for native locks.</li>
+<li><strong>C-Extension Memory Corruption:</strong> If a third-party
+library written in C or C++ corrupts memory, GDB pinpoints the native
+crash site, while <code>py-bt</code> shows the exact Python function
+call that invoked the faulty native function.</li>
+<li><strong>Zero-Instrumented Live Inspection:</strong> The combination
+requires no prior code modification, pre-installed Python debugging
+libraries, or open network debug ports. It works directly against the
+running process using the system's debugging symbols
+(<code>python-debuginfo</code> or <code>python3-dbg</code>).</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

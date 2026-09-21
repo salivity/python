@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Operator Overloading with Dunder Methods - python</title>
+    <meta name="description" content="Operator overloading in Python allows developers to redefine the behavior of built-in operators—such as +, -, , and ==—for user-defined objects. This capability is powered entirely by special methods known as "dunder" (double underscore) methods or m">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-operator-overloading-with-dunder-methods">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Operator Overloading with Dunder Methods - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-operator-overloading-with-dunder-methods" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Operator overloading in Python allows developers to redefine the behavior of built-in operators—such as +, -, , and ==—for user-defined objects. This capability is powered entirely by special methods known as "dunder" (double underscore) methods or m" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-operator-overloading-with-dunder-methods">Python Operator
+Overloading with Dunder Methods</h1>
+<p>Operator overloading in Python allows developers to redefine the
+behavior of built-in operators—such as <code>+</code>, <code>-</code>,
+<code>*</code>, and <code>==</code>—for user-defined objects. This
+capability is powered entirely by special methods known as "dunder"
+(double underscore) methods or magic methods. This article explains the
+mechanics behind operator overloading in Python, details the primary
+dunder methods for arithmetic and comparisons, and demonstrates how to
+implement them cleanly and effectively in your classes.</p>
+<h2 id="how-operator-overloading-works">How Operator Overloading
+Works</h2>
+<p>In Python, operators are syntactic sugar for method calls. When an
+operator is used between objects, Python intercepts the operation and
+translates it into a call to a corresponding dunder method defined
+within the object's class.</p>
+<p>For example, the expression <code>a + b</code> internally translates
+to:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>a.<span class="fu">__add__</span>(b)</span></code></pre></div>
+<p>If the left operand (<code>a</code>) does not implement the method or
+returns the singleton <code>NotImplemented</code>, Python automatically
+attempts the reverse operation on the right operand by calling:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>b.<span class="fu">__radd__</span>(a)</span></code></pre></div>
+<p>If neither object provides a valid implementation, Python raises a
+<code>TypeError</code>.</p>
+<h2 id="arithmetic-operators">Arithmetic Operators</h2>
+<p>To overload standard mathematical operations, you implement their
+corresponding arithmetic dunder methods.</p>
+<p>Here are the most common arithmetic operators and their methods:</p>
+<ul>
+<li><code>+</code> : <code>__add__(self, other)</code></li>
+<li><code>-</code> : <code>__sub__(self, other)</code></li>
+<li><code>*</code> : <code>__mul__(self, other)</code></li>
+<li><code>/</code> : <code>__truediv__(self, other)</code></li>
+<li><code>//</code> : <code>__floordiv__(self, other)</code></li>
+<li><code>%</code> : <code>__mod__(self, other)</code></li>
+<li><code>**</code> : <code>__pow__(self, other)</code></li>
+</ul>
+<h3 id="implementation-example">Implementation Example</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Vector:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, x, y):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.x <span class="op">=</span> x</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.y <span class="op">=</span> y</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__add__</span>(<span class="va">self</span>, other):</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(other, Vector):</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> Vector(<span class="va">self</span>.x <span class="op">+</span> other.x, <span class="va">self</span>.y <span class="op">+</span> other.y)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">NotImplemented</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__repr__</span>(<span class="va">self</span>):</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f&quot;Vector(</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>x<span class="sc">}</span><span class="ss">, </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>y<span class="sc">}</span><span class="ss">)&quot;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>v1 <span class="op">=</span> Vector(<span class="dv">2</span>, <span class="dv">3</span>)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>v2 <span class="op">=</span> Vector(<span class="dv">5</span>, <span class="dv">7</span>)</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(v1 <span class="op">+</span> v2)  <span class="co"># Output: Vector(7, 10)</span></span></code></pre></div>
+<h2 id="comparison-operators">Comparison Operators</h2>
+<p>Python uses "rich comparison" dunder methods to evaluate relational
+operations. Each operator maps to a distinct method:</p>
+<ul>
+<li><code>==</code> : <code>__eq__(self, other)</code></li>
+<li><code>!=</code> : <code>__ne__(self, other)</code></li>
+<li><code>&lt;</code> : <code>__lt__(self, other)</code></li>
+<li><code>&lt;=</code> : <code>__le__(self, other)</code></li>
+<li><code>&gt;</code> : <code>__gt__(self, other)</code></li>
+<li><code>&gt;=</code> : <code>__ge__(self, other)</code></li>
+</ul>
+<h3 id="implementation-example-1">Implementation Example</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Product:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, name, price):</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.name <span class="op">=</span> name</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.price <span class="op">=</span> price</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__eq__</span>(<span class="va">self</span>, other):</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(other, Product):</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">self</span>.price <span class="op">==</span> other.price</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">NotImplemented</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__lt__</span>(<span class="va">self</span>, other):</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(other, Product):</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">self</span>.price <span class="op">&lt;</span> other.price</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">NotImplemented</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>p1 <span class="op">=</span> Product(<span class="st">&quot;Book&quot;</span>, <span class="dv">15</span>)</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>p2 <span class="op">=</span> Product(<span class="st">&quot;Game&quot;</span>, <span class="dv">40</span>)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(p1 <span class="op">&lt;</span> p2)   <span class="co"># Output: True</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(p1 <span class="op">==</span> p2)  <span class="co"># Output: False</span></span></code></pre></div>
+<h2 id="reflected-and-in-place-operators">Reflected and In-Place
+Operators</h2>
+<h3 id="reflected-reverse-methods">Reflected (Reverse) Methods</h3>
+<p>Reflected methods handle operations where the left-hand operand does
+not support the operation with the right-hand operand (e.g., adding an
+integer to a custom <code>Vector</code>). They are prefixed with an
+<code>r</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Vector:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, x, y):</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.x <span class="op">=</span> x</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.y <span class="op">=</span> y</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__mul__</span>(<span class="va">self</span>, scalar):</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(scalar, (<span class="bu">int</span>, <span class="bu">float</span>)):</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> Vector(<span class="va">self</span>.x <span class="op">*</span> scalar, <span class="va">self</span>.y <span class="op">*</span> scalar)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">NotImplemented</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__rmul__</span>(<span class="va">self</span>, scalar):</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Delegates to __mul__ to support: scalar * vector</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.<span class="fu">__mul__</span>(scalar)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>v <span class="op">=</span> Vector(<span class="dv">2</span>, <span class="dv">4</span>)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="dv">3</span> <span class="op">*</span> v)  <span class="co"># Calls v.__rmul__(3), Output: Vector(6, 12)</span></span></code></pre></div>
+<h3 id="in-place-augmented-methods">In-Place (Augmented) Methods</h3>
+<p>Augmented assignment operators like <code>+=</code>, <code>-=</code>,
+and <code>*=</code> correspond to methods prefixed with an
+<code>i</code> (<code>__iadd__</code>, <code>__isub__</code>, etc.).
+These allow mutable objects to modify their state in place rather than
+creating a new instance:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__iadd__</span>(<span class="va">self</span>, other):</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(other, Vector):</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.x <span class="op">+=</span> other.x</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.y <span class="op">+=</span> other.y</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">self</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">NotImplemented</span></span></code></pre></div>
+<p>If an in-place method is not implemented, Python automatically falls
+back to the standard binary method (e.g., falling back to
+<code>__add__</code> for <code>+=</code>).</p>
+<h2 id="best-practices">Best Practices</h2>
+<ul>
+<li><strong>Return <code>NotImplemented</code> instead of raising
+<code>TypeError</code>:</strong> When an unsupported type is
+encountered, returning <code>NotImplemented</code> signals Python to try
+other options, such as the reverse method (<code>__radd__</code>) on the
+other operand.</li>
+<li><strong>Maintain Immutability for Standard Operations:</strong>
+Methods like <code>__add__</code> and <code>__sub__</code> should return
+a new object rather than mutating <code>self</code>.</li>
+<li><strong>Consistency:</strong> If you implement <code>__eq__</code>,
+it is often expected that you also implement <code>__hash__</code> (or
+set it to <code>None</code> if the object is mutable) to preserve
+expected dictionary and set behaviors.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

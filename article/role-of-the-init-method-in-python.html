@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Role of the __init__ Method in Python - python</title>
+    <meta name="description" content="In Python object-oriented programming, the init method serves as the constructor-like initializer responsible for setting up an object's initial state. This article explains the exact role of init during the object creation lifecycle, clarifies the disti">
+    <link rel="canonical" href="https://salivity.github.io/python/article/role-of-the-init-method-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Role of the __init__ Method in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/role-of-the-init-method-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python object-oriented programming, the init method serves as the constructor-like initializer responsible for setting up an object's initial state. This article explains the exact role of init during the object creation lifecycle, clarifies the disti" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="role-of-the-init-method-in-python">Role of the
+<strong>init</strong> Method in Python</h1>
+<p>In Python object-oriented programming, the <code>__init__</code>
+method serves as the constructor-like initializer responsible for
+setting up an object's initial state. This article explains the exact
+role of <code>__init__</code> during the object creation lifecycle,
+clarifies the distinction between creating an instance and initializing
+it, and demonstrates how <code>__init__</code> assigns attributes to
+make objects functional immediately upon instantiation.</p>
+<h3 id="object-creation-vs-initialization">Object Creation vs.
+Initialization</h3>
+<p>A common misconception is that <code>__init__</code> creates the
+object. In Python, object instantiation is a two-step process:</p>
+<ol type="1">
+<li><strong>Creation (<code>__new__</code>):</strong> The static method
+<code>__new__</code> is called first. It allocates memory and returns a
+brand-new, empty instance of the class.</li>
+<li><strong>Initialization (<code>__init__</code>):</strong> Once the
+instance exists, Python automatically calls <code>__init__</code>,
+passing the newly created instance as the first argument
+(<code>self</code>), along with any other arguments passed to the class
+constructor.</li>
+</ol>
+<p>Therefore, <code>__init__</code> does not create the object; it
+initializes the state of an already existing object.</p>
+<h3 id="the-role-and-purpose-of-__init__">The Role and Purpose of
+<code>__init__</code></h3>
+<p>The primary responsibility of <code>__init__</code> is to bind
+attributes to the instance. Without it, an object would be an empty
+container requiring manual attribute assignment after instantiation.</p>
+<p>Key functions of <code>__init__</code> include:</p>
+<ul>
+<li><strong>Defining Instance Attributes:</strong> Setting instance
+variables that differ from one object to another.</li>
+<li><strong>Accepting Arguments:</strong> Allowing dynamic configuration
+when creating an instance.</li>
+<li><strong>Setting Defaults:</strong> Establishing baseline states or
+fallback values for an object.</li>
+<li><strong>Input Validation:</strong> Ensuring that data passed to the
+instance meets specific criteria before the object is used.</li>
+</ul>
+<h3 id="syntax-and-implementation">Syntax and Implementation</h3>
+<p>When a class is instantiated, arguments passed inside the parentheses
+are automatically forwarded to <code>__init__</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Car:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, make, model, year<span class="op">=</span><span class="dv">2024</span>):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.make <span class="op">=</span> make        <span class="co"># Instance attribute</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.model <span class="op">=</span> model      <span class="co"># Instance attribute</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.year <span class="op">=</span> year        <span class="co"># Default argument</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Instantiation</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>my_car <span class="op">=</span> Car(<span class="st">&quot;Toyota&quot;</span>, <span class="st">&quot;Corolla&quot;</span>)</span></code></pre></div>
+<p>In this example:</p>
+<ul>
+<li><code>self</code> refers to the newly created <code>my_car</code>
+instance.</li>
+<li><code>"Toyota"</code> and <code>"Corolla"</code> are mapped to
+<code>make</code> and <code>model</code>.</li>
+<li><code>year</code> defaults to <code>2024</code>.</li>
+</ul>
+<h3 id="strict-constraints-of-__init__">Strict Constraints of
+<code>__init__</code></h3>
+<p>The <code>__init__</code> method must return <code>None</code>.
+Attempting to return any other value, such as a string, integer, or
+custom object, results in a runtime <code>TypeError</code>. Because
+<code>__new__</code> has already returned the instance to the runtime,
+<code>__init__</code> exists strictly to modify that instance in place,
+not to produce a new return value.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

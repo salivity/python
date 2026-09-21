@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Double Underscores and Name Mangling in Python - python</title>
+    <meta name="description" content="In Python, prefixing an attribute or method with double leading underscores triggers a mechanism known as name mangling. This process automatically rewrites the identifier's internal name to include the enclosing class name, preventing naming collisions">
+    <link rel="canonical" href="https://salivity.github.io/python/article/double-underscores-and-name-mangling-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Double Underscores and Name Mangling in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/double-underscores-and-name-mangling-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, prefixing an attribute or method with double leading underscores triggers a mechanism known as name mangling. This process automatically rewrites the identifier's internal name to include the enclosing class name, preventing naming collisions" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="double-underscores-and-name-mangling-in-python">Double
+Underscores and Name Mangling in Python</h1>
+<p>In Python, prefixing an attribute or method with double leading
+underscores triggers a mechanism known as name mangling. This process
+automatically rewrites the identifier's internal name to include the
+enclosing class name, preventing naming collisions between parent
+classes and their subclasses during inheritance. While often mistaken
+for a tool to enforce strict data privacy, name mangling is specifically
+designed to protect internal state from accidental overrides in complex
+inheritance hierarchies.</p>
+<h2 id="how-name-mangling-works">How Name Mangling Works</h2>
+<p>When the Python interpreter encounters an identifier with at least
+two leading underscores and at most one trailing underscore (such as
+<code>__attribute</code>), it internally transforms the name. The
+identifier is replaced with a single leading underscore, followed by the
+enclosing class name, followed by the original attribute name:</p>
+<p><code>_ClassName__attribute</code></p>
+<p>For example, an attribute named <code>__data</code> inside a class
+named <code>Storage</code> is transformed into
+<code>_Storage__data</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Storage:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.__data <span class="op">=</span> <span class="st">&quot;Confidential&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> Storage()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Accessing s.__data directly raises an AttributeError</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># print(s.__data) </span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Accessing the mangled name succeeds</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(s._Storage__data)  <span class="co"># Outputs: Confidential</span></span></code></pre></div>
+<h2 id="the-primary-goal-preventing-subclass-collisions">The Primary
+Goal: Preventing Subclass Collisions</h2>
+<p>The definitive purpose of name mangling is to avoid name clashes when
+a class is extended by a subclass. Without name mangling, if a subclass
+defines an attribute with the same name as a private attribute in the
+parent class, it inadvertently overwrites the parent's value.</p>
+<p>Consider an inheritance scenario:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Base:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.__id <span class="op">=</span> <span class="st">&quot;BASE_101&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_id(<span class="va">self</span>):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.__id</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Derived(Base):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>()</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.__id <span class="op">=</span> <span class="st">&quot;DERIVED_202&quot;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>obj <span class="op">=</span> Derived()</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(obj.get_id())  <span class="co"># Outputs: BASE_101</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(obj._Derived__id)  <span class="co"># Outputs: DERIVED_202</span></span></code></pre></div>
+<p>Because <code>Base.__id</code> is mangled to <code>_Base__id</code>
+and <code>Derived.__id</code> is mangled to <code>_Derived__id</code>,
+both variables coexist on the same instance without interfering with one
+another.</p>
+<h2 id="what-name-mangling-does-not-do">What Name Mangling Does Not
+Do</h2>
+<p>Name mangling is not an access control mechanism like
+<code>private</code> in C++ or Java. Python adheres to the philosophy
+that "we are all consenting adults here." Because the mangled name
+remains accessible from outside the class namespace via
+<code>_ClassName__attribute</code>, it does not enforce absolute
+encapsulation or provide security against intentional modification.</p>
+<h2 id="when-to-use-double-underscores">When to Use Double
+Underscores</h2>
+<ul>
+<li><strong>Use a single underscore (<code>_attribute</code>):</strong>
+For general internal use. A single leading underscore is the Pythonic
+convention to signal to other developers that an attribute or method is
+private and not intended for external use.</li>
+<li><strong>Use double underscores (<code>__attribute</code>):</strong>
+Only when designing classes intended for inheritance where an attribute
+must remain unshadowed by subclasses, or to prevent unintended method
+overriding in deep class hierarchies.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Thread-Local Data with threading.local() - python</title>
+    <meta name="description" content="This article explains how Python manages thread-local storage using the threading.local() class. It covers the internal mechanics of how Python isolates data per thread, dynamically resolves attributes based on thread identity, manages memory cleanup whe">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-thread-local-data-with-threading-local">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Thread-Local Data with threading.local() - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-thread-local-data-with-threading-local" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how Python manages thread-local storage using the threading.local() class. It covers the internal mechanics of how Python isolates data per thread, dynamically resolves attributes based on thread identity, manages memory cleanup whe" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-thread-local-data-with-threadinglocal">Python
+Thread-Local Data with threading.local()</h1>
+<p>This article explains how Python manages thread-local storage using
+the <code>threading.local()</code> class. It covers the internal
+mechanics of how Python isolates data per thread, dynamically resolves
+attributes based on thread identity, manages memory cleanup when threads
+terminate, and addresses key operational considerations like thread
+pools and asynchronous execution.</p>
+<h2 id="the-purpose-of-thread-local-storage">The Purpose of Thread-Local
+Storage</h2>
+<p>In a multithreaded Python program, global and module-level variables
+are shared across all threads by default. While this facilitates data
+sharing, it frequently creates race conditions unless access is
+synchronized using locks.</p>
+<p>Thread-local storage solves this problem by providing an object whose
+attributes are globally accessible in scope, but uniquely isolated in
+value to the thread reading or writing them.</p>
+<h2 id="how-threadinglocal-works-internally">How
+<code>threading.local()</code> Works Internally</h2>
+<p>The <code>threading.local</code> class provides an abstraction layer
+over low-level thread identification. Instead of maintaining a single
+<code>__dict__</code> for instance attributes, a
+<code>threading.local</code> instance manages a collection of separate
+dictionaries mapped to individual threads.</p>
+<h3 id="1-thread-identification">1. Thread Identification</h3>
+<p>Whenever code reads or writes an attribute on a
+<code>threading.local</code> instance, Python intercepts the operation.
+Under the hood, Python calls <code>_thread.get_ident()</code> (or
+platform-equivalent thread identifiers) to determine the unique ID of
+the currently executing thread.</p>
+<h3 id="2-dynamic-attribute-resolution">2. Dynamic Attribute
+Resolution</h3>
+<p>The <code>threading.local</code> object overrides standard attribute
+lookup and assignment methods (<code>__getattribute__</code>,
+<code>__setattr__</code>, and <code>__delattr__</code>).</p>
+<ul>
+<li><strong>Writing:</strong> When you assign
+<code>local_data.value = 42</code>, Python retrieves the current thread
+ID, locates or creates a storage dictionary associated with that ID, and
+stores <code>value: 42</code> inside that specific dictionary.</li>
+<li><strong>Reading:</strong> When you access
+<code>local_data.value</code>, Python retrieves the current thread ID,
+finds the corresponding dictionary, and returns the attribute. If the
+current thread has not set that attribute, Python raises an
+<code>AttributeError</code>, even if another thread has defined it.</li>
+</ul>
+<h3 id="3-memory-cleanup-and-lifecycle">3. Memory Cleanup and
+Lifecycle</h3>
+<p>To prevent memory leaks, <code>threading.local</code> uses weak
+references to track <code>threading.Thread</code> instances. When a
+thread finishes execution and its thread object is garbage collected,
+the internal dictionary assigned to that thread inside the
+<code>threading.local</code> instance is automatically deallocated.</p>
+<h2 id="code-example">Code Example</h2>
+<p>The following example demonstrates how two threads interact with the
+same <code>threading.local</code> instance independently:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> threading</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a single shared thread-local object</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>thread_data <span class="op">=</span> threading.local()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> worker(worker_id):</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Set a thread-specific value</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    thread_data.user <span class="op">=</span> <span class="ss">f&quot;User-</span><span class="sc">{</span>worker_id<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    time.sleep(<span class="fl">0.1</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Read the value back</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Thread </span><span class="sc">{</span>worker_id<span class="sc">}</span><span class="ss"> sees: </span><span class="sc">{</span>thread_data<span class="sc">.</span>user<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>threads <span class="op">=</span> []</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">2</span>):</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    t <span class="op">=</span> threading.Thread(target<span class="op">=</span>worker, args<span class="op">=</span>(i,))</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    threads.append(t)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    t.start()</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> t <span class="kw">in</span> threads:</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    t.join()</span></code></pre></div>
+<p>Output:</p>
+<pre class="text"><code>Thread 0 sees: User-0
+Thread 1 sees: User-1</code></pre>
+<p>Despite accessing the same <code>thread_data</code> object, neither
+thread overwrites the other's <code>user</code> attribute.</p>
+<h2 id="important-considerations">Important Considerations</h2>
+<h3 id="subclassing-and-initialization">Subclassing and
+Initialization</h3>
+<p>You can subclass <code>threading.local</code> and define an
+<code>__init__</code> method. Python executes <code>__init__</code> once
+per thread the first time that thread accesses an attribute on the
+object, making it useful for initializing default thread-bound resources
+such as database connections:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ConnectionManager(threading.local):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.connection <span class="op">=</span> create_new_db_connection()</span></code></pre></div>
+<h3 id="thread-reuse-caveat">Thread Reuse Caveat</h3>
+<p>When using thread pools (such as
+<code>concurrent.futures.ThreadPoolExecutor</code>), worker threads are
+kept alive and reused for multiple tasks. Because thread IDs persist
+across tasks, attributes set on a <code>threading.local</code> object
+will remain accessible to the next task executed by that same thread
+unless explicitly cleared.</p>
+<h3 id="concurrency-beyond-threads">Concurrency Beyond Threads</h3>
+<p><code>threading.local()</code> is designed specifically for
+operating-system-level threads. It does not provide context isolation
+between coroutines in asynchronous programming frameworks like
+<code>asyncio</code>. For coroutine-local state, Python provides the
+<code>contextvars</code> module.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

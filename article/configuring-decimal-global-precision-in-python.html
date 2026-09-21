@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuring Decimal Global Precision in Python - python</title>
+    <meta name="description" content="Python's decimal module provides support for fast, correctly rounded decimal floating-point arithmetic, with decimal.getcontext().prec serving as the configuration for arithmetic precision. Setting getcontext().prec sets the number of significant digits">
+    <link rel="canonical" href="https://salivity.github.io/python/article/configuring-decimal-global-precision-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Configuring Decimal Global Precision in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/configuring-decimal-global-precision-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's decimal module provides support for fast, correctly rounded decimal floating-point arithmetic, with decimal.getcontext().prec serving as the configuration for arithmetic precision. Setting getcontext().prec sets the number of significant digits" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="configuring-decimal-global-precision-in-python">Configuring
+Decimal Global Precision in Python</h1>
+<p>Python's <code>decimal</code> module provides support for fast,
+correctly rounded decimal floating-point arithmetic, with
+<code>decimal.getcontext().prec</code> serving as the configuration for
+arithmetic precision. Setting <code>getcontext().prec</code> sets the
+number of significant digits used for calculations across the current
+thread. This article details how this setting operates, demonstrates its
+effect on mathematical operations, highlights the critical difference
+between value representation and arithmetic results, and explains how
+scope affects context precision.</p>
+<h3 id="how-decimalgetcontextprec-works">How
+<code>decimal.getcontext().prec</code> Works</h3>
+<p>In Python, the <code>decimal</code> module relies on an execution
+context to determine rules like rounding modes, signal trapping, and
+significant digit precision. The default context includes a precision
+(<code>prec</code>) of 28 significant digits.</p>
+<p>By modifying <code>decimal.getcontext().prec</code>, you adjust the
+significant digits retained for results of arithmetic operations:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> decimal</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> decimal <span class="im">import</span> Decimal</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Set the precision to 4 significant digits</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>decimal.getcontext().prec <span class="op">=</span> <span class="dv">4</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> Decimal(<span class="dv">1</span>) <span class="op">/</span> Decimal(<span class="dv">7</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)  <span class="co"># Outputs: 0.1429</span></span></code></pre></div>
+<p>When the division operation runs, Python checks the active context's
+<code>prec</code> attribute and rounds the result to 4 significant
+figures using the configured rounding mode (defaulting to
+<code>ROUND_HALF_EVEN</code>).</p>
+<h3 id="distinction-between-initialization-and-operations">Distinction
+Between Initialization and Operations</h3>
+<p>A common misconception is that <code>decimal.getcontext().prec</code>
+constrains all <code>Decimal</code> instances upon creation. However,
+initialization does not alter significant digits; the precision applies
+strictly to arithmetic operations.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> decimal</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> decimal <span class="im">import</span> Decimal</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>decimal.getcontext().prec <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialization retains all provided digits</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>num <span class="op">=</span> Decimal(<span class="st">&quot;1.23456789&quot;</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(num)  <span class="co"># Outputs: 1.23456789</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Arithmetic applies the precision limit</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> num <span class="op">+</span> Decimal(<span class="dv">0</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)  <span class="co"># Outputs: 1.23</span></span></code></pre></div>
+<p>Direct string conversion preserves precision entirely. Only when an
+operator or function (such as <code>+</code>, <code>-</code>,
+<code>*</code>, <code>/</code>, or <code>sqrt()</code>) processes the
+values does Python apply the <code>prec</code> limit to the output.</p>
+<h3 id="context-scope-and-thread-safety">Context Scope and Thread
+Safety</h3>
+<p>The term "global" in <code>decimal.getcontext()</code> applies
+globally to the <strong>current execution thread</strong>. Python
+maintains thread-local contexts for the <code>decimal</code> module:</p>
+<ol type="1">
+<li><strong>Thread Isolation</strong>: Changes made via
+<code>decimal.getcontext().prec</code> in one thread do not affect other
+running threads.</li>
+<li><strong>Temporary Changes with <code>localcontext()</code></strong>:
+If you need to change precision temporarily without permanently mutating
+the thread's global context, use the <code>decimal.localcontext()</code>
+context manager:</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> decimal</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> decimal <span class="im">import</span> Decimal, localcontext</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>decimal.getcontext().prec <span class="op">=</span> <span class="dv">6</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> localcontext() <span class="im">as</span> ctx:</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    ctx.prec <span class="op">=</span> <span class="dv">2</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(Decimal(<span class="dv">10</span>) <span class="op">/</span> Decimal(<span class="dv">3</span>))  <span class="co"># Outputs: 3.3</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Restores the previous context precision automatically</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(Decimal(<span class="dv">10</span>) <span class="op">/</span> Decimal(<span class="dv">3</span>))      <span class="co"># Outputs: 3.33333</span></span></code></pre></div>
+<p>Managing <code>decimal.getcontext().prec</code> properly ensures
+numerical accuracy and avoids unexpected rounding behavior across
+arithmetic operations in Python applications.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python compile Modes: exec vs eval vs single Explained - python</title>
+    <meta name="description" content="Python's built-in compile() function transforms source code strings into executable code objects that can later be passed to exec() or eval(). The behavior of this function is fundamentally governed by its mode parameter, which accepts one of three argum">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-compile-modes-exec-vs-eval-vs-single-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python compile Modes: exec vs eval vs single Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-compile-modes-exec-vs-eval-vs-single-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's built-in compile() function transforms source code strings into executable code objects that can later be passed to exec() or eval(). The behavior of this function is fundamentally governed by its mode parameter, which accepts one of three argum" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-compile-modes-exec-vs-eval-vs-single-explained">Python
+compile Modes: exec vs eval vs single Explained</h1>
+<p>Python's built-in <code>compile()</code> function transforms source
+code strings into executable code objects that can later be passed to
+<code>exec()</code> or <code>eval()</code>. The behavior of this
+function is fundamentally governed by its <code>mode</code> parameter,
+which accepts one of three arguments: <code>'exec'</code>,
+<code>'eval'</code>, or <code>'single'</code>. This parameter instructs
+the Python parser how to interpret the input syntax, what return
+behavior to expect, and how to handle expressions during execution.</p>
+<h2 id="the-exec-mode">The <code>exec</code> Mode</h2>
+<p>The <code>'exec'</code> mode is designed for compiling arbitrary
+Python code, mimicking the execution of a standard Python module or
+script.</p>
+<ul>
+<li><strong>Syntax Allowed:</strong> It accepts any valid Python code,
+including multiple statements, variable assignments, loops, class
+definitions, and function declarations.</li>
+<li><strong>Return Value:</strong> Code compiled in this mode returns
+<code>None</code> upon execution. If expressions within the code yield
+results, those results are discarded unless explicitly assigned to a
+variable or passed to an output function like <code>print()</code>.</li>
+<li><strong>Typical Use Case:</strong> Running entire scripts, code
+blocks, or dynamic program definitions.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>code_exec <span class="op">=</span> <span class="bu">compile</span>(<span class="st">&quot;x = 5</span><span class="ch">\n</span><span class="st">y = 10</span><span class="ch">\n</span><span class="st">result = x + y&quot;</span>, <span class="st">&quot;&lt;string&gt;&quot;</span>, <span class="st">&quot;exec&quot;</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>namespace <span class="op">=</span> {}</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">exec</span>(code_exec, namespace)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(namespace[<span class="st">&quot;result&quot;</span>])  <span class="co"># Outputs: 15</span></span></code></pre></div>
+<h2 id="the-eval-mode">The <code>eval</code> Mode</h2>
+<p>The <code>'eval'</code> mode strictly expects a single Python
+expression and evaluates it to produce a direct result.</p>
+<ul>
+<li><strong>Syntax Allowed:</strong> It accepts only expressions (e.g.,
+<code>2 + 2</code>, <code>[x for x in range(5)]</code>, or a variable
+name). It explicitly rejects statements, assignments (like
+<code>x = 5</code>), loops, or compound structures; attempting to
+include statements will raise a <code>SyntaxError</code>.</li>
+<li><strong>Return Value:</strong> When executed using
+<code>eval()</code>, the resulting code object computes and directly
+returns the evaluated value of the expression.</li>
+<li><strong>Typical Use Case:</strong> Evaluating mathematical formulas,
+dynamically resolving variable lookups, or parsing simple condition
+strings.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>code_eval <span class="op">=</span> <span class="bu">compile</span>(<span class="st">&quot;5 * 10 + 2&quot;</span>, <span class="st">&quot;&lt;string&gt;&quot;</span>, <span class="st">&quot;eval&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> <span class="bu">eval</span>(code_eval)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(output)  <span class="co"># Outputs: 52</span></span></code></pre></div>
+<h2 id="the-single-mode">The <code>single</code> Mode</h2>
+<p>The <code>'single'</code> mode emulates the behavior of the
+interactive Python interpreter (the REPL).</p>
+<ul>
+<li><strong>Syntax Allowed:</strong> It is meant for compiling a single
+interactive statement. If multiple statements are provided across
+newlines, the parser stops processing after the first statement or
+raises an error if trailing code is detected. However, multiple
+statements joined on a single line with semicolons are permitted.</li>
+<li><strong>Return Value and Side Effects:</strong> If the compiled
+statement evaluates to an expression, running it with
+<code>exec()</code> will automatically print the result to standard
+output (via <code>sys.displayhook</code>) as long as the value is not
+<code>None</code>.</li>
+<li><strong>Typical Use Case:</strong> Building custom interactive
+command-line environments, debuggers, or shell implementations.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>code_single <span class="op">=</span> <span class="bu">compile</span>(<span class="st">&quot;40 + 2&quot;</span>, <span class="st">&quot;&lt;string&gt;&quot;</span>, <span class="st">&quot;single&quot;</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">exec</span>(code_single)  <span class="co"># Automatically prints: 42</span></span></code></pre></div>
+<h2 id="key-differences-summary">Key Differences Summary</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>exec</code></th>
+<th style="text-align: left;"><code>eval</code></th>
+<th style="text-align: left;"><code>single</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Input Structure</strong></td>
+<td style="text-align: left;">Multiple statements or script blocks</td>
+<td style="text-align: left;">Exactly one expression</td>
+<td style="text-align: left;">A single statement or semicolon-separated
+line</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Allows Statements?</strong></td>
+<td style="text-align: left;">Yes (loops, definitions, assignments)</td>
+<td style="text-align: left;">No (raises <code>SyntaxError</code>)</td>
+<td style="text-align: left;">Yes (typically single-line)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Execution Output</strong></td>
+<td style="text-align: left;">Returns <code>None</code></td>
+<td style="text-align: left;">Returns the expression result</td>
+<td style="text-align: left;">Displays the expression result if not
+<code>None</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Primary Consumer</strong></td>
+<td style="text-align: left;"><code>exec()</code></td>
+<td style="text-align: left;"><code>eval()</code></td>
+<td style="text-align: left;"><code>exec()</code></td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

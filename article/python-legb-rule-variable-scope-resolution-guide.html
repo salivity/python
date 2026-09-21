@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python LEGB Rule: Variable Scope Resolution Guide - python</title>
+    <meta name="description" content="In Python, the LEGB rule defines the precise order in which the interpreter resolves variable names. Whenever a variable is referenced, Python searches through four hierarchical namespaces: Local, Enclosing, Global, and Built-in. If the variable is not f">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-legb-rule-variable-scope-resolution-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python LEGB Rule: Variable Scope Resolution Guide - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-legb-rule-variable-scope-resolution-guide" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, the LEGB rule defines the precise order in which the interpreter resolves variable names. Whenever a variable is referenced, Python searches through four hierarchical namespaces: Local, Enclosing, Global, and Built-in. If the variable is not f" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-legb-rule-variable-scope-resolution-guide">Python LEGB
+Rule: Variable Scope Resolution Guide</h1>
+<p>In Python, the LEGB rule defines the precise order in which the
+interpreter resolves variable names. Whenever a variable is referenced,
+Python searches through four hierarchical namespaces: Local, Enclosing,
+Global, and Built-in. If the variable is not found in any of these four
+levels, Python raises a <code>NameError</code>. Understanding this
+lookup sequence is essential for avoiding unintended variable shadowing,
+debugging naming conflicts, and managing state across nested functions
+and modules.</p>
+<hr />
+<h3 id="the-four-scopes-of-legb">The Four Scopes of LEGB</h3>
+<p>Python inspects scopes sequentially from the narrowest to the
+broadest:</p>
+<pre><code>Local  --&gt;  Enclosing  --&gt;  Global  --&gt;  Built-in</code></pre>
+<h4 id="1-local-l">1. Local (L)</h4>
+<p>The Local scope consists of variables defined directly inside the
+current function or lambda expression. These variables are initialized
+when the function is called and destroyed when the function returns.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calculate_tax():</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    rate <span class="op">=</span> <span class="fl">0.05</span>  <span class="co"># Local scope</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(rate)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>calculate_tax()</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># print(rate)  # Raises NameError: &#39;rate&#39; is not defined outside the function</span></span></code></pre></div>
+<h4 id="2-enclosing-e">2. Enclosing (E)</h4>
+<p>The Enclosing (or nonlocal) scope applies to nested functions. It
+refers to the namespace of any outer or enclosing functions. Python
+checks the immediate outer function first, moving outwards through any
+additional enclosing layers before proceeding to the global level.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> outer_function():</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    message <span class="op">=</span> <span class="st">&quot;Enclosing Scope&quot;</span>  <span class="co"># Enclosing variable</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> inner_function():</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(message)  <span class="co"># Accesses &#39;message&#39; from enclosing scope</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    inner_function()</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>outer_function()</span></code></pre></div>
+<h4 id="3-global-g">3. Global (G)</h4>
+<p>The Global scope encompasses variables defined at the top level of a
+module or script, outside of any function or class block. It also
+includes variables explicitly declared inside a function using the
+<code>global</code> keyword.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>app_name <span class="op">=</span> <span class="st">&quot;Inventory Manager&quot;</span>  <span class="co"># Global scope</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> show_app():</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(app_name)  <span class="co"># Resolves to the global variable</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>show_app()</span></code></pre></div>
+<h4 id="4-built-in-b">4. Built-in (B)</h4>
+<p>The Built-in scope is the widest and final scope Python evaluates. It
+contains all predefined functions, exceptions, and keywords provided by
+the standard runtime (such as <code>print()</code>, <code>len()</code>,
+<code>range()</code>, and <code>ValueError</code>). This scope is loaded
+automatically via the <code>builtins</code> module.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># &#39;len&#39; is resolved from the Built-in scope</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>numbers <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>]</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(numbers))</span></code></pre></div>
+<hr />
+<h3 id="how-resolution-works">How Resolution Works</h3>
+<p>When Python encounters an identifier, it terminates the search at the
+first matching name it finds along the LEGB chain:</p>
+<ol type="1">
+<li><strong>Check Local:</strong> Is the variable defined within the
+current function? If yes, use it.</li>
+<li><strong>Check Enclosing:</strong> Is the variable defined in an
+outer function? If yes, use it.</li>
+<li><strong>Check Global:</strong> Is the variable defined at the module
+level? If yes, use it.</li>
+<li><strong>Check Built-in:</strong> Does the variable exist as a
+built-in Python function or constant? If yes, use it.</li>
+<li><strong>Fail:</strong> If all scopes are exhausted without a match,
+raise a <code>NameError</code>.</li>
+</ol>
+<h4 id="resolution-order-demonstration">Resolution Order
+Demonstration</h4>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> <span class="st">&quot;Global&quot;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> outer():</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> <span class="st">&quot;Enclosing&quot;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> inner():</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> <span class="st">&quot;Local&quot;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(x)  <span class="co"># Prints &quot;Local&quot;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    inner()</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>outer()</span></code></pre></div>
+<p>If you comment out <code>x = "Local"</code>, the output becomes
+<code>"Enclosing"</code>. If you also comment out
+<code>x = "Enclosing"</code>, the output becomes
+<code>"Global"</code>.</p>
+<hr />
+<h3 id="modifying-scopes-global-and-nonlocal">Modifying Scopes:
+<code>global</code> and <code>nonlocal</code></h3>
+<p>By default, assigning to a variable inside a function creates or
+updates a <strong>local</strong> variable; it does not overwrite
+variables in outer scopes. To alter that behavior, Python provides two
+keywords:</p>
+<ul>
+<li><strong><code>global</code></strong>: Directs Python to bind the
+variable directly to the top-level module scope, allowing write
+operations to global state.</li>
+<li><strong><code>nonlocal</code></strong>: Directs Python to rebind a
+variable in the nearest enclosing function scope, preventing the
+creation of a local duplicate.</li>
+</ul>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>counter <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> update_global():</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">global</span> counter</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    counter <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> outer_counter():</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    count <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> inner_increment():</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">nonlocal</span> count</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        count <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> count</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> inner_increment</span></code></pre></div>
+<p>By adhering strictly to the LEGB sequence, Python keeps state
+management predictable and isolates nested code blocks while still
+permitting intentional access to broader execution contexts.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

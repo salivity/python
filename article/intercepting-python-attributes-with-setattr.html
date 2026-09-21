@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intercepting Python Attributes with __setattr__ - python</title>
+    <meta name="description" content="Python provides the setattr dunder method as a low-level mechanism for intercepting, modifying, or restricting attribute assignment on class instances. This article examines how Python invokes setattr during assignment operations, the execution flow behi">
+    <link rel="canonical" href="https://salivity.github.io/python/article/intercepting-python-attributes-with-setattr">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Intercepting Python Attributes with __setattr__ - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/intercepting-python-attributes-with-setattr" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python provides the setattr dunder method as a low-level mechanism for intercepting, modifying, or restricting attribute assignment on class instances. This article examines how Python invokes setattr during assignment operations, the execution flow behi" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="intercepting-python-attributes-with-setattr">Intercepting Python
+Attributes with <strong>setattr</strong></h1>
+<p>Python provides the <code>__setattr__</code> dunder method as a
+low-level mechanism for intercepting, modifying, or restricting
+attribute assignment on class instances. This article examines how
+Python invokes <code>__setattr__</code> during assignment operations,
+the execution flow behind dynamic attribute interception, common
+architectural patterns such as validation and immutability, and how to
+avoid the critical pitfalls of infinite recursion.</p>
+<h2 id="how-__setattr__-works">How <code>__setattr__</code> Works</h2>
+<p>In Python, every standard attribute assignment using the dot notation
+(<code>object.name = value</code>) triggers the instance's
+<code>__setattr__</code> method. Python translates the statement:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>instance.attribute <span class="op">=</span> value</span></code></pre></div>
+<p>into an explicit method call:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>instance.<span class="fu">__setattr__</span>(<span class="st">&quot;attribute&quot;</span>, value)</span></code></pre></div>
+<p>Because <code>__setattr__</code> is defined on <code>object</code>
+(the base class of all new-style classes), every Python class inherits a
+default implementation that handles normal assignment by updating the
+instance's namespace dictionary (<code>__dict__</code>). Overriding this
+method allows a class to intercept every assignment attempt before any
+data is written to the instance.</p>
+<h2 id="the-recursion-trap-and-safe-assignment">The Recursion Trap and
+Safe Assignment</h2>
+<p>The primary technical challenge when implementing
+<code>__setattr__</code> is avoiding infinite recursion. If you attempt
+to assign an attribute using standard syntax inside
+<code>__setattr__</code>, the method calls itself repeatedly until
+Python raises a <code>RecursionError</code>.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Incorrect: Triggers infinite recursion</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> RecursiveExample:</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__setattr__</span>(<span class="va">self</span>, name, value):</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.name <span class="op">=</span> value  <span class="co"># Calls self.__setattr__(&#39;name&#39;, value) again</span></span></code></pre></div>
+<p>To safely store values, you must bypass the overridden
+<code>__setattr__</code> method using one of two standard
+approaches:</p>
+<h3 id="1-using-super__setattr__-recommended">1. Using
+<code>super().__setattr__</code> (Recommended)</h3>
+<p>Delegating assignment to the parent class—typically
+<code>object</code>—is the cleanest and most compatible approach. It
+maintains normal inheritance chains and works seamlessly with properties
+and descriptors.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> SuperExample:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__setattr__</span>(<span class="va">self</span>, name, value):</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Perform custom logic here</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__setattr__</span>(name, value)</span></code></pre></div>
+<h3 id="2-directly-mutating-__dict__">2. Directly Mutating
+<code>__dict__</code></h3>
+<p>Alternatively, you can write directly to the instance's attribute
+dictionary. While common, this technique bypasses descriptors, data
+properties, and instances that define <code>__slots__</code> without an
+instance dictionary.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> DictExample:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__setattr__</span>(<span class="va">self</span>, name, value):</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Direct dictionary insertion avoids calling __setattr__</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.__dict__[name] <span class="op">=</span> value</span></code></pre></div>
+<h2 id="common-implementation-patterns">Common Implementation
+Patterns</h2>
+<h3 id="attribute-validation-and-type-enforcement">Attribute Validation
+and Type Enforcement</h3>
+<p>You can enforce strict typing or value constraints dynamically
+without defining individual <code>@property</code> methods for every
+attribute.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> StrictTypeContainer:</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, <span class="op">**</span>kwargs):</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> key, value <span class="kw">in</span> kwargs.items():</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>            <span class="bu">setattr</span>(<span class="va">self</span>, key, value)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__setattr__</span>(<span class="va">self</span>, name, value):</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> name.startswith(<span class="st">&quot;int_&quot;</span>) <span class="kw">and</span> <span class="kw">not</span> <span class="bu">isinstance</span>(value, <span class="bu">int</span>):</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">TypeError</span>(<span class="ss">f&quot;Attribute &#39;</span><span class="sc">{</span>name<span class="sc">}</span><span class="ss">&#39; must be an integer.&quot;</span>)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__setattr__</span>(name, value)</span></code></pre></div>
+<h3 id="creating-immutable-classes">Creating Immutable Classes</h3>
+<p>By raising an <code>AttributeError</code> on every assignment attempt
+after initialization, <code>__setattr__</code> can freeze an object's
+state to ensure immutability.</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> FrozenObject:</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, <span class="op">**</span>kwargs):</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> key, value <span class="kw">in</span> kwargs.items():</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>            <span class="bu">super</span>().<span class="fu">__setattr__</span>(key, value)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__setattr__</span>(<span class="st">&quot;_frozen&quot;</span>, <span class="va">True</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__setattr__</span>(<span class="va">self</span>, name, value):</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">getattr</span>(<span class="va">self</span>, <span class="st">&quot;_frozen&quot;</span>, <span class="va">False</span>):</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">AttributeError</span>(<span class="ss">f&quot;Cannot modify immutable instance attribute &#39;</span><span class="sc">{</span>name<span class="sc">}</span><span class="ss">&#39;.&quot;</span>)</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__setattr__</span>(name, value)</span></code></pre></div>
+<h3 id="dynamic-proxies-and-storage-redirection">Dynamic Proxies and
+Storage Redirection</h3>
+<p><code>__setattr__</code> enables dynamic proxy objects to forward
+assignments to underlying structures, such as configuration
+dictionaries, remote services, or database layers.</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> DynamicConfig:</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__setattr__</span>(<span class="st">&quot;_storage&quot;</span>, {})</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__setattr__</span>(<span class="va">self</span>, name, value):</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> name <span class="op">==</span> <span class="st">&quot;_storage&quot;</span>:</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>            <span class="bu">super</span>().<span class="fu">__setattr__</span>(name, value)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>._storage[name.lower()] <span class="op">=</span> value</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__getattr__</span>(<span class="va">self</span>, name):</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>._storage[name.lower()]</span></code></pre></div>
+<h2
+id="__setattr__-vs-descriptors-and-properties"><code>__setattr__</code>
+vs. Descriptors and Properties</h2>
+<p>While properties (<code>@property</code>) and custom descriptors
+intercept attribute assignments for specific names,
+<code>__setattr__</code> acts as a blanket interceptor for the entire
+class.</p>
+<p>When an attribute assignment executes, Python executes
+<code>type(instance).__setattr__</code> first. Python's default
+<code>object.__setattr__</code> looks for data descriptors (like
+<code>@property.setter</code>) on the class before writing to
+<code>__dict__</code>. If you override <code>__setattr__</code> without
+calling <code>super().__setattr__</code>, custom descriptors and
+property setters defined on that class will not be executed unless
+explicitly handled inside your custom method.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

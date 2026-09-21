@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Await Yields Control to the Event Loop in Python - python</title>
+    <meta name="description" content="In Python's asynchronous programming model, the await keyword pauses the execution of an enclosing coroutine and yields control back to the event loop. This article explains the underlying mechanics of this process, detailing how coroutines operate as st">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-await-yields-control-to-the-event-loop-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Await Yields Control to the Event Loop in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-await-yields-control-to-the-event-loop-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python's asynchronous programming model, the await keyword pauses the execution of an enclosing coroutine and yields control back to the event loop. This article explains the underlying mechanics of this process, detailing how coroutines operate as st" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-await-yields-control-to-the-event-loop-in-python">How Await
+Yields Control to the Event Loop in Python</h1>
+<p>In Python's asynchronous programming model, the <code>await</code>
+keyword pauses the execution of an enclosing coroutine and yields
+control back to the event loop. This article explains the underlying
+mechanics of this process, detailing how coroutines operate as state
+machines, how the <code>__await__</code> protocol interacts with
+generator-style yielding, and how the event loop manages task scheduling
+to achieve cooperative multitasking without blocking the thread.</p>
+<h3 id="the-foundation-coroutines-as-generators">The Foundation:
+Coroutines as Generators</h3>
+<p>Under the hood, Python coroutines created with <code>async def</code>
+are syntactic and structural evolutions of generators. While regular
+functions run from start to finish and return a single value, generators
+and coroutines can pause their execution state—including local
+variables, instruction pointers, and exception states—and resume
+later.</p>
+<p>When you define an <code>async def</code> function, Python compiles
+it into a coroutine object. Like a generator, a coroutine object cannot
+execute on its own; it requires a driver to advance its execution step
+by step. In asynchronous Python, the event loop acts as this driver.</p>
+<h3 id="the-__await__-dunder-method">The <code>__await__</code> Dunder
+Method</h3>
+<p>When Python encounters the expression <code>await obj</code>, it does
+not immediately halt the entire thread. Instead, it follows these exact
+steps:</p>
+<ol type="1">
+<li>Python checks if <code>obj</code> is an awaitable by looking for the
+<code>__await__()</code> magic method.</li>
+<li>It calls <code>obj.__await__()</code>, which must return an
+iterator.</li>
+<li>Python then iterates through this iterator, propagating whatever
+values the iterator yields up through the call stack.</li>
+</ol>
+<p>Most commonly, the object being awaited is an
+<code>asyncio.Task</code> or an <code>asyncio.Future</code>.</p>
+<h3 id="the-actual-yield-mechanism">The Actual Yield Mechanism</h3>
+<p>The magic of transferring control back to the event loop relies on a
+standard <code>yield</code> statement hidden deep inside the standard
+library.</p>
+<p>At the lowest level of <code>asyncio</code>, an
+<code>asyncio.Future</code> implements <code>__await__</code> roughly
+like this:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> <span class="fu">__await__</span>(<span class="va">self</span>):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="va">self</span>.done():</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._asyncio_future_blocking <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">yield</span> <span class="va">self</span>  <span class="co"># Control is yielded here</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>.result()</span></code></pre></div>
+<p>When a future is not yet resolved, it yields itself. Because the
+coroutine executing <code>await</code> delegates to this iterator, the
+<code>yield</code> bubbles up through any nested coroutine calls until
+it reaches the task runner inside the event loop.</p>
+<h3 id="how-the-event-loop-receives-control">How the Event Loop Receives
+Control</h3>
+<ol type="1">
+<li><strong>Execution Steps Forward:</strong> The event loop runs a
+scheduled task by calling its <code>.send(None)</code> method. This
+starts or resumes the coroutine.</li>
+<li><strong>Hit the Suspension Point:</strong> The coroutine runs
+synchronously until it reaches an I/O operation, sleep, or another
+awaited future that is not complete.</li>
+<li><strong>Yielding Back:</strong> The uncompleted future executes
+<code>yield self</code>. This suspends the execution frame of the
+coroutine and returns the <code>Future</code> object back to the event
+loop's task-driving loop.</li>
+<li><strong>Registration:</strong> The event loop sees that the task has
+yielded a future that is not done. It attaches a callback to that
+future: <code>future.add_done_callback(loop._wakeup)</code>.</li>
+<li><strong>Loop Continues:</strong> Because the coroutine has paused
+and returned execution back to the loop's caller frame, the event loop
+is now free to poll the OS for network I/O selectors, execute scheduled
+timers, or step another ready task forward.</li>
+</ol>
+<h3 id="resuming-the-coroutine">Resuming the Coroutine</h3>
+<p>Once the background operation finishes (such as the operating system
+notifying Python that socket data has arrived, or a timer expiring):</p>
+<ol type="1">
+<li>The low-level callback fires and marks the <code>Future</code> as
+completed with a result or exception.</li>
+<li>The event loop moves the associated task back into its "ready"
+queue.</li>
+<li>On a subsequent iteration of the loop, the task is driven forward
+again using <code>coroutine.send(result)</code>.</li>
+<li>The coroutine receives the result directly at the point of the
+original <code>await</code> expression and continues execution until it
+completes or hits another <code>await</code>.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

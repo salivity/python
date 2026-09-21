@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python pdb.post_mortem for Post-Crash Debugging - python</title>
+    <meta name="description" content="The pdb.postmortem() function in Python provides a powerful way to diagnose application failures by immediately launching an interactive debugging session after an unhandled exception occurs. Instead of relying on speculative logging or restarting the ap">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-pdb-post-mortem-for-post-crash-debugging">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python pdb.post_mortem for Post-Crash Debugging - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-pdb-post-mortem-for-post-crash-debugging" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The pdb.postmortem() function in Python provides a powerful way to diagnose application failures by immediately launching an interactive debugging session after an unhandled exception occurs. Instead of relying on speculative logging or restarting the ap" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-pdbpost_mortem-for-post-crash-debugging">Python
+pdb.post_mortem for Post-Crash Debugging</h1>
+<p>The <code>pdb.post_mortem()</code> function in Python provides a
+powerful way to diagnose application failures by immediately launching
+an interactive debugging session after an unhandled exception occurs.
+Instead of relying on speculative logging or restarting the application
+with manual breakpoints, this function preserves the exact execution
+state at the moment of failure. It enables developers to inspect local
+and global variables, traverse the call stack, and pinpoint the root
+cause of an error in the frozen environment where the crash
+happened.</p>
+<h3 id="how-pdbpost_mortem-works">How <code>pdb.post_mortem()</code>
+Works</h3>
+<p>When Python encounters an exception, it generates a traceback object
+that contains the call stack, frame objects, and the line numbers
+executing when the failure occurred. Under standard execution, an
+uncaught exception terminates the process and prints this traceback to
+standard error.</p>
+<p><code>pdb.post_mortem()</code> intercepts this process by accepting a
+traceback object—typically retrieved via
+<code>sys.exc_info()[2]</code>—and loading the execution frame where the
+exception was raised into Python's interactive debugger
+(<code>pdb</code>). If no traceback argument is passed, it automatically
+retrieves the traceback of the exception currently being handled.</p>
+<h3 id="basic-implementation-with-try-except">Basic Implementation with
+Try-Except</h3>
+<p>The most direct way to use post-mortem debugging is inside an
+<code>except</code> block:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pdb</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> divide(a, b):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">/</span> b</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    divide(<span class="dv">10</span>, <span class="dv">0</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">ZeroDivisionError</span>:</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    pdb.post_mortem()</span></code></pre></div>
+<p>When the <code>ZeroDivisionError</code> is raised, execution
+transfers directly into the interactive PDB shell at the exact line
+inside <code>divide()</code>, giving you access to inspect
+<code>a</code> and <code>b</code>.</p>
+<h3 id="automating-post-mortem-debugging-with-sysexcepthook">Automating
+Post-Mortem Debugging with <code>sys.excepthook</code></h3>
+<p>Instead of wrapping code in explicit <code>try...except</code>
+blocks, you can configure Python to automatically drop into
+<code>pdb.post_mortem()</code> whenever any unhandled exception occurs
+by overriding <code>sys.excepthook</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pdb</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> exception_handler(exc_type, exc_value, exc_traceback):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Ignore interactive keyboard interrupts</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">issubclass</span>(exc_type, <span class="pp">KeyboardInterrupt</span>):</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        sys.__excepthook__(exc_type, exc_value, exc_traceback)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Unhandled exception: </span><span class="sc">{</span>exc_value<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    pdb.post_mortem(exc_traceback)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>sys.excepthook <span class="op">=</span> exception_handler</span></code></pre></div>
+<p>With this hook in place, any fatal crash anywhere in your application
+immediately pauses the termination process and yields control to the PDB
+prompt.</p>
+<h3 id="navigating-the-post-mortem-environment">Navigating the
+Post-Mortem Environment</h3>
+<p>Because the application has already crashed, the execution flow
+cannot be resumed; commands like <code>next</code>, <code>step</code>,
+or <code>continue</code> will either exit the debugger or have no
+forward path. However, you retain full read and evaluation access to the
+post-crash state:</p>
+<ul>
+<li><strong>Stack Navigation:</strong> Use <code>u</code> (up) and
+<code>d</code> (down) to move through the call stack frames to see how
+caller functions contributed to the failure.</li>
+<li><strong>Variable Inspection:</strong> Use
+<code>p &lt;expression&gt;</code> or <code>pp &lt;expression&gt;</code>
+to print variable values, or call <code>locals()</code> and
+<code>globals()</code> to inspect environment dictionaries.</li>
+<li><strong>Context Inspection:</strong> Use <code>l</code> (list) to
+view the source code surrounding the crash site.</li>
+<li><strong>Arbitrary Code Execution:</strong> Execute arbitrary Python
+expressions directly in the prompt to test hypothesis fixes or inspect
+deep object attributes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

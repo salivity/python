@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Serializes Code with Marshal - python</title>
+    <meta name="description" content="This article explores how Python uses its internal marshal module to serialize executable code objects into raw binary streams. You will learn the mechanics behind converting compiled Python code into persistent bytecode, how marshal structures this bina">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-serializes-code-with-marshal">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Serializes Code with Marshal - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-serializes-code-with-marshal" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how Python uses its internal marshal module to serialize executable code objects into raw binary streams. You will learn the mechanics behind converting compiled Python code into persistent bytecode, how marshal structures this bina" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-serializes-code-with-marshal">How Python Serializes
+Code with Marshal</h1>
+<p>This article explores how Python uses its internal
+<code>marshal</code> module to serialize executable code objects into
+raw binary streams. You will learn the mechanics behind converting
+compiled Python code into persistent bytecode, how <code>marshal</code>
+structures this binary data, the difference between <code>marshal</code>
+and <code>pickle</code>, and the critical limitations regarding
+cross-version compatibility and security.</p>
+<h3 id="what-is-the-marshal-module">What Is the <code>marshal</code>
+Module?</h3>
+<p>The <code>marshal</code> module is an internal Python module designed
+primarily to support Python's module-caching mechanism. When Python
+imports a script, it compiles the source code into bytecode and caches
+the result on disk as a <code>.pyc</code> file inside the
+<code>__pycache__</code> directory. To write this bytecode to disk and
+read it back efficiently, Python serializes the in-memory code object
+using <code>marshal</code>.</p>
+<p>Unlike general-purpose serialization tools like <code>pickle</code>
+or <code>json</code>, <code>marshal</code> is hardcoded to support only
+a specific subset of internal Python types: primitive values (integers,
+floats, strings, booleans, <code>None</code>), basic collections
+(tuples, lists, sets, dictionaries), and executable <code>code</code>
+objects.</p>
+<h3 id="understanding-the-code-object">Understanding the Code
+Object</h3>
+<p>Before serialization occurs, Python compiles source code into a
+<code>code</code> object (<code>types.CodeType</code>). A code object
+contains everything the Python Virtual Machine (PVM) needs to execute a
+block of logic:</p>
+<ul>
+<li><code>co_code</code>: The raw bytecode instructions.</li>
+<li><code>co_consts</code>: A tuple of literals and nested code objects
+referenced in the bytecode.</li>
+<li><code>co_names</code>: Global names, attribute names, and imported
+modules.</li>
+<li><code>co_varnames</code>: Local variable names.</li>
+<li><code>co_filename</code>, <code>co_name</code>,
+<code>co_firstlineno</code>: Debugging metadata such as file name, scope
+name, and line numbers.</li>
+</ul>
+<h3 id="the-serialization-process-marshaldumps">The Serialization
+Process (<code>marshal.dumps</code>)</h3>
+<p>When you invoke <code>marshal.dumps(code_object)</code>, the Python
+C-API traverses the underlying C structure (<code>PyCodeObject</code>)
+recursively and converts it into a sequence of bytes.</p>
+<ol type="1">
+<li><p><strong>Type Descriptors (Type Tags):</strong> Every serialized
+entity begins with a single byte representing its type tag, defined in
+Python's source as constants like <code>TYPE_CODE</code>,
+<code>TYPE_STRING</code>, <code>TYPE_INT</code>, or
+<code>TYPE_SMALL_TUPLE</code>.</p></li>
+<li><p><strong>Recursive Decomposition:</strong> When
+<code>marshal</code> encounters a code object, it writes the
+<code>TYPE_CODE</code> tag. It then sequentially writes the code
+object's internal fields (argument count, register count, stack size,
+flags, bytecode, constants, names, etc.). Because the
+<code>co_consts</code> field often contains other code objects (such as
+nested functions or class definitions), the serializer calls itself
+recursively on those sub-objects.</p></li>
+<li><p><strong>String and Reference Interning (The Flag
+System):</strong> Modern Python versions use a variation called
+<code>FLAG_REF</code> combined with type tags. If an object (like a
+variable name or string) appears multiple times within the code object,
+<code>marshal</code> assigns it an index and references it later rather
+than writing duplicate bytes, keeping <code>.pyc</code> files
+compact.</p></li>
+</ol>
+<p>Example of serializing and inspecting a function's code:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> marshal</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> hello():</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;Hello, World!&quot;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract and serialize the code object</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>code <span class="op">=</span> hello.__code__</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>serialized_data <span class="op">=</span> marshal.dumps(code)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">type</span>(serialized_data))  <span class="co"># &lt;class &#39;bytes&#39;&gt;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(serialized_data[:<span class="dv">10</span>])   <span class="co"># Binary representation starting with type tags</span></span></code></pre></div>
+<h3 id="deserialization-and-execution-marshalloads">Deserialization and
+Execution (<code>marshal.loads</code>)</h3>
+<p>Deserialization is the reverse process. When
+<code>marshal.loads(bytes_data)</code> is called:</p>
+<ol type="1">
+<li>The deserializer reads the initial byte to determine the type
+tag.</li>
+<li>Upon recognizing a <code>TYPE_CODE</code> tag, it allocates a new
+<code>PyCodeObject</code> structure in memory.</li>
+<li>It reconstructs each associated field by reading length prefixes and
+sub-components.</li>
+<li>The resulting object is a fully functional in-memory code object
+that can be passed directly to Python's built-in <code>exec()</code> or
+<code>eval()</code> functions.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Reconstructing the executable object</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>reconstructed_code <span class="op">=</span> marshal.loads(serialized_data)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Executing the deserialized bytecode</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">exec</span>(reconstructed_code)</span></code></pre></div>
+<h3 id="marshal-vs-pickle"><code>marshal</code> vs.
+<code>pickle</code></h3>
+<p>While both modules convert Python structures into bytes, their
+purposes diverge significantly:</p>
+<ul>
+<li><strong>Type Support:</strong> <code>pickle</code> supports
+user-defined classes, instance states, and complex object graphs.
+<code>marshal</code> only serializes built-in primitives and code
+objects; it cannot serialize arbitrary class instances.</li>
+<li><strong>Cross-Version Stability:</strong> The <code>pickle</code>
+protocol guarantees backward and forward compatibility across Python
+versions. The <code>marshal</code> format does not. The byte layout of
+code objects frequently changes between minor Python releases (e.g.,
+between Python 3.11 and 3.12).</li>
+<li><strong>Speed:</strong> <code>marshal</code> is written directly in
+C for maximum throughput, designed purely to reduce Python interpreter
+startup latency.</li>
+</ul>
+<h3 id="security-and-version-caveats">Security and Version Caveats</h3>
+<p>The <code>marshal</code> module is not designed to be secure against
+erroneous or maliciously crafted data. Deserializing an untrusted
+<code>marshal</code> payload can cause memory corruption, segmentation
+faults, or arbitrary code execution via forged bytecode
+instructions.</p>
+<p>Furthermore, because bytecode specifications differ across Python
+versions, a code object marshaled in Python 3.10 will typically fail to
+load or execute in Python 3.11 or later. For persistent, long-term
+storage or data exchange between different systems, standard
+serialization formats should always be preferred over
+<code>marshal</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

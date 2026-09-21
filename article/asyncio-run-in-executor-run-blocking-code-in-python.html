@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asyncio run_in_executor: Run Blocking Code in Python - python</title>
+    <meta name="description" content="Python's asyncio framework relies on a single-threaded cooperative multitasking model, meaning that any synchronous, blocking function call will freeze the entire event loop and halt all concurrent tasks. To integrate legacy synchronous code without rewr">
+    <link rel="canonical" href="https://salivity.github.io/python/article/asyncio-run-in-executor-run-blocking-code-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Asyncio run_in_executor: Run Blocking Code in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/asyncio-run-in-executor-run-blocking-code-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's asyncio framework relies on a single-threaded cooperative multitasking model, meaning that any synchronous, blocking function call will freeze the entire event loop and halt all concurrent tasks. To integrate legacy synchronous code without rewr" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="asyncio-run_in_executor-run-blocking-code-in-python">Asyncio
+run_in_executor: Run Blocking Code in Python</h1>
+<p>Python's <code>asyncio</code> framework relies on a single-threaded
+cooperative multitasking model, meaning that any synchronous, blocking
+function call will freeze the entire event loop and halt all concurrent
+tasks. To integrate legacy synchronous code without rewriting it from
+scratch, Python provides <code>loop.run_in_executor()</code>. This
+article explains how <code>run_in_executor()</code> works, how to
+offload both I/O-bound and CPU-bound operations to background worker
+pools, and how modern Python versions have simplified this integration
+pattern.</p>
+<h2 id="the-blocking-problem-in-asyncio">The Blocking Problem in
+Asyncio</h2>
+<p>The <code>asyncio</code> event loop executes asynchronous tasks
+sequentially on a single thread. When a coroutine yields control via
+<code>await</code>, the event loop proceeds to run other tasks. However,
+if a task invokes a standard synchronous function—such as
+<code>time.sleep()</code>, a blocking database driver, or a standard
+HTTP request using <code>requests</code>—the thread blocks entirely. As
+long as that synchronous operation executes, the event loop cannot
+process any other incoming events, timers, or network traffic.</p>
+<h2 id="how-looprun_in_executor-works">How
+<code>loop.run_in_executor()</code> Works</h2>
+<p>The <code>run_in_executor()</code> method bridges synchronous and
+asynchronous execution by delegating the execution of a blocking
+callable to an external executor, usually an instance of
+<code>concurrent.futures.ThreadPoolExecutor</code> or
+<code>concurrent.futures.ProcessPoolExecutor</code>.</p>
+<p>The method signature is:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> loop.run_in_executor(executor, func, <span class="op">*</span>args)</span></code></pre></div>
+<ul>
+<li><strong><code>executor</code></strong>: An instance of an executor
+pool. Passing <code>None</code> tells <code>asyncio</code> to use the
+event loop's default <code>ThreadPoolExecutor</code>.</li>
+<li><strong><code>func</code></strong>: The standard synchronous
+function to execute.</li>
+<li><strong><code>*args</code></strong>: Positional arguments passed
+directly to <code>func</code>. Keyword arguments are not directly
+supported by this signature and must be passed using
+<code>functools.partial</code>.</li>
+</ul>
+<p>When called, <code>run_in_executor()</code> returns an
+<code>asyncio.Future</code> that tracks the execution of the synchronous
+function in the background pool. When the worker finishes execution, the
+future resolves with the function's return value, resuming the awaiting
+coroutine without having stalled the main event loop.</p>
+<h2 id="handling-blocking-io-with-threadpoolexecutor">Handling Blocking
+I/O with ThreadPoolExecutor</h2>
+<p>For synchronous operations dominated by network or disk I/O, a thread
+pool is the appropriate choice. Threads share memory and have low
+overhead compared to processes.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> blocking_fetch(url: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">int</span>:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># A standard blocking HTTP request</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> requests.get(url)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">len</span>(response.text)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    loop <span class="op">=</span> asyncio.get_running_loop()</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Passing None uses the default ThreadPoolExecutor</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> <span class="cf">await</span> loop.run_in_executor(</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">None</span>, </span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        blocking_fetch, </span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;https://httpbin.org/get&quot;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Fetched </span><span class="sc">{</span>result<span class="sc">}</span><span class="ss"> characters.&quot;</span>)</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>asyncio.run(main())</span></code></pre></div>
+<p>If the legacy function requires keyword arguments, wrap the target
+function with <code>functools.partial</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functools <span class="im">import</span> partial</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrapping a function with keyword arguments</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>bound_function <span class="op">=</span> partial(blocking_fetch_with_kwargs, timeout<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> <span class="cf">await</span> loop.run_in_executor(<span class="va">None</span>, bound_function, <span class="st">&quot;https://example.com&quot;</span>)</span></code></pre></div>
+<h2 id="handling-cpu-bound-tasks-with-processpoolexecutor">Handling
+CPU-Bound Tasks with ProcessPoolExecutor</h2>
+<p>Python's Global Interpreter Lock (GIL) limits multiple system threads
+from executing Python bytecode simultaneously. For intensive
+computations—such as data parsing, image processing, or
+cryptography—using a <code>ThreadPoolExecutor</code> will still block
+execution across other threads.</p>
+<p>To overcome this, pass an explicit <code>ProcessPoolExecutor</code>
+to <code>run_in_executor()</code>. This spins up separate Python
+processes, each with its own interpreter and memory space:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> concurrent.futures <span class="im">import</span> ProcessPoolExecutor</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cpu_heavy_computation(n: <span class="bu">int</span>) <span class="op">-&gt;</span> <span class="bu">int</span>:</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    count <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        count <span class="op">+=</span> i <span class="op">*</span> i</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> count</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    loop <span class="op">=</span> asyncio.get_running_loop()</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Use ProcessPoolExecutor to bypass the GIL</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> ProcessPoolExecutor() <span class="im">as</span> executor:</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        result <span class="op">=</span> <span class="cf">await</span> loop.run_in_executor(</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>            executor, </span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>            cpu_heavy_computation, </span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>            <span class="dv">10_000_000</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Result: </span><span class="sc">{</span>result<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&quot;__main__&quot;</span>:</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    asyncio.run(main())</span></code></pre></div>
+<p><em>Note: Functions and arguments passed to a
+<code>ProcessPoolExecutor</code> must be picklable.</em></p>
+<h2 id="modern-alternative-asyncioto_thread">Modern Alternative:
+<code>asyncio.to_thread()</code></h2>
+<p>In Python 3.9 and later, <code>asyncio.to_thread()</code> was
+introduced as a higher-level wrapper around
+<code>loop.run_in_executor(None, ...)</code>. It removes boilerplate
+code and natively accepts keyword arguments:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> blocking_task(seconds: <span class="bu">int</span>, message: <span class="bu">str</span> <span class="op">=</span> <span class="st">&quot;Done&quot;</span>):</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    time.sleep(seconds)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> message</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Directly offload to a thread with args and kwargs</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> <span class="cf">await</span> asyncio.to_thread(blocking_task, <span class="dv">2</span>, message<span class="op">=</span><span class="st">&quot;Finished&quot;</span>)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(result)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>asyncio.run(main())</span></code></pre></div>
+<p>Under the hood, <code>asyncio.to_thread()</code> accesses the running
+event loop and delegates execution to the default
+<code>ThreadPoolExecutor</code>, while automatically propagating context
+variables (<code>contextvars</code>), which
+<code>run_in_executor()</code> does not do by default.</p>
+<h2 id="key-considerations">Key Considerations</h2>
+<ul>
+<li><strong>Thread Pool Exhaustion</strong>: The default
+<code>ThreadPoolExecutor</code> has a limited number of workers. Running
+excessive concurrent blocking tasks can starve the pool, causing
+subsequent tasks to queue and delay execution.</li>
+<li><strong>Resource Cleanup</strong>: When using custom
+<code>ProcessPoolExecutor</code> or <code>ThreadPoolExecutor</code>
+instances, ensure they are properly closed using a context manager or
+explicit <code>.shutdown()</code> calls to prevent memory and process
+leaks.</li>
+<li><strong>Thread Safety</strong>: Legacy functions that modify shared
+mutable state outside the executor must implement appropriate locking
+mechanisms (such as <code>threading.Lock</code>) to avoid race
+conditions.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

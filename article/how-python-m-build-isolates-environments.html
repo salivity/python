@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How python -m build Isolates Environments - python</title>
+    <meta name="description" content="The standard Python build tool (python -m build) ensures reproducible and clean package generation by compiling distributions inside a temporary, isolated virtual environment. By adhering to modern packaging standards defined in PEP 517 and PEP 518, buil">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-m-build-isolates-environments">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How python -m build Isolates Environments - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-m-build-isolates-environments" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The standard Python build tool (python -m build) ensures reproducible and clean package generation by compiling distributions inside a temporary, isolated virtual environment. By adhering to modern packaging standards defined in PEP 517 and PEP 518, buil" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python--m-build-isolates-environments">How python -m build
+Isolates Environments</h1>
+<p>The standard Python <code>build</code> tool
+(<code>python -m build</code>) ensures reproducible and clean package
+generation by compiling distributions inside a temporary, isolated
+virtual environment. By adhering to modern packaging standards defined
+in PEP 517 and PEP 518, <code>build</code> creates a dedicated workspace
+containing only explicitly declared build dependencies, preventing
+packages installed in the global or local environment from interfering
+with the build process.</p>
+<h3 id="the-problem-with-unisolated-builds">The Problem with Unisolated
+Builds</h3>
+<p>Historically, generating Python distributions
+(<code>python setup.py sdist bdist_wheel</code>) relied entirely on
+whatever packages happened to be present in the active Python
+environment. This approach created common issues:</p>
+<ul>
+<li><strong>Hidden Dependencies:</strong> A build might succeed locally
+because an undeclared tool was installed on the developer's machine, but
+fail in CI/CD pipelines.</li>
+<li><strong>Version Conflicts:</strong> An outdated package in the
+ambient environment could break the build backend.</li>
+<li><strong>Environment Contamination:</strong> Running setup scripts
+could execute arbitrary code and modify the host environment.</li>
+</ul>
+<h3 id="the-step-by-step-isolation-process">The Step-by-Step Isolation
+Process</h3>
+<p>When you run <code>python -m build</code>, the tool follows a
+standardized sequence to construct wheels and source distributions
+(sdists) cleanly:</p>
+<h4 id="1-inspecting-pyprojecttoml">1. Inspecting
+<code>pyproject.toml</code></h4>
+<p>The tool reads the project configuration file to locate the
+<code>[build-system]</code> table. It extracts two critical pieces of
+metadata:</p>
+<ul>
+<li><code>requires</code>: A list of packages required to build the
+distribution (e.g., <code>setuptools&gt;=61.0</code>,
+<code>wheel</code>, <code>flit_core</code>, or
+<code>hatchling</code>).</li>
+<li><code>build-backend</code>: The entry point that will perform the
+packaging (e.g., <code>setuptools.build_meta</code>).</li>
+</ul>
+<h4 id="2-creating-a-temporary-environment">2. Creating a Temporary
+Environment</h4>
+<p>Using an isolated environment provider (such as the <code>venv</code>
+module or the third-party <code>virtualenv</code> package),
+<code>build</code> provisions a fresh, transient directory structure.
+This temporary directory is detached from the host Python's
+<code>site-packages</code>.</p>
+<h4 id="3-installing-build-requirements">3. Installing Build
+Requirements</h4>
+<p>Inside the newly provisioned environment, <code>build</code> runs an
+installer (typically <code>pip</code>) to fetch and install only the
+packages declared in the <code>requires</code> field. It can also query
+the build backend for dynamic requirements via the
+<code>get_requires_for_build_wheel</code> or
+<code>get_requires_for_build_sdist</code> PEP 517 hooks and install
+those as well.</p>
+<h4 id="4-executing-build-hooks-via-subprocess">4. Executing Build Hooks
+via Subprocess</h4>
+<p>Instead of executing code directly inside the parent process,
+<code>build</code> runs the backend within a subprocess tied directly to
+the temporary environment's Python executable. This ensures:</p>
+<ul>
+<li><code>sys.path</code> contains only the standard library and the
+isolated environment's dependencies.</li>
+<li>Build artifacts are produced under strict isolation.</li>
+<li>Host environment variables and packages cannot accidentally alter
+the output.</li>
+</ul>
+<h4 id="5-artifact-extraction-and-teardown">5. Artifact Extraction and
+Teardown</h4>
+<p>Once the backend successfully outputs the <code>.tar.gz</code>
+(sdist) and <code>.whl</code> (wheel) into the specified output
+directory (defaulting to <code>dist/</code>), <code>build</code>
+dismantles and deletes the temporary environment completely.</p>
+<h3 id="disabling-isolation">Disabling Isolation</h3>
+<p>Isolation is the default behavior, but developers can bypass it using
+the <code>--no-isolation</code> (or <code>-n</code>) flag:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-m</span> build <span class="at">--no-isolation</span></span></code></pre></div>
+<p>When this flag is active, <code>build</code> skips the creation of
+the temporary virtual environment and executes the build hooks directly
+within the current Python interpreter. This is primarily useful in
+managed environments like Linux package distribution systems, offline
+build environments, or situations where build dependencies have already
+been pre-installed intentionally.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mypy vs Python Dynamic Typing: Key Differences - python</title>
+    <meta name="description" content="Python fundamentally operates as a dynamically typed language where data types are enforced at runtime, but modern workflows increasingly incorporate static type checkers like Mypy to verify types before code execution. While Python's runtime dynamically">
+    <link rel="canonical" href="https://salivity.github.io/python/article/mypy-vs-python-dynamic-typing-key-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mypy vs Python Dynamic Typing: Key Differences - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/mypy-vs-python-dynamic-typing-key-differences" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python fundamentally operates as a dynamically typed language where data types are enforced at runtime, but modern workflows increasingly incorporate static type checkers like Mypy to verify types before code execution. While Python's runtime dynamically" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="mypy-vs-python-dynamic-typing-key-differences">Mypy vs Python
+Dynamic Typing: Key Differences</h1>
+<p>Python fundamentally operates as a dynamically typed language where
+data types are enforced at runtime, but modern workflows increasingly
+incorporate static type checkers like Mypy to verify types before code
+execution. While Python's runtime dynamically associates types with
+values rather than variables, static type checkers analyze type
+annotations ahead of time without executing the program. Understanding
+the differences between these two approaches clarifies how Python
+handles variable types, when errors are surfaced, and how developers can
+build safer, more maintainable codebases without sacrificing runtime
+flexibility.</p>
+<h3 id="pythons-dynamic-runtime-typing">Python’s Dynamic Runtime
+Typing</h3>
+<p>By default, Python evaluates types dynamically at runtime. Variables
+do not have intrinsic types; instead, they are merely references to
+objects in memory that hold their own types.</p>
+<ul>
+<li><strong>Runtime Enforcement:</strong> Python does not verify whether
+a function call or operation is valid until the interpreter executes
+that specific line of code. If an invalid operation occurs—such as
+attempting to concatenate an integer to a string—a
+<code>TypeError</code> is raised during execution.</li>
+<li><strong>Duck Typing:</strong> Python relies on the philosophy of
+"duck typing" ("if it walks like a duck and quacks like a duck, it's a
+duck"). An operation succeeds as long as the object implements the
+required methods or behaviors at the moment of execution, regardless of
+its explicit class hierarchy.</li>
+<li><strong>Flexibility vs. Risk:</strong> This model allows for rapid
+prototyping and flexible code, but it introduces the risk of edge-case
+bugs that only reveal themselves when specific code paths are executed
+in production.</li>
+</ul>
+<h3 id="static-type-checkers-mypy">Static Type Checkers (Mypy)</h3>
+<p>Mypy is a static analysis tool that inspects Python source code using
+type hints introduced in PEP 484. It checks for type consistency before
+the code is ever run.</p>
+<ul>
+<li><strong>Ahead-of-Time Verification:</strong> Mypy scans the abstract
+syntax tree of your codebase to ensure that function arguments, return
+types, and variable assignments match their declared annotations.</li>
+<li><strong>Zero Runtime Overhead:</strong> Python's interpreter
+completely ignores type annotations during execution. Consequently,
+running Mypy does not change how your code behaves at runtime, nor does
+it affect execution speed.</li>
+<li><strong>Predictive Bug Prevention:</strong> Because Mypy analyzes
+the entire codebase statically, it uncovers invalid operations, missing
+attributes, and <code>None</code> reference errors across unreachable or
+rarely used code branches prior to deployment.</li>
+</ul>
+<h3 id="key-differences-at-a-glance">Key Differences at a Glance</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Dynamic Runtime Typing</th>
+<th style="text-align: left;">Static Typing with Mypy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Execution Phase</strong></td>
+<td style="text-align: left;">Happens while the program runs.</td>
+<td style="text-align: left;">Happens before runtime (via CLI or
+CI/CD).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Error Discovery</strong></td>
+<td style="text-align: left;">Errors surface only when a specific line
+executes.</td>
+<td style="text-align: left;">Errors surface globally during
+analysis.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Performance Impact</strong></td>
+<td style="text-align: left;">Slight overhead during runtime type
+checking/resolution.</td>
+<td style="text-align: left;">Zero runtime overhead; purely
+developer-facing.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Type Mutability</strong></td>
+<td style="text-align: left;">Variables can be reassigned to completely
+different types.</td>
+<td style="text-align: left;">Flags reassignments that violate initial
+type bounds.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Strictness</strong></td>
+<td style="text-align: left;">Permissive until an unsupported operation
+occurs.</td>
+<td style="text-align: left;">Strict based on defined annotations and
+configuration.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="how-they-work-together-gradual-typing">How They Work Together:
+Gradual Typing</h3>
+<p>Mypy does not replace Python's dynamic runtime; instead, it
+complements it through a system called <strong>gradual typing</strong>.
+Developers can leave parts of a codebase dynamic for rapid iteration
+while applying strict static typing to critical business logic. If an
+unannotated function is passed to Mypy, it treats the values dynamically
+(typed as <code>Any</code>), allowing teams to incrementally adopt type
+safety without rewriting existing dynamic code.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

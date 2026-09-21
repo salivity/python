@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celery Automatic Retry with Exponential Backoff in Python - python</title>
+    <meta name="description" content="Celery provides built-in mechanisms to handle transient failures gracefully by automatically retrying failed tasks using exponential backoff. This article explores how to implement retry policies in Celery using both declarative decorator parameters and">
+    <link rel="canonical" href="https://salivity.github.io/python/article/celery-automatic-retry-with-exponential-backoff-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Celery Automatic Retry with Exponential Backoff in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/celery-automatic-retry-with-exponential-backoff-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Celery provides built-in mechanisms to handle transient failures gracefully by automatically retrying failed tasks using exponential backoff. This article explores how to implement retry policies in Celery using both declarative decorator parameters and" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1
+id="celery-automatic-retry-with-exponential-backoff-in-python">Celery
+Automatic Retry with Exponential Backoff in Python</h1>
+<p>Celery provides built-in mechanisms to handle transient failures
+gracefully by automatically retrying failed tasks using exponential
+backoff. This article explores how to implement retry policies in Celery
+using both declarative decorator parameters and manual programmatic
+controls, detailing options such as backoff limits, jitter, and maximum
+retry counts to ensure resilient background job processing in
+Python.</p>
+<h3 id="declarative-retries-using-task-decorators">Declarative Retries
+Using Task Decorators</h3>
+<p>The most straightforward way to implement automatic retries with
+exponential backoff is through the <code>@app.task</code> decorator
+attributes. This approach removes boilerplate exception-handling code
+from the task body.</p>
+<p>To enable exponential backoff declaratively, configure the following
+parameters:</p>
+<ul>
+<li><strong><code>autoretry_for</code></strong>: A tuple of exception
+classes that should trigger an automatic retry.</li>
+<li><strong><code>retry_backoff</code></strong>: When set to
+<code>True</code>, Celery calculates delay times exponentially (e.g.,
+1s, 2s, 4s, 8s...). You can also set this to an integer to serve as the
+initial backoff factor in seconds.</li>
+<li><strong><code>retry_backoff_max</code></strong>: The maximum
+duration in seconds that a task can be delayed between retries,
+preventing excessively long wait periods.</li>
+<li><strong><code>retry_jitter</code></strong>: A boolean (default is
+<code>True</code>) that adds a randomized delay to the backoff interval
+to prevent the "thundering herd" problem where multiple retrying tasks
+hit a service simultaneously.</li>
+<li><strong><code>max_retries</code></strong>: The maximum number of
+retry attempts before the task permanently fails. Setting this to
+<code>None</code> allows infinite retries.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> celery <span class="im">import</span> Celery</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> Celery(<span class="st">&#39;tasks&#39;</span>, broker<span class="op">=</span><span class="st">&#39;redis://localhost:6379/0&#39;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="at">@app.task</span>(</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    autoretry_for<span class="op">=</span>(requests.exceptions.RequestException,),</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    retry_backoff<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    retry_backoff_max<span class="op">=</span><span class="dv">600</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    retry_jitter<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    max_retries<span class="op">=</span><span class="dv">5</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_api_data(url):</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> requests.get(url, timeout<span class="op">=</span><span class="dv">5</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    response.raise_for_status()</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> response.json()</span></code></pre></div>
+<h3 id="programmatic-retries-with-selfretry">Programmatic Retries with
+<code>self.retry</code></h3>
+<p>When dynamic conditions dictate retry behavior—such as inspecting
+specific HTTP status codes or modifying delays based on response
+headers—you can handle retries programmatically using a bound task.</p>
+<p>By setting <code>bind=True</code>, the task instance is passed as the
+first argument (<code>self</code>), granting access to the
+<code>self.retry()</code> method.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> celery <span class="im">import</span> Celery</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> Celery(<span class="st">&#39;tasks&#39;</span>, broker<span class="op">=</span><span class="st">&#39;redis://localhost:6379/0&#39;</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="at">@app.task</span>(bind<span class="op">=</span><span class="va">True</span>, max_retries<span class="op">=</span><span class="dv">5</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> send_webhook(<span class="va">self</span>, payload):</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        response <span class="op">=</span> requests.post(<span class="st">&#39;https://api.example.com/webhook&#39;</span>, json<span class="op">=</span>payload)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        response.raise_for_status()</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> requests.exceptions.HTTPError <span class="im">as</span> exc:</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Retry only for rate limits or server errors</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> response.status_code <span class="kw">in</span> [<span class="dv">429</span>, <span class="dv">500</span>, <span class="dv">502</span>, <span class="dv">503</span>, <span class="dv">504</span>]:</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Calculate exponential backoff: 2 ^ request_retries</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            countdown <span class="op">=</span> <span class="dv">2</span> <span class="op">**</span> <span class="va">self</span>.request.retries</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="va">self</span>.retry(exc<span class="op">=</span>exc, countdown<span class="op">=</span>countdown)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> exc</span></code></pre></div>
+<h3 id="global-application-settings">Global Application Settings</h3>
+<p>You can also define default retry parameters globally across an
+entire Celery application. While individual task decorators will
+override these values, global settings ensure uniform baseline behavior
+across tasks that utilize retries:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>app.conf.update(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    task_annotations<span class="op">=</span>{</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;*&#39;</span>: {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;max_retries&#39;</span>: <span class="dv">3</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;default_retry_delay&#39;</span>: <span class="dv">5</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>Combining <code>autoretry_for</code> with <code>retry_backoff</code>
+and <code>retry_jitter</code> is the standard best practice for handling
+network instability, third-party API rate limits, and temporary database
+lockups cleanly in Python applications.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

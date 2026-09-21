@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python functools.partial Explained - python</title>
+    <meta name="description" content="This article explores Python's functools.partial() function, detailing how it enables partial function application by pre-filling function arguments. You will learn the mechanics behind partial functions, see how to fix positional and keyword arguments,">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-functools-partial-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python functools.partial Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-functools-partial-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores Python's functools.partial() function, detailing how it enables partial function application by pre-filling function arguments. You will learn the mechanics behind partial functions, see how to fix positional and keyword arguments," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-functoolspartial-explained">Python functools.partial
+Explained</h1>
+<p>This article explores Python's <code>functools.partial()</code>
+function, detailing how it enables partial function application by
+pre-filling function arguments. You will learn the mechanics behind
+partial functions, see how to fix positional and keyword arguments,
+understand common practical use cases like simplifying callbacks and
+mapping operations, and discover how this tool improves code readability
+and reusability.</p>
+<h2 id="what-is-partial-application">What is Partial Application?</h2>
+<p>Partial application is a functional programming technique where an
+existing function with multiple arguments is transformed into a new
+callable object that requires fewer arguments. This is done by fixing
+(or "binding") a specific subset of the original arguments upfront. When
+the resulting object is invoked, it runs the original function using
+both the pre-bound arguments and any new arguments provided at call
+time.</p>
+<h2 id="how-functoolspartial-works">How <code>functools.partial()</code>
+Works</h2>
+<p>Python provides <code>partial()</code> within the built-in
+<code>functools</code> module. Its basic signature is:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>functools.partial(func, <span class="op">/</span>, <span class="op">*</span>args, <span class="op">**</span>keywords)</span></code></pre></div>
+<p>When invoked, <code>partial()</code> returns a <code>partial</code>
+object—a callable that behaves like <code>func</code>, but with the
+specified <code>*args</code> and <code>**keywords</code> already
+supplied.</p>
+<h3 id="basic-example">Basic Example</h3>
+<p>Consider a function that calculates powers:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functools <span class="im">import</span> partial</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> power(base, exponent):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> base <span class="op">**</span> exponent</span></code></pre></div>
+<p>If your code frequently calculates squares or cubes, you can create
+dedicated helper functions using <code>partial()</code> without writing
+repetitive wrapper functions:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Fix &#39;exponent&#39; using a keyword argument</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>square <span class="op">=</span> partial(power, exponent<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>cube <span class="op">=</span> partial(power, exponent<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(square(<span class="dv">5</span>))  <span class="co"># Output: 25</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(cube(<span class="dv">3</span>))    <span class="co"># Output: 27</span></span></code></pre></div>
+<p>You can also bind positional arguments from left to right:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Fix &#39;base&#39; to 2</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>power_of_two <span class="op">=</span> partial(power, <span class="dv">2</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(power_of_two(<span class="dv">4</span>))  <span class="co"># 2 ** 4 -&gt; Output: 16</span></span></code></pre></div>
+<h2 id="common-use-cases">Common Use Cases</h2>
+<h3 id="1-adapting-functions-for-higher-order-functions">1. Adapting
+Functions for Higher-Order Functions</h3>
+<p>Functions like <code>map()</code>, <code>filter()</code>, or
+<code>multiprocessing.Pool.map()</code> expect callables that accept a
+single parameter. If you have a multi-argument function,
+<code>partial()</code> allows you to adapt it cleanly without writing a
+<code>lambda</code>.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functools <span class="im">import</span> partial</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> multiply(x, y):</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x <span class="op">*</span> y</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>double <span class="op">=</span> partial(multiply, <span class="dv">2</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>numbers <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>]</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Cleaner and more readable than using lambda x: multiply(2, x)</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>doubled <span class="op">=</span> <span class="bu">list</span>(<span class="bu">map</span>(double, numbers))</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(doubled)  <span class="co"># Output: [2, 4, 6, 8]</span></span></code></pre></div>
+<h3 id="2-event-handling-and-callbacks">2. Event Handling and
+Callbacks</h3>
+<p>In GUI frameworks (such as Tkinter or PyQt) or asynchronous event
+loops, callbacks often accept zero arguments or a fixed event object.
+<code>partial()</code> lets you pass custom contextual parameters to
+these handlers without creating dynamic closures:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functools <span class="im">import</span> partial</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tkinter <span class="im">as</span> tk</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> on_button_click(button_id):</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Button </span><span class="sc">{</span>button_id<span class="sc">}</span><span class="ss"> clicked&quot;</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>root <span class="op">=</span> tk.Tk()</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>btn <span class="op">=</span> tk.Button(root, text<span class="op">=</span><span class="st">&quot;Click Me&quot;</span>, command<span class="op">=</span>partial(on_button_click, <span class="dv">42</span>))</span></code></pre></div>
+<h2 id="inspecting-partial-objects">Inspecting Partial Objects</h2>
+<p>Objects created by <code>functools.partial()</code> store their
+underlying function and bound arguments in read-only attributes:</p>
+<ul>
+<li><code>func</code>: The original callable.</li>
+<li><code>args</code>: A tuple of fixed positional arguments.</li>
+<li><code>keywords</code>: A dictionary of fixed keyword arguments (or
+<code>None</code>).</li>
+</ul>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>p <span class="op">=</span> partial(power, <span class="dv">10</span>, exponent<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(p.func)      <span class="co"># &lt;function power at ...&gt;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(p.args)      <span class="co"># (10,)</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(p.keywords)  <span class="co"># {&#39;exponent&#39;: 2}</span></span></code></pre></div>
+<p>By pre-binding values, <code>functools.partial()</code> eliminates
+boilerplate wrappers, replaces ambiguous <code>lambda</code> functions,
+and enhances modularity across your Python applications.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

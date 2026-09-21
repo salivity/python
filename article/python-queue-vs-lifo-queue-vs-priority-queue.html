@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Queue vs LifoQueue vs PriorityQueue - python</title>
+    <meta name="description" content="Python’s standard queue module provides synchronized, thread-safe data structures designed for multi-threaded programming. While all three classes—queue.Queue, queue.LifoQueue, and queue.PriorityQueue—share identical public methods such as put(), g">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-queue-vs-lifo-queue-vs-priority-queue">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Queue vs LifoQueue vs PriorityQueue - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-queue-vs-lifo-queue-vs-priority-queue" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s standard queue module provides synchronized, thread-safe data structures designed for multi-threaded programming. While all three classes—queue.Queue, queue.LifoQueue, and queue.PriorityQueue—share identical public methods such as put(), g" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-queue-vs-lifoqueue-vs-priorityqueue">Python Queue vs
+LifoQueue vs PriorityQueue</h1>
+<p>Python’s standard <code>queue</code> module provides synchronized,
+thread-safe data structures designed for multi-threaded programming.
+While all three classes—<code>queue.Queue</code>,
+<code>queue.LifoQueue</code>, and <code>queue.PriorityQueue</code>—share
+identical public methods such as <code>put()</code>, <code>get()</code>,
+<code>task_done()</code>, and <code>join()</code>, they differ
+fundamentally in the retrieval order of their stored items.
+Understanding the ordering mechanism, internal implementation, and
+primary use cases of each class is essential for choosing the right tool
+for concurrent workflows.</p>
+<h3 id="queuequeue-first-in-first-out"><code>queue.Queue</code>
+(First-In, First-Out)</h3>
+<p><code>queue.Queue</code> implements a classic FIFO (First-In,
+First-Out) data structure. The first element added via
+<code>put()</code> is always the first element retrieved via
+<code>get()</code>.</p>
+<ul>
+<li><strong>Ordering:</strong> Insertion order. Items are processed
+strictly sequentially based on arrival time.</li>
+<li><strong>Internal Structure:</strong> It uses
+<code>collections.deque</code> internally, which provides <span
+class="math inline">\(O(1)\)</span> time complexity for appends and pop
+operations from both ends.</li>
+<li><strong>Typical Use Cases:</strong> Ideal for standard
+task-processing pipelines, background worker pools, message buffering,
+and breadth-first traversals where fairness and order of arrival must be
+preserved.</li>
+</ul>
+<h3 id="queuelifoqueue-last-in-first-out"><code>queue.LifoQueue</code>
+(Last-In, First-Out)</h3>
+<p><code>queue.LifoQueue</code> is a thread-safe implementation of a
+stack (LIFO: Last-In, First-Out). The most recently added item is the
+first one to be removed.</p>
+<ul>
+<li><strong>Ordering:</strong> Reverse insertion order. The newest
+element is retrieved first.</li>
+<li><strong>Internal Structure:</strong> It utilizes a standard Python
+<code>list</code> internally, appending to the end and popping from the
+end, which ensures <span class="math inline">\(O(1)\)</span> amortized
+operations.</li>
+<li><strong>Typical Use Cases:</strong> Best suited for depth-first
+searches, recursive processing simulations, undo/redo mechanisms, and
+scenarios where the freshest data has higher operational relevance than
+older data.</li>
+</ul>
+<h3
+id="queuepriorityqueue-priority-based-retrieval"><code>queue.PriorityQueue</code>
+(Priority-Based Retrieval)</h3>
+<p><code>queue.PriorityQueue</code> retrieves items based on their
+priority rather than their insertion order. By default, it retrieves the
+smallest item first (min-heap).</p>
+<ul>
+<li><strong>Ordering:</strong> Sorted order determined by Python's
+standard comparison operators (<code>&lt;</code>). Items are commonly
+inserted as tuples in the format
+<code>(priority_number, data)</code>.</li>
+<li><strong>Internal Structure:</strong> It wraps a standard Python
+<code>list</code> using the <code>heapq</code> module. Enqueueing
+(<code>put()</code>) and dequeueing (<code>get()</code>) operations take
+<span class="math inline">\(O(\log n)\)</span> time due to heap
+rebalancing.</li>
+<li><strong>Special Considerations:</strong> When storing custom objects
+or tuples where priorities match, elements must be comparable, or a
+tie-breaker (such as an auto-incrementing counter or unique ID) must be
+included in the tuple to avoid <code>TypeError</code>.</li>
+<li><strong>Typical Use Cases:</strong> Suitable for event-driven
+simulations, job schedulers with varying urgency levels, and graph
+algorithms such as Dijkstra's or A* search.</li>
+</ul>
+<h3 id="summary-of-differences">Summary of Differences</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>queue.Queue</code></th>
+<th style="text-align: left;"><code>queue.LifoQueue</code></th>
+<th style="text-align: left;"><code>queue.PriorityQueue</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Retrieval Order</strong></td>
+<td style="text-align: left;">FIFO (Earliest item first)</td>
+<td style="text-align: left;">LIFO (Latest item first)</td>
+<td style="text-align: left;">Priority (Lowest value first)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Backing Structure</strong></td>
+<td style="text-align: left;"><code>collections.deque</code></td>
+<td style="text-align: left;">Python <code>list</code></td>
+<td style="text-align: left;">Python <code>list</code> with
+<code>heapq</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>put()</code>
+Complexity</strong></td>
+<td style="text-align: left;"><span
+class="math inline">\(O(1)\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(O(1)\)</span>
+amortized</td>
+<td style="text-align: left;"><span class="math inline">\(O(\log
+n)\)</span></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>get()</code>
+Complexity</strong></td>
+<td style="text-align: left;"><span
+class="math inline">\(O(1)\)</span></td>
+<td style="text-align: left;"><span
+class="math inline">\(O(1)\)</span></td>
+<td style="text-align: left;"><span class="math inline">\(O(\log
+n)\)</span></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Item Requirements</strong></td>
+<td style="text-align: left;">Any object</td>
+<td style="text-align: left;">Any object</td>
+<td style="text-align: left;">Comparable objects or priority tuples</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

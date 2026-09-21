@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use asyncio.timeout in Modern Python - python</title>
+    <meta name="description" content="This article covers how to implement and manage timeouts in modern asynchronous Python using the asyncio.timeout() context manager introduced in Python 3.11. You will learn the mechanics of how this context manager cancels long-running tasks, how to hand">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-use-asyncio-timeout-in-modern-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use asyncio.timeout in Modern Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-use-asyncio-timeout-in-modern-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article covers how to implement and manage timeouts in modern asynchronous Python using the asyncio.timeout() context manager introduced in Python 3.11. You will learn the mechanics of how this context manager cancels long-running tasks, how to hand" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-use-asynciotimeout-in-modern-python">How to Use
+asyncio.timeout in Modern Python</h1>
+<p>This article covers how to implement and manage timeouts in modern
+asynchronous Python using the <code>asyncio.timeout()</code> context
+manager introduced in Python 3.11. You will learn the mechanics of how
+this context manager cancels long-running tasks, how to handle the
+resulting <code>TimeoutError</code>, how to dynamically adjust deadlines
+during execution, and why it provides a cleaner, more robust alternative
+to older approaches like <code>asyncio.wait_for()</code>.</p>
+<h2 id="the-basics-of-asynciotimeout">The Basics of
+asyncio.timeout()</h2>
+<p>In Python 3.11 and later, <code>asyncio.timeout()</code> serves as
+the standard way to apply a deadline to one or more asynchronous
+operations. It is used as an asynchronous context manager that accepts a
+single argument: the timeout duration in seconds (or <code>None</code>
+to disable the timeout).</p>
+<p>Here is a basic implementation:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> fetch_data():</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> asyncio.sleep(<span class="dv">3</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;Data fetched&quot;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">async</span> <span class="cf">with</span> asyncio.timeout(<span class="dv">2</span>):</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>            result <span class="op">=</span> <span class="cf">await</span> fetch_data()</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(result)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> <span class="pp">TimeoutError</span>:</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;The operation timed out.&quot;</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>asyncio.run(main())</span></code></pre></div>
+<p>In this example, <code>fetch_data()</code> attempts to sleep for 3
+seconds, but the context manager enforces a 2-second limit. When the
+limit is reached, the context manager cancels the running task within
+its scope and raises a standard <code>TimeoutError</code>.</p>
+<h2 id="how-the-cancellation-flow-works">How the Cancellation Flow
+Works</h2>
+<p>Under the hood, <code>asyncio.timeout()</code> schedules a
+cancellation callback on the event loop when entering the context
+block.</p>
+<ol type="1">
+<li><strong>Entering the context (<code>async with</code>):</strong> The
+context manager calculates an absolute deadline using the current event
+loop time plus the specified delay
+(<code>loop.time() + delay</code>).</li>
+<li><strong>Normal completion:</strong> If the code inside the block
+finishes before the deadline, the context manager cancels the scheduled
+timeout callback and exits cleanly.</li>
+<li><strong>Reaching the deadline:</strong> If the timer expires while
+code inside the block is awaiting, the context manager calls
+<code>task.cancel()</code> on the enclosing task.</li>
+<li><strong>Exiting the context:</strong> As the task unwinds due to
+cancellation, the context manager catches the internal
+<code>asyncio.CancelledError</code>, checks if it was caused by this
+specific timeout, and converts it into a <code>TimeoutError</code>.</li>
+</ol>
+<p>Because the conversion from <code>CancelledError</code> to
+<code>TimeoutError</code> occurs when leaving the context manager, you
+must place your <code>try...except TimeoutError</code> block
+<strong>outside</strong> the <code>async with asyncio.timeout()</code>
+block.</p>
+<h2 id="dynamic-deadline-rescheduling">Dynamic Deadline
+Rescheduling</h2>
+<p>The context manager returns a <code>Timeout</code> object that allows
+you to inspect and modify the deadline while the block is running.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">async</span> <span class="cf">with</span> asyncio.timeout(<span class="dv">5</span>) <span class="im">as</span> cm:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Check the absolute deadline</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Deadline scheduled for: </span><span class="sc">{</span>cm<span class="sc">.</span>when()<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">await</span> asyncio.sleep(<span class="dv">1</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Extend the deadline by shifting it forward</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>            new_deadline <span class="op">=</span> asyncio.get_running_loop().time() <span class="op">+</span> <span class="dv">10</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>            cm.reschedule(new_deadline)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Check if expired</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Has the timeout expired? </span><span class="sc">{</span>cm<span class="sc">.</span>expired()<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> <span class="pp">TimeoutError</span>:</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Timed out.&quot;</span>)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>asyncio.run(main())</span></code></pre></div>
+<p>Useful methods and attributes of the <code>Timeout</code> object
+include:</p>
+<ul>
+<li><code>cm.when()</code>: Returns the absolute monotonic clock
+deadline, or <code>None</code> if no deadline is set.</li>
+<li><code>cm.reschedule(when)</code>: Updates the deadline. Passing an
+absolute timestamp (from <code>loop.time()</code>) shifts the deadline,
+while passing <code>None</code> removes the timeout entirely.</li>
+<li><code>cm.expired()</code>: Returns <code>True</code> if the timeout
+triggered a cancellation.</li>
+</ul>
+<h2 id="absolute-timeouts-with-asynciotimeout_at">Absolute Timeouts with
+asyncio.timeout_at()</h2>
+<p>If you already have a calculated target timestamp from
+<code>loop.time()</code>, use <code>asyncio.timeout_at()</code> instead
+of calculating relative seconds:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    loop <span class="op">=</span> asyncio.get_running_loop()</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    deadline <span class="op">=</span> loop.time() <span class="op">+</span> <span class="fl">2.5</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">async</span> <span class="cf">with</span> asyncio.timeout_at(deadline):</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">await</span> asyncio.sleep(<span class="dv">5</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> <span class="pp">TimeoutError</span>:</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Reached absolute deadline.&quot;</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>asyncio.run(main())</span></code></pre></div>
+<h2 id="advantages-over-asynciowait_for">Advantages Over
+asyncio.wait_for()</h2>
+<p>Before Python 3.11, the primary tool for timing out operations was
+<code>asyncio.wait_for(aw, timeout)</code>. The
+<code>asyncio.timeout()</code> context manager improves on this pattern
+in several ways:</p>
+<ol type="1">
+<li><strong>Scoped Blocks:</strong> <code>asyncio.wait_for</code>
+requires wrapping a single awaitable or task.
+<code>asyncio.timeout()</code> can enclose a block containing multiple
+<code>await</code> expressions, sequential requests, or custom logic
+without combining them into a single coroutine.</li>
+<li><strong>Cleaner Cancellation Semantics:</strong>
+<code>asyncio.wait_for</code> creates an intermediate task to manage the
+timeout, which often led to swallowed cancellation exceptions or subtle
+bugs when combined with task cancellation trees.
+<code>asyncio.timeout()</code> works directly on the current task.</li>
+<li><strong>Consistent Exception Types:</strong>
+<code>asyncio.timeout()</code> raises the built-in
+<code>TimeoutError</code> directly, aligning with Python's unified
+exception hierarchy.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

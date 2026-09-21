@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protect Python Coroutines with asyncio.shield - python</title>
+    <meta name="description" content="Python's asyncio.shield() function prevents an inner coroutine or task from being aborted when the task awaiting it receives a cancellation request. In asynchronous applications, operations such as saving state to a database, closing network connections">
+    <link rel="canonical" href="https://salivity.github.io/python/article/protect-python-coroutines-with-asyncio-shield">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Protect Python Coroutines with asyncio.shield - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/protect-python-coroutines-with-asyncio-shield" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's asyncio.shield() function prevents an inner coroutine or task from being aborted when the task awaiting it receives a cancellation request. In asynchronous applications, operations such as saving state to a database, closing network connections" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="protect-python-coroutines-with-asyncioshield">Protect Python
+Coroutines with asyncio.shield</h1>
+<p>Python's <code>asyncio.shield()</code> function prevents an inner
+coroutine or task from being aborted when the task awaiting it receives
+a cancellation request. In asynchronous applications, operations such as
+saving state to a database, closing network connections gracefully, or
+writing to disk must often run to completion regardless of client
+timeouts or task cancellations. By acting as an isolation barrier,
+<code>asyncio.shield()</code> ensures that cancellation signals raised
+in the caller do not propagate down to the protected operation.</p>
+<h3 id="how-task-cancellation-works-by-default">How Task Cancellation
+Works by Default</h3>
+<p>In standard <code>asyncio</code> workflows, tasks are organized in a
+hierarchy of execution. When an outer task is cancelled via
+<code>task.cancel()</code>, Python injects an
+<code>asyncio.CancelledError</code> exception into the coroutine at its
+current <code>await</code> point. If that outer task is awaiting an
+inner coroutine or task, the cancellation automatically propagates
+downward, immediately stopping the inner execution unless explicitly
+caught and handled.</p>
+<h3 id="the-mechanism-of-asyncioshield">The Mechanism of
+<code>asyncio.shield()</code></h3>
+<p>When you wrap an awaitable in
+<code>asyncio.shield(coroutine_or_task)</code>, <code>asyncio</code>
+wraps the target in a distinct task (if it is not one already) and
+returns a separate future to the caller.</p>
+<p>The protection mechanism functions as follows:</p>
+<ol type="1">
+<li><strong>Decoupling Cancellation Propagation:</strong> When the
+caller awaiting the shielded task receives a
+<code>CancelledError</code>, the exception is raised inside the caller.
+However, <code>asyncio.shield()</code> intercepts the cancellation
+signal and does not forward <code>CancelledError</code> to the
+underlying task.</li>
+<li><strong>Background Completion:</strong> The underlying task remains
+scheduled on the event loop and continues running independently until it
+finishes, fails, or is cancelled directly.</li>
+<li><strong>Direct Cancellation Still Applies:</strong> The shield only
+protects the task from <em>parent</em> or <em>outer</em> cancellation.
+If the shielded task itself is directly targeted with
+<code>inner_task.cancel()</code>, it will still cancel normally.</li>
+</ol>
+<h3 id="implementation-example">Implementation Example</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> critical_write_operation():</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Starting critical write...&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> asyncio.sleep(<span class="dv">2</span>)  <span class="co"># Simulating I/O</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Critical write completed successfully.&quot;</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Shield the critical coroutine</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    shielded_task <span class="op">=</span> asyncio.shield(critical_write_operation())</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Create an outer worker that awaits the shielded task</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    worker <span class="op">=</span> asyncio.create_task(shielded_task)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Let the task begin</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> asyncio.sleep(<span class="fl">0.5</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Cancel the outer worker</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    worker.cancel()</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> worker</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> asyncio.CancelledError:</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Caller caught CancelledError, but the inner task continues.&quot;</span>)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Allow time for the shielded background task to complete</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> asyncio.sleep(<span class="dv">2</span>)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>asyncio.run(main())</span></code></pre></div>
+<h3 id="critical-gotchas-when-using-asyncioshield">Critical Gotchas When
+Using <code>asyncio.shield()</code></h3>
+<p>While <code>asyncio.shield()</code> guarantees that the inner task is
+not cancelled by outer triggers, it introduces specific behavioral
+nuances:</p>
+<ul>
+<li><strong>Handling <code>CancelledError</code> in the Caller:</strong>
+Even though the inner task continues running, the
+<code>await asyncio.shield(...)</code> line still raises
+<code>asyncio.CancelledError</code> immediately to the caller. If the
+caller does not handle this exception, execution in the calling scope
+terminates.</li>
+<li><strong>Orphaned Tasks:</strong> Because the caller raises
+<code>CancelledError</code> immediately, it no longer awaits the result
+of the shielded task. If the shielded task raises an unhandled exception
+later during its background run, it will be treated as an unhandled task
+exception by the event loop.</li>
+<li><strong>Proper Cleanup:</strong> If the calling routine needs to
+know when the shielded operation actually concludes, you must keep an
+explicit reference to the inner task and await it within an
+exception-handling block (such as a <code>finally</code> or
+<code>except asyncio.CancelledError</code> clause).</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

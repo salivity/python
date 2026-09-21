@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightweight Context Managers with Python contextlib - python</title>
+    <meta name="description" content="Python's built-in contextlib module provides a suite of utilities designed to simplify the creation and management of context managers without requiring boilerplate class definitions. Instead of manually implementing the enter() and exit() protocol withi">
+    <link rel="canonical" href="https://salivity.github.io/python/article/lightweight-context-managers-with-python-contextlib">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Lightweight Context Managers with Python contextlib - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/lightweight-context-managers-with-python-contextlib" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's built-in contextlib module provides a suite of utilities designed to simplify the creation and management of context managers without requiring boilerplate class definitions. Instead of manually implementing the enter() and exit() protocol withi" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="lightweight-context-managers-with-python-contextlib">Lightweight
+Context Managers with Python contextlib</h1>
+<p>Python's built-in <code>contextlib</code> module provides a suite of
+utilities designed to simplify the creation and management of context
+managers without requiring boilerplate class definitions. Instead of
+manually implementing the <code>__enter__()</code> and
+<code>__exit__()</code> protocol within a custom class, developers can
+use tools like the <code>@contextmanager</code> decorator and prebuilt
+helper functions to write clean, lightweight resource-management code
+using standard generator functions.</p>
+<h3 id="the-contextmanager-decorator">The <code>@contextmanager</code>
+Decorator</h3>
+<p>The primary tool for creating lightweight context managers is the
+<code>@contextmanager</code> decorator. It allows a standard generator
+function to define a context manager. Execution pauses at the
+<code>yield</code> statement when entering the <code>with</code> block
+and resumes afterward to handle cleanup.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> contextlib <span class="im">import</span> contextmanager</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">@contextmanager</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> managed_resource():</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Setup phase (equivalent to __enter__)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Acquiring resource&quot;</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    resource <span class="op">=</span> {<span class="st">&quot;status&quot;</span>: <span class="st">&quot;active&quot;</span>}</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">yield</span> resource</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">finally</span>:</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Teardown phase (equivalent to __exit__)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Releasing resource&quot;</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Usage</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> managed_resource() <span class="im">as</span> res:</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Using resource: </span><span class="sc">{</span>res[<span class="st">&#39;status&#39;</span>]<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>Wrapping the <code>yield</code> expression in a
+<code>try...finally</code> block ensures that cleanup logic always
+executes, even if an exception occurs inside the <code>with</code>
+block.</p>
+<h3 id="asynchronous-support-asynccontextmanager">Asynchronous Support:
+<code>@asynccontextmanager</code></h3>
+<p>For asynchronous applications, <code>contextlib</code> provides
+<code>@asynccontextmanager</code>. It functions identically to
+<code>@contextmanager</code> but operates on asynchronous generators
+used alongside <code>async with</code> statements.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> contextlib <span class="im">import</span> asynccontextmanager</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="at">@asynccontextmanager</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> async_resource():</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> setup_connection()</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">yield</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">finally</span>:</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> close_connection()</span></code></pre></div>
+<h3 id="prebuilt-lightweight-context-managers">Prebuilt Lightweight
+Context Managers</h3>
+<p>In addition to custom generator-based context managers,
+<code>contextlib</code> includes several prebuilt utilities for common
+resource handling and control flow patterns:</p>
+<ul>
+<li><p><strong><code>contextlib.suppress(*exceptions)</code></strong>:
+Silences specified exceptions within a block, replacing verbose
+<code>try...except Pass</code> constructs.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> contextlib <span class="im">import</span> suppress</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> suppress(<span class="pp">FileNotFoundError</span>):</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    os.remove(<span class="st">&quot;temporary_file.txt&quot;</span>)</span></code></pre></div></li>
+<li><p><strong><code>contextlib.closing(thing)</code></strong>: Wraps
+objects that provide a <code>.close()</code> method (such as urllib
+streams or database cursors) but do not inherently implement the context
+management protocol.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> contextlib <span class="im">import</span> closing</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> urllib.request <span class="im">import</span> urlopen</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> closing(urlopen(<span class="st">&#39;https://www.example.com&#39;</span>)) <span class="im">as</span> page:</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    content <span class="op">=</span> page.read()</span></code></pre></div></li>
+<li><p><strong><code>contextlib.nullcontext(enter_result=None)</code></strong>:
+Acts as a no-op context manager that returns an optional value and
+performs no setup or teardown. It is useful as a default or fallback
+when a context manager is conditionally required.</p></li>
+<li><p><strong><code>contextlib.redirect_stdout(new_target)</code> and
+<code>redirect_stderr(new_target)</code></strong>: Temporarily redirects
+standard output or standard error streams to another file-like
+object.</p></li>
+</ul>
+<h3 id="combining-contexts-with-contextdecorator">Combining Contexts
+with <code>ContextDecorator</code></h3>
+<p>The <code>ContextDecorator</code> class allows context managers to be
+used both as standard <code>with</code> statements and as function
+decorators. Context managers created via <code>@contextmanager</code>
+automatically inherit from <code>ContextDecorator</code>, allowing a
+function's entire execution to be encapsulated by the context logic
+without an extra level of indentation.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

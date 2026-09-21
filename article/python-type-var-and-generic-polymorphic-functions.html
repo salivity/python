@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python TypeVar and Generic Polymorphic Functions - python</title>
+    <meta name="description" content="Python's typing.TypeVar and generic types provide a powerful mechanism for writing reusable, type-safe code through parametric polymorphism. By allowing functions to accept and return dynamic types while preserving the exact type identity across argument">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-type-var-and-generic-polymorphic-functions">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python TypeVar and Generic Polymorphic Functions - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-type-var-and-generic-polymorphic-functions" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's typing.TypeVar and generic types provide a powerful mechanism for writing reusable, type-safe code through parametric polymorphism. By allowing functions to accept and return dynamic types while preserving the exact type identity across argument" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-typevar-and-generic-polymorphic-functions">Python TypeVar
+and Generic Polymorphic Functions</h1>
+<p>Python's <code>typing.TypeVar</code> and generic types provide a
+powerful mechanism for writing reusable, type-safe code through
+parametric polymorphism. By allowing functions to accept and return
+dynamic types while preserving the exact type identity across arguments
+and return values, these tools eliminate code duplication without
+sacrificing static type analysis. This article explains the limitations
+of using loose types like <code>Any</code>, how <code>TypeVar</code>
+preserves type relationships, how to apply type constraints and bounds,
+and how modern Python syntax streamlines generic programming.</p>
+<h2 id="the-limitation-of-any-and-object">The Limitation of
+<code>Any</code> and <code>object</code></h2>
+<p>When designing functions that handle multiple types, relying on
+<code>object</code> or <code>typing.Any</code> often breaks static type
+safety:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_first(items: <span class="bu">list</span>[<span class="bu">object</span>]) <span class="op">-&gt;</span> <span class="bu">object</span>:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> items[<span class="dv">0</span>]</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>val <span class="op">=</span> get_first([<span class="st">&quot;apple&quot;</span>, <span class="st">&quot;banana&quot;</span>])</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Static type checkers view `val` as `object`, losing string-specific methods.</span></span></code></pre></div>
+<p>Using <code>object</code> or <code>Any</code> severs the relationship
+between the input type and the output type. Static analysis tools like
+<code>mypy</code> or integrated development environments (IDEs) can no
+longer verify whether subsequent operations on the returned value are
+valid.</p>
+<h2 id="how-typevar-solves-the-problem">How <code>TypeVar</code> Solves
+the Problem</h2>
+<p><code>TypeVar</code> functions as a placeholder that captures and
+binds the concrete type passed into a function during a specific
+invocation. This enables true parametric polymorphism, ensuring that the
+returned type mirrors the input type precisely.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypeVar</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>T <span class="op">=</span> TypeVar(<span class="st">&quot;T&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_first(items: <span class="bu">list</span>[T]) <span class="op">-&gt;</span> T:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> items[<span class="dv">0</span>]</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>val <span class="op">=</span> get_first([<span class="st">&quot;apple&quot;</span>, <span class="st">&quot;banana&quot;</span>])</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># The type checker identifies `val` as `str`.</span></span></code></pre></div>
+<p>In this implementation, if a <code>list[str]</code> is passed,
+<code>T</code> resolves to <code>str</code>, and the function guarantees
+a <code>str</code> return type. If a <code>list[int]</code> is passed,
+<code>T</code> resolves to <code>int</code>.</p>
+<h2 id="constraining-generic-types">Constraining Generic Types</h2>
+<p>Sometimes polymorphic functions should only work with a specific
+subset of types. <code>TypeVar</code> accommodates this through explicit
+type constraints or inheritance bounds.</p>
+<h3 id="explicit-type-constraints">Explicit Type Constraints</h3>
+<p>Pass multiple types as positional arguments to restrict
+<code>TypeVar</code> to an explicit set:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypeVar</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>AnyStr <span class="op">=</span> TypeVar(<span class="st">&quot;AnyStr&quot;</span>, <span class="bu">str</span>, <span class="bu">bytes</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> concat(a: AnyStr, b: AnyStr) <span class="op">-&gt;</span> AnyStr:</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">+</span> b</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>concat(<span class="st">&quot;hello &quot;</span>, <span class="st">&quot;world&quot;</span>)  <span class="co"># Valid: T is str</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>concat(<span class="st">b&quot;hello &quot;</span>, <span class="st">b&quot;world&quot;</span>)  <span class="co"># Valid: T is bytes</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"># concat(&quot;hello &quot;, b&quot;world&quot;) # Rejected: Types do not match</span></span></code></pre></div>
+<h3 id="upper-bounds">Upper Bounds</h3>
+<p>Use the <code>bound</code> keyword argument to allow any type that is
+a subclass of a specified base class:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypeVar</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Shape:</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> area(<span class="va">self</span>) <span class="op">-&gt;</span> <span class="bu">float</span>:</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">NotImplementedError</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>ShapeT <span class="op">=</span> TypeVar(<span class="st">&quot;ShapeT&quot;</span>, bound<span class="op">=</span>Shape)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> print_area(shape: ShapeT) <span class="op">-&gt;</span> ShapeT:</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(shape.area())</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> shape</span></code></pre></div>
+<p>The <code>bound=Shape</code> constraint ensures that any argument
+passed has an <code>area</code> method, while returning the specific
+subclass instead of degrading to the generic base
+<code>Shape</code>.</p>
+<h2 id="modern-python-312-syntax">Modern Python 3.12+ Syntax</h2>
+<p>Python 3.12 introduced PEP 695, providing a cleaner, native syntax
+for defining generic functions without explicitly importing and
+declaring <code>TypeVar</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_first[T](items: <span class="bu">list</span>[T]) <span class="op">-&gt;</span> T:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> items[<span class="dv">0</span>]</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> print_area[ShapeT: Shape](shape: ShapeT) <span class="op">-&gt;</span> ShapeT:</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(shape.area())</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> shape</span></code></pre></div>
+<p>Under the hood, this syntax constructs a <code>TypeVar</code> scoped
+strictly to the function, improving readability while retaining the same
+polymorphic behavior.</p>
+<h2 id="key-benefits-of-generic-polymorphism">Key Benefits of Generic
+Polymorphism</h2>
+<ul>
+<li><strong>Code Reusability:</strong> One function implementation
+serves multiple data structures and classes.</li>
+<li><strong>Type Preservation:</strong> Retains precise return types,
+enabling robust static analysis and autocompletion in IDEs.</li>
+<li><strong>Bug Prevention:</strong> Detects mismatched types and
+invalid method calls at build or lint time rather than during runtime
+execution.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

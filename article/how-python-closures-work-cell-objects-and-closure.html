@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Closures Work: Cell Objects and __closure__ - python</title>
+    <meta name="description" content="This article explains the internal mechanics of closures in Python, detailing how the runtime captures free variables from an enclosing scope. You will learn how Python uses specialized cell objects to store references to these lexical variables, how the">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-closures-work-cell-objects-and-closure">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Closures Work: Cell Objects and __closure__ - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-closures-work-cell-objects-and-closure" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the internal mechanics of closures in Python, detailing how the runtime captures free variables from an enclosing scope. You will learn how Python uses specialized cell objects to store references to these lexical variables, how the" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-closures-work-cell-objects-and-closure">How Python
+Closures Work: Cell Objects and <strong>closure</strong></h1>
+<p>This article explains the internal mechanics of closures in Python,
+detailing how the runtime captures free variables from an enclosing
+scope. You will learn how Python uses specialized <code>cell</code>
+objects to store references to these lexical variables, how the inner
+function maintains access to them via its <code>__closure__</code>
+attribute, and how the underlying bytecode coordinates this behavior to
+preserve state across independent function calls.</p>
+<hr />
+<h3 id="understanding-the-closure-mechanism">Understanding the Closure
+Mechanism</h3>
+<p>A closure occurs when a nested function references a variable defined
+in its enclosing scope, and that nested function is returned or passed
+elsewhere, outliving the scope in which it was created. Because standard
+local variables are destroyed when their enclosing function terminates,
+Python needs a way to keep referenced variables alive without turning
+them into globals.</p>
+<p>Instead of binding the variable's value directly to the inner
+function at definition time, Python binds a reference to the storage
+location of the variable. This is accomplished using <strong>cell
+objects</strong>.</p>
+<hr />
+<h3 id="what-are-cell-objects">What Are Cell Objects?</h3>
+<p>A <code>cell</code> object (<code>PyCellObject</code> in CPython) is
+an internal container used to implement closures. It holds a pointer to
+a Python object rather than holding the object directly.</p>
+<p>When a variable in an outer function is referenced by an inner
+function:</p>
+<ol type="1">
+<li>Python recognizes that the variable must survive beyond the
+execution frame of the outer function.</li>
+<li>The outer function does not store the variable purely as a standard
+local in its stack frame. Instead, it creates a <code>cell</code> object
+to wrap the value.</li>
+<li>Both the outer function and the inner function share a reference to
+this exact same <code>cell</code> object.</li>
+</ol>
+<p>Because both scopes reference the same cell, any updates to the
+variable (such as those made with the <code>nonlocal</code> keyword) are
+immediately visible to both the outer and inner functions.</p>
+<hr />
+<h3 id="inspecting-closures-with-__closure__">Inspecting Closures with
+<code>__closure__</code></h3>
+<p>Every Python function has a <code>__closure__</code> attribute. For
+standard functions that do not capture variables from an outer scope,
+<code>__closure__</code> evaluates to <code>None</code>. For closures,
+<code>__closure__</code> contains a tuple of <code>cell</code> objects
+corresponding to the captured variables.</p>
+<p>Consider the following example:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_multiplier(factor):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> multiply(number):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> number <span class="op">*</span> factor</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> multiply</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>doubler <span class="op">=</span> make_multiplier(<span class="dv">2</span>)</span></code></pre></div>
+<p>Inspecting the <code>doubler</code> function reveals how Python
+encapsulates <code>factor</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(doubler.__closure__)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: (&lt;cell at 0x...: int object at 0x...&gt;,)</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>cell <span class="op">=</span> doubler.__closure__[<span class="dv">0</span>]</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">type</span>(cell))</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: &lt;class &#39;cell&#39;&gt;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(cell.cell_contents)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: 2</span></span></code></pre></div>
+<p>The <code>cell_contents</code> attribute provides direct access to
+the encapsulated variable inside the cell.</p>
+<hr />
+<h3 id="bytecode-and-code-object-attributes">Bytecode and Code Object
+Attributes</h3>
+<p>The association between the outer scope and the inner function is
+governed by metadata in each function's code object
+(<code>__code__</code>):</p>
+<ul>
+<li><strong><code>co_cellvars</code></strong>: Present on the enclosing
+function's code object, this tuple lists the names of local variables
+that are referenced by nested functions and thus need to be stored
+inside cell objects.</li>
+<li><strong><code>co_freevars</code></strong>: Present on the inner
+function's code object, this tuple lists the names of variables used
+locally but defined in an enclosing scope.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(make_multiplier.__code__.co_cellvars)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: (&#39;factor&#39;,)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(doubler.__code__.co_freevars)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: (&#39;factor&#39;,)</span></span></code></pre></div>
+<p>When Python compiles the bytecode for these functions:</p>
+<ul>
+<li>The outer function uses instructions like <code>MAKE_CELL</code> or
+creates cell objects during frame initialization.</li>
+<li>The inner function accesses captured variables using
+<code>LOAD_DEREF</code> and modifies them using <code>STORE_DEREF</code>
+instead of standard <code>LOAD_FAST</code> and <code>STORE_FAST</code>
+instructions.</li>
+</ul>
+<p><code>LOAD_DEREF</code> retrieves the value by dereferencing the cell
+found in <code>__closure__</code> at the specified index, allowing the
+function to execute seamlessly even after the outer function's execution
+frame has been popped off the call stack.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

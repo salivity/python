@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python List Comprehension vs For Loop Performance - python</title>
+    <meta name="description" content="Python's list comprehensions generally outperform traditional for loops when creating new lists from an iterable. While both constructs iterate over data to generate collections, list comprehensions operate closer to C-level speeds, avoid repeated attrib">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-list-comprehension-vs-for-loop-performance">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python List Comprehension vs For Loop Performance - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-list-comprehension-vs-for-loop-performance" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's list comprehensions generally outperform traditional for loops when creating new lists from an iterable. While both constructs iterate over data to generate collections, list comprehensions operate closer to C-level speeds, avoid repeated attrib" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-list-comprehension-vs-for-loop-performance">Python List
+Comprehension vs For Loop Performance</h1>
+<p>Python's list comprehensions generally outperform traditional
+<code>for</code> loops when creating new lists from an iterable. While
+both constructs iterate over data to generate collections, list
+comprehensions operate closer to C-level speeds, avoid repeated
+attribute lookups, and streamline bytecode execution. This article
+examines the underlying architectural differences, bytecode variations,
+and real-world performance implications of using a list comprehension
+instead of a standard <code>for</code> loop.</p>
+<h3 id="bytecode-and-overhead-differences">Bytecode and Overhead
+Differences</h3>
+<p>The primary reason for the performance advantage of list
+comprehensions lies in how Python's interpreter compiles and executes
+each structure. In a standard <code>for</code> loop that builds a list,
+the code explicitly calls the <code>append()</code> method on every
+iteration:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> []</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> item <span class="kw">in</span> iterable:</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    results.append(item <span class="op">*</span> <span class="dv">2</span>)</span></code></pre></div>
+<p>During this loop, the Python Virtual Machine (PVM) must perform an
+attribute lookup on <code>results</code> to find the <code>append</code>
+method, load the method into the execution frame, and call it as a
+distinct function for every single element. This translates to multiple
+bytecode operations (<code>LOAD_ATTR</code>, <code>LOAD_METHOD</code>,
+and <code>CALL_METHOD</code> or <code>CALL_FUNCTION</code>) repeated
+across all cycles.</p>
+<p>In contrast, a list comprehension executes an optimized sequence:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> [item <span class="op">*</span> <span class="dv">2</span> <span class="cf">for</span> item <span class="kw">in</span> iterable]</span></code></pre></div>
+<p>Under the hood, the interpreter utilizes a specialized bytecode
+instruction, <code>LIST_APPEND</code>. This instruction directly appends
+the calculated value to the internal list structure in C without
+re-evaluating the list reference or resolving the <code>append</code>
+attribute on each pass. This bypasses high-level function call overhead
+and drastically reduces the total number of bytecode instructions
+executed.</p>
+<h3 id="memory-pre-allocation-and-c-level-optimization">Memory
+Pre-allocation and C-Level Optimization</h3>
+<p>Beyond method lookups, Python's list comprehensions are implemented
+in native C within the interpreter. The loop logic executes in compiled
+C code rather than relying on the general-purpose loop evaluation
+routines required by a standard Python <code>for</code> statement.</p>
+<p>While list comprehensions dynamic-resize lists similarly to normal
+appends, the execution path in C handles state management and memory
+adjustments more efficiently than interpreted Python frames.</p>
+<h3 id="typical-performance-gains">Typical Performance Gains</h3>
+<p>In pure microbenchmarks—such as squaring numbers or filtering values
+from a large range—a list comprehension is typically between 20% and 50%
+faster than an equivalent <code>for</code> loop using
+<code>.append()</code>.</p>
+<p>However, this performance gap narrows or disappears under certain
+conditions:</p>
+<ol type="1">
+<li><strong>Heavy Computation:</strong> If the expression inside the
+loop involves computationally heavy logic or I/O operations, the
+mechanical overhead of the loop itself becomes negligible compared to
+the total runtime.</li>
+<li><strong>Pre-bound Methods:</strong> If a traditional loop optimizes
+the append call outside the iteration (e.g.,
+<code>append = results.append</code> followed by
+<code>append(item)</code>), the performance approaches that of the
+comprehension, though it still falls short due to the efficiency of the
+<code>LIST_APPEND</code> instruction.</li>
+</ol>
+<h3 id="summary">Summary</h3>
+<p>List comprehensions are consistently faster than traditional
+<code>for</code> loops for constructing lists because they eliminate
+Python-level function call overhead and leverage specialized bytecode.
+When creating new sequences from existing data, list comprehensions
+provide both cleaner syntax and superior execution speed. Traditional
+loops remain the better choice only when managing complex side effects,
+multi-step error handling, or when list construction is not the end
+goal.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

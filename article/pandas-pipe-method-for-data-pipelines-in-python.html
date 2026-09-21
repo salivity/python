@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pandas Pipe Method for Data Pipelines in Python - python</title>
+    <meta name="description" content="The Pandas .pipe() method provides a structured and readable way to apply custom, multi-step data transformations directly to DataFrames and Series. By chaining functions together in a sequential, left-to-right flow, .pipe() eliminates deeply nested func">
+    <link rel="canonical" href="https://salivity.github.io/python/article/pandas-pipe-method-for-data-pipelines-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pandas Pipe Method for Data Pipelines in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/pandas-pipe-method-for-data-pipelines-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Pandas .pipe() method provides a structured and readable way to apply custom, multi-step data transformations directly to DataFrames and Series. By chaining functions together in a sequential, left-to-right flow, .pipe() eliminates deeply nested func" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pandas-pipe-method-for-data-pipelines-in-python">Pandas Pipe
+Method for Data Pipelines in Python</h1>
+<p>The Pandas <code>.pipe()</code> method provides a structured and
+readable way to apply custom, multi-step data transformations directly
+to DataFrames and Series. By chaining functions together in a
+sequential, left-to-right flow, <code>.pipe()</code> eliminates deeply
+nested function calls and removes the need for excessive intermediate
+variables. This article covers how the <code>.pipe()</code> method
+works, why it leads to cleaner code, how to pass arguments effectively,
+and a practical example of building an end-to-end data transformation
+pipeline.</p>
+<h2 id="the-problem-with-traditional-transformations">The Problem with
+Traditional Transformations</h2>
+<p>When applying multiple custom transformations to a Pandas DataFrame,
+developers typically rely on two approaches: intermediate variables or
+nested function calls.</p>
+<p>Intermediate variables clutter the namespace and waste memory:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>df1 <span class="op">=</span> clean_columns(raw_df)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>df2 <span class="op">=</span> filter_outliers(df1, threshold<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>df3 <span class="op">=</span> calculate_metrics(df2)</span></code></pre></div>
+<p>Nested function calls read inside-out, making code difficult to read
+and debug:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>df_transformed <span class="op">=</span> calculate_metrics(filter_outliers(clean_columns(raw_df), threshold<span class="op">=</span><span class="dv">3</span>))</span></code></pre></div>
+<p>Both approaches become brittle and hard to maintain as transformation
+logic expands.</p>
+<h2 id="how-the-pipe-method-works">How the <code>.pipe()</code> Method
+Works</h2>
+<p>The <code>.pipe()</code> method allows functions to be chained
+directly onto a DataFrame or Series. The method expects a callable as
+its first argument and passes the calling object as the first parameter
+to that function by default:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>df_transformed <span class="op">=</span> (</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    raw_df</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    .pipe(clean_columns)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    .pipe(filter_outliers, threshold<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    .pipe(calculate_metrics)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>This syntax executes top-to-bottom, matching the logical order of the
+data workflow.</p>
+<h3 id="passing-positional-and-keyword-arguments">Passing Positional and
+Keyword Arguments</h3>
+<p>Any additional arguments required by the transformation function can
+be passed directly after the function name:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> drop_low_variance(df, threshold<span class="op">=</span><span class="fl">0.05</span>, drop_na<span class="op">=</span><span class="va">True</span>):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># logic</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Calling via pipe</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>df.pipe(drop_low_variance, threshold<span class="op">=</span><span class="fl">0.01</span>, drop_na<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
+<h3 id="specifying-the-target-parameter">Specifying the Target
+Parameter</h3>
+<p>If the function does not accept the DataFrame as its first parameter,
+pass a tuple containing the function and the string name of the target
+parameter:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> export_and_return(file_path, data, file_format<span class="op">=</span><span class="st">&quot;csv&quot;</span>):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Saves data and returns it</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Specify that the DataFrame belongs to the &#39;data&#39; parameter</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>df.pipe((export_and_return, <span class="st">&quot;data&quot;</span>), file_path<span class="op">=</span><span class="st">&quot;output.csv&quot;</span>)</span></code></pre></div>
+<h2 id="complete-data-transformation-example">Complete Data
+Transformation Example</h2>
+<p>Below is a complete implementation showing how multiple independent,
+testable functions assemble into a unified pipeline:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Sample raw data</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>raw_data <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39; customer_id &#39;</span>: [<span class="st">&#39;101&#39;</span>, <span class="st">&#39;102&#39;</span>, <span class="st">&#39;103&#39;</span>, <span class="st">&#39;104&#39;</span>],</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Spend_Amount&#39;</span>: [<span class="st">&#39;$120.50&#39;</span>, <span class="st">&#39;$45.00&#39;</span>, <span class="st">&#39;invalid&#39;</span>, <span class="st">&#39;$850.20&#39;</span>],</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Region&#39;</span>: [<span class="st">&#39; north &#39;</span>, <span class="st">&#39;south&#39;</span>, <span class="st">&#39;north&#39;</span>, <span class="st">&#39;west&#39;</span>]</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> clean_column_names(df):</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;Normalize headers: lowercase, trimmed, and underscored.&quot;&quot;&quot;</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> df.copy()</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    df.columns <span class="op">=</span> df.columns.<span class="bu">str</span>.strip().<span class="bu">str</span>.lower().<span class="bu">str</span>.replace(<span class="st">&#39; &#39;</span>, <span class="st">&#39;_&#39;</span>)</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_currency(df, column):</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;Clean string currency and convert to float.&quot;&quot;&quot;</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> df.copy()</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    df[column] <span class="op">=</span> (</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>        df[column]</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>        .astype(<span class="bu">str</span>)</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>        .<span class="bu">str</span>.replace(<span class="st">&#39;$&#39;</span>, <span class="st">&#39;&#39;</span>, regex<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>    df[column] <span class="op">=</span> pd.to_numeric(df[column], errors<span class="op">=</span><span class="st">&#39;coerce&#39;</span>)</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> remove_missing_records(df, subset):</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;Remove records with null values in critical columns.&quot;&quot;&quot;</span></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df.dropna(subset<span class="op">=</span>subset)</span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> standardize_text(df, columns):</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;Trim whitespace and standardize casing for categorical text.&quot;&quot;&quot;</span></span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> df.copy()</span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> col <span class="kw">in</span> columns:</span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>        df[col] <span class="op">=</span> df[col].astype(<span class="bu">str</span>).<span class="bu">str</span>.strip().<span class="bu">str</span>.title()</span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df</span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a><span class="co"># Execute the pipeline</span></span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>cleaned_df <span class="op">=</span> (</span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>    raw_data</span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>    .pipe(clean_column_names)</span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a>    .pipe(parse_currency, column<span class="op">=</span><span class="st">&#39;spend_amount&#39;</span>)</span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>    .pipe(remove_missing_records, subset<span class="op">=</span>[<span class="st">&#39;spend_amount&#39;</span>])</span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a>    .pipe(standardize_text, columns<span class="op">=</span>[<span class="st">&#39;region&#39;</span>])</span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a>    .reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(cleaned_df)</span></code></pre></div>
+<h2 id="key-benefits-of-using-pipe">Key Benefits of Using
+<code>.pipe()</code></h2>
+<ul>
+<li><strong>Readability</strong>: Code mirrors the conceptual flow of
+the pipeline, executing sequentially from top to bottom.</li>
+<li><strong>Modularity</strong>: Individual transformation steps exist
+as isolated functions, making them straightforward to unit-test and
+reuse across different pipelines.</li>
+<li><strong>Encapsulation</strong>: Side effects are minimized by
+ensuring each pipeline step takes an input and explicitly returns a
+transformed DataFrame.</li>
+<li><strong>Seamless Integration</strong>: <code>.pipe()</code> works
+interchangeably with Pandas' built-in chaining methods such as
+<code>.assign()</code>, <code>.groupby()</code>, and
+<code>.query()</code>.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

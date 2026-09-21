@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Thread Priorities at the OS Level - python</title>
+    <meta name="description" content="Python uses native operating system threads for its concurrency model, but the standard library does not provide native tools to set or manage thread priorities. Because CPython relies on the host operating system's kernel scheduler and enforces executio">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-thread-priorities-at-the-os-level">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Thread Priorities at the OS Level - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-thread-priorities-at-the-os-level" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python uses native operating system threads for its concurrency model, but the standard library does not provide native tools to set or manage thread priorities. Because CPython relies on the host operating system's kernel scheduler and enforces executio" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-thread-priorities-at-the-os-level">Python Thread
+Priorities at the OS Level</h1>
+<p>Python uses native operating system threads for its concurrency
+model, but the standard library does not provide native tools to set or
+manage thread priorities. Because CPython relies on the host operating
+system's kernel scheduler and enforces execution through the Global
+Interpreter Lock (GIL), Python offloads scheduling decisions entirely to
+the OS while restricting explicit priority controls. This article
+examines how Python interacts with OS schedulers, why thread priority is
+absent from the standard library, and how to apply OS-level priorities
+using platform-specific workarounds.</p>
+<h3 id="native-thread-implementation-in-cpython">Native Thread
+Implementation in CPython</h3>
+<p>CPython implements its <code>threading</code> module on top of native
+operating system primitives. On POSIX systems (Linux, macOS), it uses
+POSIX Threads (pthreads). On Windows, it uses Win32 threads.</p>
+<p>When you instantiate and start a <code>threading.Thread</code> in
+Python, the runtime creates a genuine OS-level thread. However, the
+<code>threading</code> API exposes no methods or parameters to set
+priority values, such as "nice" values on Linux or thread priority
+classes on Windows. Every Python thread is spawned with the operating
+system's default scheduling policy and priority level (such as
+<code>SCHED_OTHER</code> on Linux or <code>THREAD_PRIORITY_NORMAL</code>
+on Windows).</p>
+<h3 id="the-impact-of-the-global-interpreter-lock-gil">The Impact of the
+Global Interpreter Lock (GIL)</h3>
+<p>Even if Python exposed OS-level thread priorities natively, the
+Global Interpreter Lock (GIL) complicates priority-based scheduling.</p>
+<p>In CPython, the GIL ensures that only one thread executes Python
+bytecode at any given moment. Threads periodically release the GIL after
+a designated interval (controlled by
+<code>sys.getswitchinterval()</code>, defaulting to 5 milliseconds) or
+when performing blocking I/O operations.</p>
+<p>When a thread releases the GIL:</p>
+<ol type="1">
+<li>The operating system determines which waiting thread wakes up based
+on OS scheduling algorithms.</li>
+<li>The awakened thread must still contend for and successfully acquire
+the GIL before it can run Python code.</li>
+<li>If an OS scheduler elevates a high-priority thread, that thread
+still cannot proceed if another thread holds the GIL during a CPU-bound
+task until the switch interval lapses or an I/O boundary is
+reached.</li>
+</ol>
+<p>Consequently, OS-level thread priorities have minimal impact on
+CPU-bound Python workloads, though they can affect threads performing
+non-Python operations (such as C extensions or long-running I/O) that
+release the GIL.</p>
+<h3 id="how-the-operating-system-manages-python-threads">How the
+Operating System Manages Python Threads</h3>
+<p>Because Python delegates scheduling to the kernel, the OS scheduler
+controls time slicing, core allocation, and context switching:</p>
+<ul>
+<li><strong>Windows:</strong> The kernel assigns threads a dynamic
+priority based on the process's priority class and the thread's relative
+priority level. Because Python threads run at
+<code>THREAD_PRIORITY_NORMAL</code> by default, they receive standard
+quantum allocations.</li>
+<li><strong>Linux:</strong> The Completely Fair Scheduler (CFS)
+allocates CPU time based on the thread's "niceness" and virtual runtime.
+By default, all Python threads inherit the niceness of the parent
+process (usually 0).</li>
+</ul>
+<h3 id="setting-os-level-thread-priorities-via-ctypes">Setting OS-Level
+Thread Priorities via <code>ctypes</code></h3>
+<p>To bypass Python's abstraction and alter thread priorities at the OS
+level, you must interact directly with the operating system's system
+libraries via <code>ctypes</code>.</p>
+<h4 id="on-windows">On Windows</h4>
+<p>Windows allows assigning priority to individual threads using the
+Win32 API function <code>SetThreadPriority</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ctypes</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> threading</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>THREAD_PRIORITY_LOWEST <span class="op">=</span> <span class="op">-</span><span class="dv">2</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>THREAD_PRIORITY_BELOW_NORMAL <span class="op">=</span> <span class="op">-</span><span class="dv">1</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>THREAD_PRIORITY_NORMAL <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>THREAD_PRIORITY_ABOVE_NORMAL <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>THREAD_PRIORITY_HIGHEST <span class="op">=</span> <span class="dv">2</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> set_current_thread_priority(priority_level):</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    handle <span class="op">=</span> ctypes.windll.kernel32.GetCurrentThread()</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    ctypes.windll.kernel32.SetThreadPriority(handle, priority_level)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> worker():</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    set_current_thread_priority(THREAD_PRIORITY_BELOW_NORMAL)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Thread work goes here</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>t <span class="op">=</span> threading.Thread(target<span class="op">=</span>worker)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>t.start()</span></code></pre></div>
+<h4 id="on-linux-posix">On Linux (POSIX)</h4>
+<p>Linux threads created by Python are lightweight processes with their
+own Thread ID (TID). You can set thread priority or scheduling policies
+using <code>pthread_setschedparam</code> or set niceness via
+<code>setpriority</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ctypes</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> threading</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> set_current_thread_nice(nice_value):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Retrieve the thread ID (TID) on Linux</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    SYS_gettid <span class="op">=</span> <span class="dv">186</span>  <span class="co"># Architecture-dependent syscall number for x86_64</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    libc <span class="op">=</span> ctypes.CDLL(<span class="st">&quot;libc.so.6&quot;</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    tid <span class="op">=</span> libc.syscall(SYS_gettid)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># PRIO_PROCESS = 0 applies to a specific thread ID in Linux</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    PRIO_PROCESS <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    libc.setpriority(PRIO_PROCESS, tid, nice_value)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> worker():</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    set_current_thread_nice(<span class="dv">10</span>)  <span class="co"># Lower priority (higher nice value)</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Thread work goes here</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>t <span class="op">=</span> threading.Thread(target<span class="op">=</span>worker)</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>t.start()</span></code></pre></div>
+<p><em>Note: Increasing priority (negative nice values or real-time
+policies like <code>SCHED_FIFO</code>) on Linux typically requires
+<code>CAP_SYS_NICE</code> or root privileges.</em></p>
+<h3
+id="architectural-alternatives-to-os-thread-priorities">Architectural
+Alternatives to OS Thread Priorities</h3>
+<p>Because manipulating OS-level priorities for Python threads
+introduces platform dependency and produces inconsistent results under
+the GIL, modern Python architectures typically use other mechanisms:</p>
+<ol type="1">
+<li><strong>Application-Level Queues
+(<code>queue.PriorityQueue</code>):</strong> Instead of altering OS
+thread behavior, maintain a fixed pool of standard worker threads and
+prioritize tasks before they reach the workers using a
+<code>PriorityQueue</code>.</li>
+<li><strong>Process-Level Prioritization
+(<code>multiprocessing</code>):</strong> Processes bypass the GIL
+entirely. Python allows setting process priorities across platforms via
+tools like <code>os.nice()</code> on Unix or the third-party library
+<code>psutil</code> (<code>psutil.Process().nice(...)</code>), providing
+reliable resource allocation through the OS scheduler.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Frozen Dataclasses and Pseudo-Immutability - python</title>
+    <meta name="description" content="Python's dataclasses module allows developers to create structures that behave like immutable records by passing frozen=True to the @dataclass decorator. This article explains how frozen dataclasses enforce read-only behavior, why this protection is clas">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-frozen-dataclasses-and-pseudo-immutability">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Frozen Dataclasses and Pseudo-Immutability - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-frozen-dataclasses-and-pseudo-immutability" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's dataclasses module allows developers to create structures that behave like immutable records by passing frozen=True to the @dataclass decorator. This article explains how frozen dataclasses enforce read-only behavior, why this protection is clas" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-frozen-dataclasses-and-pseudo-immutability">Python Frozen
+Dataclasses and Pseudo-Immutability</h1>
+<p>Python's <code>dataclasses</code> module allows developers to create
+structures that behave like immutable records by passing
+<code>frozen=True</code> to the <code>@dataclass</code> decorator. This
+article explains how frozen dataclasses enforce read-only behavior, why
+this protection is classified as pseudo-immutability rather than
+absolute immutability, and the common ways this boundary can be bypassed
+or weakened.</p>
+<h3 id="how-frozen-dataclasses-work">How Frozen Dataclasses Work</h3>
+<p>When you define a dataclass with
+<code>@dataclass(frozen=True)</code>, Python automatically generates
+special implementations for attribute assignment and deletion:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dataclasses <span class="im">import</span> dataclass</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span>(frozen<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Point:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    x: <span class="bu">int</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    y: <span class="bu">int</span></span></code></pre></div>
+<p>Under the hood, the decorator injects <code>__setattr__()</code> and
+<code>__delattr__()</code> methods into the generated class. Whenever
+code attempts to modify an attribute (e.g., <code>point.x = 10</code>)
+or delete one (e.g., <code>del point.x</code>), these generated methods
+raise a <code>dataclasses.FrozenInstanceError</code>. Additionally,
+frozen dataclasses automatically generate a <code>__hash__()</code>
+method by default, allowing instances to be used as dictionary keys or
+set elements, provided all defined fields are also hashable.</p>
+<h3 id="why-it-is-pseudo-immutability">Why It Is
+"Pseudo-Immutability"</h3>
+<p>Python is fundamentally a dynamic language that relies on convention
+("we are all consenting adults here") rather than hard runtime memory
+protections. Because of this architecture, frozen dataclasses provide
+<em>pseudo-immutability</em> rather than true, hardware- or
+runtime-enforced immutability for two primary reasons:</p>
+<h4 id="1-mutable-nested-objects">1. Mutable Nested Objects</h4>
+<p>The "frozen" constraint only prevents reassignment of the top-level
+references held by the dataclass; it does not freeze the underlying
+objects themselves. If a field references a mutable object, that object
+can still be modified in place.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dataclasses <span class="im">import</span> dataclass</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> List</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span>(frozen<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Team:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    members: List[<span class="bu">str</span>]</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>team <span class="op">=</span> Team(members<span class="op">=</span>[<span class="st">&quot;Alice&quot;</span>, <span class="st">&quot;Bob&quot;</span>])</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Reassignment fails:</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># team.members = [&quot;Charlie&quot;]  -&gt; Raises FrozenInstanceError</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Mutation succeeds:</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>team.members.append(<span class="st">&quot;Charlie&quot;</span>)  <span class="co"># Modifies the internal list</span></span></code></pre></div>
+<p>In this scenario, <code>team</code> has changed state despite being
+marked as frozen. To achieve deeper immutability, mutable collections
+like <code>list</code> or <code>dict</code> must be replaced with
+immutable alternatives such as <code>tuple</code> or
+<code>frozenset</code>.</p>
+<h4 id="2-direct-bypass-via-object__setattr__">2. Direct Bypass via
+<code>object.__setattr__</code></h4>
+<p>Because the freezing mechanism relies entirely on Python-level method
+interception, it can be bypassed directly using the base
+<code>object</code> methods.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>point <span class="op">=</span> Point(<span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">object</span>.<span class="fu">__setattr__</span>(point, <span class="st">&#39;x&#39;</span>, <span class="dv">10</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(point.x)  <span class="co"># Outputs: 10</span></span></code></pre></div>
+<p>By calling <code>object.__setattr__</code>, the dataclass's custom
+<code>__setattr__</code> check is completely circumvented. In fact,
+Python's own dataclass implementation relies on this exact mechanism
+during <code>__init__</code> to populate the initial values without
+raising a <code>FrozenInstanceError</code>.</p>
+<h3 id="summary">Summary</h3>
+<p>Frozen dataclasses provide defensive programming safeguards to
+prevent accidental reassignments in standard application workflows.
+However, because they do not protect nested mutable structures and can
+be bypassed via dynamic introspection, their immutability remains
+superficial—a pragmatic convention rather than an unbreakable
+guarantee.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

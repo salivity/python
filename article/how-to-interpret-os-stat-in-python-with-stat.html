@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Interpret os.stat in Python with stat - python</title>
+    <meta name="description" content="When inspecting files in Python, os.stat() returns an os.statresult object containing low-level numeric metadata such as file sizes, timestamps, and protection modes. Because values like stmode encode both file type and permission bits into a single raw">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-interpret-os-stat-in-python-with-stat">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Interpret os.stat in Python with stat - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-interpret-os-stat-in-python-with-stat" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When inspecting files in Python, os.stat() returns an os.statresult object containing low-level numeric metadata such as file sizes, timestamps, and protection modes. Because values like stmode encode both file type and permission bits into a single raw" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-interpret-osstat-in-python-with-stat">How to Interpret
+os.stat in Python with stat</h1>
+<p>When inspecting files in Python, <code>os.stat()</code> returns an
+<code>os.stat_result</code> object containing low-level numeric metadata
+such as file sizes, timestamps, and protection modes. Because values
+like <code>st_mode</code> encode both file type and permission bits into
+a single raw integer, they can be difficult to parse directly. The
+standard library's <code>stat</code> module solves this by providing
+specialized functions, bitmasks, and constants designed to decode,
+evaluate, and translate these raw numeric attributes into human-readable
+information and actionable programmatic checks.</p>
+<h3 id="file-type-identification-functions">File Type Identification
+Functions</h3>
+<p>The <code>st_mode</code> attribute contains the file type encoded
+alongside permission flags. The <code>stat</code> module provides a
+suite of boolean functions that accept <code>st_mode</code> as an
+argument to determine the exact type of a filesystem node:</p>
+<ul>
+<li><code>stat.S_ISREG(mode)</code>: Returns <code>True</code> if the
+file is a regular file.</li>
+<li><code>stat.S_ISDIR(mode)</code>: Returns <code>True</code> if the
+path points to a directory.</li>
+<li><code>stat.S_ISLNK(mode)</code>: Returns <code>True</code> if the
+node is a symbolic link (typically checked against results from
+<code>os.lstat()</code>).</li>
+<li><code>stat.S_ISFIFO(mode)</code>: Returns <code>True</code> if the
+node is a FIFO pipe.</li>
+<li><code>stat.S_ISSOCK(mode)</code>: Returns <code>True</code> if the
+node is a socket.</li>
+<li><code>stat.S_ISCHR(mode)</code> and <code>stat.S_ISBLK(mode)</code>:
+Check for character and block device files, respectively.</li>
+</ul>
+<h3 id="permission-masks-and-decoding">Permission Masks and
+Decoding</h3>
+<p>File permissions are stored as bit patterns within
+<code>st_mode</code>. The <code>stat</code> module defines constants
+that represent standard POSIX permission flags, enabling bitwise
+operations to check specific access rights:</p>
+<ul>
+<li><strong>Owner permissions</strong>: <code>stat.S_IRUSR</code>
+(read), <code>stat.S_IWUSR</code> (write), <code>stat.S_IXUSR</code>
+(execute).</li>
+<li><strong>Group permissions</strong>: <code>stat.S_IRGRP</code>
+(read), <code>stat.S_IWGRP</code> (write), <code>stat.S_IXGRP</code>
+(execute).</li>
+<li><strong>Others permissions</strong>: <code>stat.S_IROTH</code>
+(read), <code>stat.S_IWOTH</code> (write), <code>stat.S_IXOTH</code>
+(execute).</li>
+<li><strong>Special flags</strong>: <code>stat.S_ISUID</code> (set UID
+bit), <code>stat.S_ISGID</code> (set GID bit), and
+<code>stat.S_ISVTX</code> (sticky bit).</li>
+</ul>
+<p>To isolate just the permission portion of <code>st_mode</code>, the
+<code>stat.S_IMODE()</code> function masks out the file type data,
+leaving only the permissions and special execution bits.</p>
+<h3 id="human-readable-formatting-with-filemode">Human-Readable
+Formatting with <code>filemode</code></h3>
+<p>Instead of manually checking individual bitmasks, you can convert the
+entire <code>st_mode</code> integer into a traditional Unix-style
+permission string (such as <code>-rw-r--r--</code> or
+<code>drwxr-xr-x</code>) using <code>stat.filemode()</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> stat</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>info <span class="op">=</span> os.stat(<span class="st">&quot;example.txt&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>mode_string <span class="op">=</span> stat.filemode(info.st_mode)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(mode_string)  <span class="co"># Outputs: -rw-r--r--</span></span></code></pre></div>
+<h3 id="practical-application">Practical Application</h3>
+<p>Here is how to combine <code>os.stat()</code> and <code>stat</code>
+to interpret metadata:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> stat</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>path <span class="op">=</span> <span class="st">&quot;example.txt&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>file_stat <span class="op">=</span> os.stat(path)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Determine the file type</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> stat.S_ISDIR(file_stat.st_mode):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    file_type <span class="op">=</span> <span class="st">&quot;Directory&quot;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="cf">elif</span> stat.S_ISREG(file_stat.st_mode):</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    file_type <span class="op">=</span> <span class="st">&quot;Regular File&quot;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    file_type <span class="op">=</span> <span class="st">&quot;Other&quot;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Check specific permissions</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>has_user_write <span class="op">=</span> <span class="bu">bool</span>(file_stat.st_mode <span class="op">&amp;</span> stat.S_IWUSR)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>octal_permissions <span class="op">=</span> <span class="bu">oct</span>(stat.S_IMODE(file_stat.st_mode))</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Type: </span><span class="sc">{</span>file_type<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;User Write Allowed: </span><span class="sc">{</span>has_user_write<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Octal Mode: </span><span class="sc">{</span>octal_permissions<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Format String: </span><span class="sc">{</span>stat<span class="sc">.</span>filemode(file_stat.st_mode)<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<h3 id="index-constants-for-legacy-tuple-unpacking">Index Constants for
+Legacy Tuple Unpacking</h3>
+<p>While modern Python allows accessing attributes via names like
+<code>file_stat.st_size</code>, <code>os.stat_result</code> objects can
+also be accessed as standard tuples. The <code>stat</code> module
+defines integer index constants—such as <code>stat.ST_MODE</code>,
+<code>stat.ST_INO</code>, <code>stat.ST_DEV</code>,
+<code>stat.ST_UID</code>, and <code>stat.ST_SIZE</code>—to support
+index-based access across legacy implementations.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

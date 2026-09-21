@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimizing Python Memory with __slots__ - python</title>
+    <meta name="description" content="In Python, standard class instances store their attributes in a dynamic dictionary named dict, which provides flexibility but incurs a significant memory overhead. By declaring slots, developers can bypass this default dictionary mechanism and allocate a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/optimizing-python-memory-with-slots">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Optimizing Python Memory with __slots__ - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/optimizing-python-memory-with-slots" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, standard class instances store their attributes in a dynamic dictionary named dict, which provides flexibility but incurs a significant memory overhead. By declaring slots, developers can bypass this default dictionary mechanism and allocate a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="optimizing-python-memory-with-slots">Optimizing Python Memory
+with <strong>slots</strong></h1>
+<p>In Python, standard class instances store their attributes in a
+dynamic dictionary named <code>__dict__</code>, which provides
+flexibility but incurs a significant memory overhead. By declaring
+<code>__slots__</code>, developers can bypass this default dictionary
+mechanism and allocate a fixed amount of space for a predefined set of
+attributes. This optimization drastically reduces the memory footprint
+of individual objects, improves attribute access speed, and prevents the
+dynamic addition of unapproved attributes, making it particularly
+valuable when instantiating millions of small objects.</p>
+<h2 id="the-default-behavior-the-__dict__-overhead">The Default
+Behavior: The <code>__dict__</code> Overhead</h2>
+<p>By default, Python classes are designed to be dynamic. You can add,
+modify, or remove attributes on an instance at runtime. To facilitate
+this flexibility, every instance creates an internal dictionary:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> StandardPoint:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, x, y):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.x <span class="op">=</span> x</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.y <span class="op">=</span> y</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>p <span class="op">=</span> StandardPoint(<span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(p.__dict__)  <span class="co"># Output: {&#39;x&#39;: 1, &#39;y&#39;: 2}</span></span></code></pre></div>
+<p>A Python dictionary is a hash table. To avoid hash collisions and
+allow fast key-value lookups, dictionaries over-allocate memory. In
+addition to the memory consumed by the dictionary structure itself, the
+instance pointer to that dictionary adds another layer of overhead. When
+creating millions of instances of <code>StandardPoint</code>, this
+overhead quickly adds up to gigabytes of unnecessary RAM usage.</p>
+<h2 id="how-__slots__-optimizes-memory">How <code>__slots__</code>
+Optimizes Memory</h2>
+<p>When you define <code>__slots__</code> inside a class, you tell
+Python not to use a dynamic dictionary for instance attributes. Instead,
+Python allocates a fixed-size array of references, similar to a struct
+in C:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> SlottedPoint:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">__slots__</span> <span class="op">=</span> (<span class="st">&#39;x&#39;</span>, <span class="st">&#39;y&#39;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, x, y):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.x <span class="op">=</span> x</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.y <span class="op">=</span> y</span></code></pre></div>
+<p>By assigning a tuple of attribute names to <code>__slots__</code>,
+several key optimizations occur:</p>
+<ol type="1">
+<li><strong>Elimination of <code>__dict__</code></strong>: The instance
+no longer creates or maintains a per-instance dictionary, saving roughly
+100 to 150 bytes per object on 64-bit systems.</li>
+<li><strong>Compact Memory Layout</strong>: Object attributes are stored
+as sequential pointers at fixed offsets directly in the object
+structure.</li>
+<li><strong>Descriptor-Based Access</strong>: Python automatically
+generates descriptors for each slotted attribute, allowing direct memory
+offset lookups instead of hashing string keys.</li>
+</ol>
+<h2 id="quantifying-the-memory-savings">Quantifying the Memory
+Savings</h2>
+<p>The difference in memory consumption between standard instances and
+slotted instances is substantial when scaled across large datasets.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>p_standard <span class="op">=</span> StandardPoint(<span class="dv">10</span>, <span class="dv">20</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>p_slotted <span class="op">=</span> SlottedPoint(<span class="dv">10</span>, <span class="dv">20</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Memory of instance itself</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(sys.getsizeof(p_standard))        <span class="co"># ~48-56 bytes</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(sys.getsizeof(p_standard.__dict__)) <span class="co"># ~104-112 bytes</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(sys.getsizeof(p_slotted))         <span class="co"># ~48-56 bytes (with no __dict__)</span></span></code></pre></div>
+<p>Because <code>sys.getsizeof()</code> does not recursively count
+nested structures like <code>__dict__</code>, the true cost of
+<code>p_standard</code> is the sum of the instance and its dictionary
+(typically 150+ bytes), whereas <code>p_slotted</code> remains fixed
+around 48 to 56 bytes. In production environments involving millions of
+records, implementing <code>__slots__</code> typically reduces overall
+process memory by 40% to 70%.</p>
+<h2 id="secondary-benefit-faster-attribute-access">Secondary Benefit:
+Faster Attribute Access</h2>
+<p>While primarily a memory optimization technique,
+<code>__slots__</code> also provides a measurable speed improvement.
+Accessing a slotted attribute does not require hashing a string name and
+searching a hash table. Instead, the runtime reads directly from a
+predetermined memory address, resulting in roughly 15% to 25% faster
+attribute reads and writes.</p>
+<h2 id="trade-offs-and-limitations">Trade-offs and Limitations</h2>
+<p>While powerful, <code>__slots__</code> introduces constraints that
+must be considered:</p>
+<ul>
+<li><strong>Fixed Attributes</strong>: You cannot dynamically add new
+attributes to an instance at runtime. Attempting to set an undefined
+attribute raises an <code>AttributeError</code>.</li>
+<li><strong>Inheritance Rules</strong>: A subclass does not
+automatically inherit slotted behavior. If a child class inherits from a
+slotted parent without defining its own <code>__slots__</code>, Python
+creates a <code>__dict__</code> for the child, negating the memory
+benefits.</li>
+<li><strong>Weak References</strong>: Slotted classes cannot be weakly
+referenced using Python's <code>weakref</code> module unless
+<code>'__weakref__'</code> is explicitly included in the
+<code>__slots__</code> definition.</li>
+<li><strong>Multiple Inheritance</strong>: Multiple inheritance with
+multiple slotted base classes is strictly restricted if more than one
+base class defines non-empty <code>__slots__</code>.</li>
+</ul>
+<p>Using <code>__slots__</code> is an effective pattern in Python when
+building data-heavy classes, parsers, or simulation engines where memory
+constraints are critical.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

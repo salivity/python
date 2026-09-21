@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Enum vs IntEnum Integer Comparisons - python</title>
+    <meta name="description" content="In Python, the enum module provides Enum and IntEnum to create enumerated constants, but they behave fundamentally differently when compared to integers. While a standard Enum enforces strict type safety and treats its members as distinct objects that ar">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-enum-vs-int-enum-integer-comparisons">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Enum vs IntEnum Integer Comparisons - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-enum-vs-int-enum-integer-comparisons" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, the enum module provides Enum and IntEnum to create enumerated constants, but they behave fundamentally differently when compared to integers. While a standard Enum enforces strict type safety and treats its members as distinct objects that ar" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-enum-vs-intenum-integer-comparisons">Python Enum vs
+IntEnum Integer Comparisons</h1>
+<p>In Python, the <code>enum</code> module provides <code>Enum</code>
+and <code>IntEnum</code> to create enumerated constants, but they behave
+fundamentally differently when compared to integers. While a standard
+<code>Enum</code> enforces strict type safety and treats its members as
+distinct objects that are never equal to raw integers, an
+<code>IntEnum</code> explicitly subclasses <code>int</code>, allowing
+its members to be treated and compared as standard integers.
+Understanding this distinction is critical for writing predictable,
+bug-free Python code when handling categorical data and numeric
+values.</p>
+<h2 id="inheritance-and-type-hierarchy">Inheritance and Type
+Hierarchy</h2>
+<p>The core difference between the two classes lies in their type
+inheritance:</p>
+<ul>
+<li><strong><code>enum.Enum</code></strong>: Inherits only from the
+enumeration base classes. Its members are instances of the enumeration
+type itself, not integers, even if their assigned values are
+integers.</li>
+<li><strong><code>enum.IntEnum</code></strong>: Inherits from both
+<code>int</code> and <code>enum.Enum</code>. Consequently, every member
+of an <code>IntEnum</code> is also an instance of <code>int</code>
+(<code>isinstance(member, int)</code> returns <code>True</code>).</li>
+</ul>
+<h2 id="equality-comparisons--and-">Equality Comparisons
+(<code>==</code> and <code>!=</code>)</h2>
+<p>Because a standard <code>Enum</code> is not an integer, it will
+always evaluate to <code>False</code> when compared for equality against
+an integer literal, even if that literal matches the member's underlying
+value. Conversely, an <code>IntEnum</code> will evaluate to
+<code>True</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> enum <span class="im">import</span> Enum, IntEnum</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Status(Enum):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    PENDING <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    ACTIVE <span class="op">=</span> <span class="dv">2</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> IntStatus(IntEnum):</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    PENDING <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    ACTIVE <span class="op">=</span> <span class="dv">2</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Standard Enum equality</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(Status.PENDING <span class="op">==</span> <span class="dv">1</span>)      <span class="co"># Output: False</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(Status.PENDING.value <span class="op">==</span> <span class="dv">1</span>) <span class="co"># Output: True (requires explicit .value access)</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># IntEnum equality</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(IntStatus.PENDING <span class="op">==</span> <span class="dv">1</span>)   <span class="co"># Output: True</span></span></code></pre></div>
+<h2 id="relational-and-ordering-comparisons----">Relational and Ordering
+Comparisons (<code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>,
+<code>&gt;=</code>)</h2>
+<p>Standard <code>Enum</code> classes do not support ordering
+comparisons with integers, nor do they support ordering comparisons with
+other enum members by default. Attempting an ordering comparison between
+a standard <code>Enum</code> and an integer raises a
+<code>TypeError</code>.</p>
+<p><code>IntEnum</code> supports all standard integer relational
+comparisons:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Standard Enum raises TypeError</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(Status.ACTIVE <span class="op">&gt;</span> <span class="dv">1</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">TypeError</span> <span class="im">as</span> e:</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(e)  <span class="co"># Output: &#39;&gt;&#39; not supported between instances of &#39;Status&#39; and &#39;int&#39;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># IntEnum comparisons succeed</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(IntStatus.ACTIVE <span class="op">&gt;</span> <span class="dv">1</span>)       <span class="co"># Output: True</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(IntStatus.PENDING <span class="op">&lt;</span> <span class="dv">5</span>)      <span class="co"># Output: True</span></span></code></pre></div>
+<p>Furthermore, two different <code>IntEnum</code> classes can be
+compared against each other if their underlying integers compare,
+whereas standard <code>Enum</code> instances from different classes will
+always compare as unequal and raise errors on ordering.</p>
+<h2 id="arithmetic-operations">Arithmetic Operations</h2>
+<p>Because <code>IntEnum</code> members are integers, they directly
+support arithmetic operations, whereas standard <code>Enum</code>
+members do not:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># IntEnum supports arithmetic</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> IntStatus.ACTIVE <span class="op">+</span> <span class="dv">5</span>     <span class="co"># Output: 7 (type: int)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Enum does not support arithmetic</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Status.ACTIVE + 5               # Raises TypeError: unsupported operand type(s)</span></span></code></pre></div>
+<h2 id="choosing-between-enum-and-intenum">Choosing Between
+<code>Enum</code> and <code>IntEnum</code></h2>
+<ul>
+<li><strong>Use <code>Enum</code></strong> when you want strict type
+safety. It prevents accidental comparisons with integers, protecting
+against logic errors where arbitrary numbers might inadvertently match
+an enum state.</li>
+<li><strong>Use <code>IntEnum</code></strong> when you need backward
+compatibility with existing integer constants, when interfacing with
+systems or APIs (like C extensions or network protocols) that require
+integer values, or when using enum values as list indices or
+slices.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

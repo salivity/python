@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C Stack Overflow vs Python RecursionError Explained - python</title>
+    <meta name="description" content="While both errors arise from deeply nested execution, they represent entirely different failure boundaries within runtime environments. A Python RecursionError is a preemptive, software-enforced limit managed directly by the CPython interpreter to protec">
+    <link rel="canonical" href="https://salivity.github.io/python/article/c-stack-overflow-vs-python-recursion-error-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="C Stack Overflow vs Python RecursionError Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/c-stack-overflow-vs-python-recursion-error-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="While both errors arise from deeply nested execution, they represent entirely different failure boundaries within runtime environments. A Python RecursionError is a preemptive, software-enforced limit managed directly by the CPython interpreter to protec" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="c-stack-overflow-vs-python-recursionerror-explained">C Stack
+Overflow vs Python RecursionError Explained</h1>
+<p>While both errors arise from deeply nested execution, they represent
+entirely different failure boundaries within runtime environments. A
+Python <code>RecursionError</code> is a preemptive, software-enforced
+limit managed directly by the CPython interpreter to protect system
+stability, whereas a C-level stack overflow is a hard hardware and
+operating system fault caused by exhausting the actual physical memory
+allocated to a thread's call stack. Understanding the difference
+requires looking at how Python abstracts execution frames versus how
+native C code utilizes system memory.</p>
+<h2 id="python-recursionerror-a-software-counter-safeguard">Python
+RecursionError: A Software Counter Safeguard</h2>
+<p>Python executes code by allocating frame objects on the heap rather
+than relying strictly on the native operating system stack for
+Python-to-Python function calls. Because Python frames are
+heap-allocated, pure Python recursion would theoretically continue
+consuming system RAM until the machine ran out of memory, or until
+native C functions within the interpreter consumed the OS stack.</p>
+<p>To prevent silent crashes and unconstrained resource consumption,
+Python implements a logical depth limit:</p>
+<ul>
+<li><strong>Trigger Mechanism:</strong> CPython tracks recursion depth
+using an internal counter (<code>PyThreadState.recursion_depth</code>).
+Every time a Python function is entered, this counter increments; when
+the function returns, it decrements.</li>
+<li><strong>The Threshold:</strong> If this counter reaches the
+threshold defined by <code>sys.getrecursionlimit()</code> (typically set
+to 1,000 by default), the interpreter halts execution and raises a
+<code>RecursionError</code> (a subclass of
+<code>BuiltinError</code>).</li>
+<li><strong>Consequence:</strong> Because this is a controlled runtime
+exception, it can be captured using a standard
+<code>try...except RecursionError</code> block. The Python process
+remains healthy and stable.</li>
+</ul>
+<h2 id="c-level-stack-overflow-physical-memory-depletion">C-Level Stack
+Overflow: Physical Memory Depletion</h2>
+<p>Unlike Python's logical frame counting, C functions allocate local
+variables, return addresses, and execution contexts directly on a
+contiguous block of virtual memory known as the native call stack. This
+stack is allocated by the operating system when a thread is spawned
+(typically ranging from 1 MB to 8 MB).</p>
+<ul>
+<li><strong>Trigger Mechanism:</strong> A native stack overflow occurs
+when native execution pushes the stack pointer past the boundary of
+allocated stack memory. The operating system places a "guard page" at
+the end of the stack region—an unmapped page of memory.</li>
+<li><strong>The Threshold:</strong> The trigger is not a function count,
+but raw bytes. Declaring massive local arrays on the stack (e.g.,
+<code>int buffer[1000000];</code>) or recursing thousands of times
+through native C functions moves the stack pointer onto the guard
+page.</li>
+<li><strong>Consequence:</strong> When the CPU attempts to write to or
+read from the guard page, the Memory Management Unit (MMU) generates a
+hardware fault. The operating system intercepts this as an illegal
+memory access and sends a signal (such as <code>SIGSEGV</code> on
+Unix-like systems or a structured exception
+<code>EXCEPTION_STACK_OVERFLOW</code> on Windows). The process
+terminates immediately with a segmentation fault. Standard Python
+exception handlers cannot catch this event.</li>
+</ul>
+<h2 id="key-differences">Key Differences</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Python <code>RecursionError</code></th>
+<th style="text-align: left;">C-Level Stack Overflow</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Enforcing Agent</strong></td>
+<td style="text-align: left;">CPython interpreter (software).</td>
+<td style="text-align: left;">MMU and Operating System
+(hardware/OS).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Limiting Factor</strong></td>
+<td style="text-align: left;">Number of Python frames
+(<code>sys.getrecursionlimit()</code>).</td>
+<td style="text-align: left;">Physical byte size of the thread call
+stack.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Memory Location</strong></td>
+<td style="text-align: left;">Python frames on the heap.</td>
+<td style="text-align: left;">Native activation records on the thread
+stack.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Recovery</strong></td>
+<td style="text-align: left;">Recoverable via Python
+<code>try/except</code>.</td>
+<td style="text-align: left;">Non-recoverable; process crashes
+immediately.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="when-python-encounters-a-c-stack-overflow">When Python
+Encounters a C Stack Overflow</h2>
+<p>Although Python's recursion limit is designed to prevent native stack
+exhaustion, a C-level stack overflow can still occur in Python
+applications under specific conditions:</p>
+<ol type="1">
+<li><strong>Artificially High Recursion Limits:</strong> Increasing
+<code>sys.setrecursionlimit()</code> to a very high number (such as
+100,000) permits deep call stacks. Because each Python call still
+involves internal C-level dispatch functions inside the interpreter,
+native stack space is gradually consumed. Eventually, the native OS
+stack runs out before the Python limit is reached, causing a
+segmentation fault.</li>
+<li><strong>C Extensions and Native Libraries:</strong> Deep recursion
+occurring inside C extension modules (e.g., NumPy, Cython, or custom C
+libraries) bypasses Python's internal frame counter entirely. If native
+functions call each other recursively without sufficient stack space, a
+hardware crash occurs instantly.</li>
+<li><strong>Deep C-Level Object Nesting:</strong> Evaluating or
+deallocating deeply nested objects (such as a dictionary containing
+thousands of nested lists) can cause recursive calls to internal C
+functions like <code>Py_DECREF</code>. If the C deallocator recurses too
+deeply, it triggers a C-level stack overflow outside the purview of
+<code>RecursionError</code>.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

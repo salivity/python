@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How PyTorch Autograd Dynamic DAG Engine Works - python</title>
+    <meta name="description" content="PyTorch relies on its autograd engine to calculate gradients automatically using a dynamic Directed Acyclic Graph (DAG). Unlike static computational graph frameworks that define the graph structure before execution, PyTorch generates a new graph on-the-f">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-py-torch-autograd-dynamic-dag-engine-works">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How PyTorch Autograd Dynamic DAG Engine Works - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-py-torch-autograd-dynamic-dag-engine-works" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="PyTorch relies on its autograd engine to calculate gradients automatically using a dynamic Directed Acyclic Graph (DAG). Unlike static computational graph frameworks that define the graph structure before execution, PyTorch generates a new graph on-the-f" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-pytorch-autograd-dynamic-dag-engine-works">How PyTorch
+Autograd Dynamic DAG Engine Works</h1>
+<p>PyTorch relies on its <code>autograd</code> engine to calculate
+gradients automatically using a dynamic Directed Acyclic Graph (DAG).
+Unlike static computational graph frameworks that define the graph
+structure before execution, PyTorch generates a new graph on-the-fly
+during every forward pass. This article explains how the autograd engine
+tracks tensor operations, builds graph nodes and edges via dynamic
+execution, traverses these structures during backpropagation using
+reverse-mode automatic differentiation, and cleans up memory dynamically
+between training steps.</p>
+<h3 id="tensors-and-the-grad_fn-reference">Tensors and the
+<code>grad_fn</code> Reference</h3>
+<p>The foundation of the autograd graph is the
+<code>torch.Tensor</code>. When a tensor is initialized with
+<code>requires_grad=True</code>, PyTorch begins monitoring all
+mathematical operations applied to it.</p>
+<p>Tensors created directly by the user are designated as "leaf nodes."
+Leaf nodes do not have an operation that created them, so their
+<code>grad_fn</code> attribute remains <code>None</code>. However,
+whenever an operation transforms a tensor that tracks gradients, the
+resulting output tensor receives a <code>grad_fn</code> attribute. This
+attribute points to a C++ <code>Node</code> object (such as
+<code>AddBackward0</code> or <code>MulBackward0</code>) that
+encapsulates the backward formula for that specific operation.</p>
+<h3 id="dynamic-graph-construction-in-the-forward-pass">Dynamic Graph
+Construction in the Forward Pass</h3>
+<p>PyTorch employs a "define-by-run" execution model. The computational
+graph is not compiled ahead of time; instead, it is constructed eagerly
+as Python executes operations sequentially:</p>
+<ol type="1">
+<li><strong>Operation Execution:</strong> When an operation like
+<code>z = x * y</code> executes, PyTorch's C++ backend performs the
+forward numerical computation.</li>
+<li><strong>Node Creation:</strong> Concurrently, an operation-specific
+<code>Node</code> instance is instantiated in memory.</li>
+<li><strong>Tracking Dependencies:</strong> The output tensor
+<code>z</code> is assigned this new node as its <code>grad_fn</code>.
+The new node records pointers to the <code>grad_fn</code> instances of
+its inputs (<code>x</code> and <code>y</code>) through an internal list
+called <code>next_edges</code>.</li>
+<li><strong>Context Storage:</strong> Operations that require
+forward-pass values to compute derivatives (such as activations or
+activations' inputs) cache these values using an internal context object
+(<code>ctx.save_for_backward</code>).</li>
+</ol>
+<p>Through this mechanism, the graph represents operations as nodes and
+data dependencies as directed edges flowing from outputs back toward the
+original inputs.</p>
+<h3 id="representation-of-the-graph">Representation of the Graph</h3>
+<p>In the internal C++ core (<code>torch::autograd</code>), the graph is
+structured with clear roles:</p>
+<ul>
+<li><strong>Nodes (<code>torch::autograd::Node</code>):</strong>
+Represent elementary operations. Each node defines an
+<code>apply()</code> method that accepts incoming gradients
+(vector-Jacobian products) and computes gradients with respect to its
+inputs.</li>
+<li><strong>Edges (<code>torch::autograd::Edge</code>):</strong>
+Directed connections consisting of a target <code>Node</code> pointer
+and an input index, specifying which input of the parent operation the
+gradient corresponds to.</li>
+<li><strong>AccumulateGrad Nodes:</strong> Special terminal nodes
+attached to leaf tensors. When backward execution reaches a leaf, the
+<code>AccumulateGrad</code> node adds the computed gradient directly
+into the tensor's <code>.grad</code> attribute.</li>
+</ul>
+<h3 id="the-backward-pass-and-graph-traversal">The Backward Pass and
+Graph Traversal</h3>
+<p>Backpropagation begins when <code>.backward()</code> is called on a
+scalar tensor (typically the loss). The autograd engine evaluates the
+graph through reverse-mode automatic differentiation:</p>
+<ol type="1">
+<li><strong>Root Initialization:</strong> The engine initializes the
+gradient of the root tensor, defaulting to
+<code>torch.tensor(1.0)</code> for scalar outputs.</li>
+<li><strong>Topological Sorting and Queuing:</strong> The C++
+<code>Engine::execute</code> method manages graph traversal using a task
+queue. It tracks node dependencies to ensure a node is only evaluated
+once all its dependent downstream gradients have been calculated.</li>
+<li><strong>Applying Derivatives:</strong> The engine pops nodes from
+the queue, passes incoming gradients to their <code>apply()</code>
+method, and receives the resulting gradients for input variables.</li>
+<li><strong>Accumulation:</strong> As gradients reach
+<code>AccumulateGrad</code> nodes, they are written to the
+<code>.grad</code> fields of the respective leaf tensors using an
+in-place addition (<code>+=</code>) operation.</li>
+</ol>
+<h3 id="dynamic-behavior-and-memory-management">Dynamic Behavior and
+Memory Management</h3>
+<p>A critical design feature of PyTorch's DAG is its ephemerality. By
+default, once <code>.backward()</code> finishes traversing the graph,
+the intermediate buffers and non-leaf node references are immediately
+freed from memory (<code>retain_graph=False</code>).</p>
+<p>Because the graph is dismantled after every backward pass, control
+flow statements such as Python <code>if</code> conditions,
+<code>for</code> loops, and dynamic recursion naturally alter the graph
+topology across iterations. In the subsequent training step, the forward
+pass dynamically constructs an entirely new DAG reflecting whatever
+execution path the Python interpreter takes.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

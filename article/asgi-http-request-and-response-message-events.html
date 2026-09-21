@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASGI HTTP Request and Response Message Events - python</title>
+    <meta name="description" content="The Asynchronous Server Gateway Interface (ASGI) defines how asynchronous Python web servers and applications communicate using a standard message-passing protocol. For HTTP transactions, the lifecycle is managed by an initial connection scope and a sequ">
+    <link rel="canonical" href="https://salivity.github.io/python/article/asgi-http-request-and-response-message-events">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ASGI HTTP Request and Response Message Events - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/asgi-http-request-and-response-message-events" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Asynchronous Server Gateway Interface (ASGI) defines how asynchronous Python web servers and applications communicate using a standard message-passing protocol. For HTTP transactions, the lifecycle is managed by an initial connection scope and a sequ" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="asgi-http-request-and-response-message-events">ASGI HTTP Request
+and Response Message Events</h1>
+<p>The Asynchronous Server Gateway Interface (ASGI) defines how
+asynchronous Python web servers and applications communicate using a
+standard message-passing protocol. For HTTP transactions, the lifecycle
+is managed by an initial connection scope and a sequence of predefined
+inbound and outbound message events passed via <code>receive</code> and
+<code>send</code> callables. This article outlines the specific message
+event types that govern HTTP request ingestion and response delivery
+under the ASGI specification.</p>
+<h3 id="the-connection-scope">The Connection Scope</h3>
+<p>Before any message events are exchanged, the ASGI server initializes
+the connection by passing a <code>scope</code> dictionary of type
+<code>http</code> to the application. This dictionary establishes the
+context of the request and includes metadata such as:</p>
+<ul>
+<li><code>type</code>: Set to <code>"http"</code>.</li>
+<li><code>asgi["version"]</code>: The ASGI specification version.</li>
+<li><code>http_version</code>: The HTTP protocol version (e.g.,
+<code>"1.1"</code> or <code>"2"</code>).</li>
+<li><code>method</code>: The HTTP verb in uppercase (e.g.,
+<code>"GET"</code>, <code>"POST"</code>).</li>
+<li><code>path</code> and <code>raw_path</code>: The URL path.</li>
+<li><code>query_string</code>: The URL query string as raw bytes.</li>
+<li><code>headers</code>: A list of two-item iterable byte pairs
+representing HTTP headers.</li>
+</ul>
+<h3 id="inbound-request-events">Inbound Request Events</h3>
+<p>Once the scope is established, the application listens for incoming
+data using the <code>receive</code> awaitable callable. The HTTP
+lifecycle dictates two primary inbound message types:</p>
+<h4 id="1-httprequest">1. <code>http.request</code></h4>
+<p>Sent by the server to deliver the HTTP request body to the
+application. If the body is large or streamed, multiple
+<code>http.request</code> events are sent sequentially.</p>
+<ul>
+<li><code>body</code> (<em>bytes</em>, optional): A chunk of the request
+body. Defaults to empty bytes <code>b""</code>.</li>
+<li><code>more_body</code> (<em>bool</em>, optional): Indicates whether
+more body chunks are expected. When <code>False</code>, the request body
+transmission is complete. Defaults to <code>False</code>.</li>
+</ul>
+<h4 id="2-httpdisconnect">2. <code>http.disconnect</code></h4>
+<p>Sent by the server if the client closes the connection before the
+response is fully generated or sent. It carries no additional payload
+beyond <code>type: "http.disconnect"</code>. Applications can listen for
+this event to cancel expensive background tasks early.</p>
+<h3 id="outbound-response-events">Outbound Response Events</h3>
+<p>To return data to the client, the application transmits structured
+dictionaries to the server using the <code>send</code> awaitable
+callable. The lifecycle strictly requires a response to begin before
+body data can be delivered.</p>
+<h4 id="1-httpresponsestart">1. <code>http.response.start</code></h4>
+<p>This event must be sent first to initialize the HTTP response.
+Sending any other event before this raises an error.</p>
+<ul>
+<li><code>status</code> (<em>int</em>): The HTTP status code (e.g.,
+<code>200</code>, <code>404</code>).</li>
+<li><code>headers</code> (<em>Iterable[Tuple[bytes, bytes]]</em>,
+optional): A list of two-element tuples containing header names and
+values as bytes.</li>
+<li><code>trailers</code> (<em>bool</em>, optional): Indicates whether
+HTTP trailers will follow the response body. Defaults to
+<code>False</code>.</li>
+</ul>
+<h4 id="2-httpresponsebody">2. <code>http.response.body</code></h4>
+<p>Sent after <code>http.response.start</code> to transmit the response
+payload. Multiple <code>http.response.body</code> events can be chained
+to stream data.</p>
+<ul>
+<li><code>body</code> (<em>bytes</em>, optional): A chunk of the
+response body. Defaults to empty bytes <code>b""</code>.</li>
+<li><code>more_body</code> (<em>bool</em>, optional): Set to
+<code>True</code> if further chunks will follow. When set to
+<code>False</code>, it signals the completion of the HTTP response.</li>
+</ul>
+<h3 id="standard-lifecycle-execution-order">Standard Lifecycle Execution
+Order</h3>
+<ol type="1">
+<li><strong>Initialization:</strong> The server calls the application:
+<code>app(scope, receive, send)</code>.</li>
+<li><strong>Body Consumption:</strong> The application calls
+<code>await receive()</code> to consume one or more
+<code>http.request</code> events until <code>more_body</code> is
+<code>False</code>.</li>
+<li><strong>Response Header Transmission:</strong> The application calls
+<code>await send({"type": "http.response.start", "status": ..., "headers": ...})</code>.</li>
+<li><strong>Response Body Transmission:</strong> The application calls
+<code>await send({"type": "http.response.body", "body": ..., "more_body": ...})</code>
+until all body chunks are sent with <code>more_body=False</code>.</li>
+<li><strong>Termination:</strong> The application completes its
+execution loop, and the server closes or reuses the underlying
+connection.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

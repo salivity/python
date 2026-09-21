@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How PyInstaller Bundles Python Scripts to Executables - python</title>
+    <meta name="description" content="PyInstaller converts Python scripts into standalone executable applications by analyzing source code to detect all necessary dependencies, gathering those files alongside a dedicated Python runtime, and wrapping them with an executable launcher called a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-py-installer-bundles-python-scripts-to-executables">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How PyInstaller Bundles Python Scripts to Executables - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-py-installer-bundles-python-scripts-to-executables" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="PyInstaller converts Python scripts into standalone executable applications by analyzing source code to detect all necessary dependencies, gathering those files alongside a dedicated Python runtime, and wrapping them with an executable launcher called a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-pyinstaller-bundles-python-scripts-to-executables">How
+PyInstaller Bundles Python Scripts to Executables</h1>
+<p>PyInstaller converts Python scripts into standalone executable
+applications by analyzing source code to detect all necessary
+dependencies, gathering those files alongside a dedicated Python
+runtime, and wrapping them with an executable launcher called a
+bootloader. This enables users to run Python programs on machines that
+do not have Python installed, preserving all libraries, binary
+extensions, and data assets within a self-contained distribution.</p>
+<h3 id="1-dependency-analysis">1. Dependency Analysis</h3>
+<p>The bundling process begins with static code analysis. PyInstaller
+reads the primary Python script and parses its Abstract Syntax Tree
+(AST) to identify every <code>import</code> statement. It then
+recursively inspects the imported modules to discover secondary
+dependencies, including standard library modules, third-party packages,
+and compiled C-extensions (<code>.pyd</code> on Windows or
+<code>.so</code> on Linux and macOS). PyInstaller also uses built-in
+"hooks" to identify hidden imports or dynamic dependencies that cannot
+be detected through static analysis alone.</p>
+<h3 id="2-gathering-the-runtime-components">2. Gathering the Runtime
+Components</h3>
+<p>Python scripts require an interpreter to execute; they cannot be
+translated directly into native machine code. To resolve this,
+PyInstaller collects:</p>
+<ul>
+<li>The target operating system's specific Python dynamic library (such
+as <code>python3x.dll</code> on Windows or <code>libpython</code> on
+Linux/macOS).</li>
+<li>All identified third-party libraries and local modules.</li>
+<li>Any bundled data files, configuration files, or binaries explicitly
+specified by the developer.</li>
+</ul>
+<h3 id="3-the-bootloader">3. The Bootloader</h3>
+<p>PyInstaller provides a precompiled native binary executable known as
+the bootloader. This small C program serves as the entry point of the
+final application. When a user runs the compiled application, the
+bootloader initializes first. It sets up the execution environment,
+creates an isolated Python runtime instance using the bundled shared
+library, and points Python's module search path (<code>sys.path</code>)
+to the bundled dependencies. Finally, it tells the embedded interpreter
+to execute the primary Python script.</p>
+<h3 id="4-packaging-modes-one-folder-vs-one-file">4. Packaging Modes:
+One-Folder vs. One-File</h3>
+<p>PyInstaller packages the application into one of two formats:</p>
+<ul>
+<li><strong>One-Folder Mode (<code>--onedir</code>):</strong> This is
+the default mode. PyInstaller places the executable bootloader, the
+Python shared libraries, and all dependencies into a single directory.
+The executable launches directly from this directory, which offers
+faster startup times because no files need extraction.</li>
+<li><strong>One-File Mode (<code>--onefile</code>):</strong> PyInstaller
+packages the bootloader, all code, libraries, and resources into a
+single executable using a compressed archive. When executed, the
+bootloader extracts these contents into a temporary directory (typically
+named <code>_MEIxxxxxx</code> in the system's temporary directory). The
+bootloader then runs the application from this temporary path and
+automatically deletes the files once the program terminates.</li>
+</ul>
+<h3 id="5-runtime-execution">5. Runtime Execution</h3>
+<p>Regardless of the packaging mode, the resulting binary is an
+encapsulated environment. Because it includes both the interpreter and
+all necessary modules, the application executes independently of any
+system-wide Python installation on the target machine.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

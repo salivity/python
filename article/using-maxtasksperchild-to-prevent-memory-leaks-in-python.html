@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using maxtasksperchild to Prevent Memory Leaks in Python - python</title>
+    <meta name="description" content="When executing data-intensive or long-running workloads with Python's multiprocessing.Pool, worker processes often accumulate memory over time and fail to release it back to the operating system. Setting the maxtasksperchild parameter provides an automat">
+    <link rel="canonical" href="https://salivity.github.io/python/article/using-maxtasksperchild-to-prevent-memory-leaks-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using maxtasksperchild to Prevent Memory Leaks in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/using-maxtasksperchild-to-prevent-memory-leaks-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When executing data-intensive or long-running workloads with Python's multiprocessing.Pool, worker processes often accumulate memory over time and fail to release it back to the operating system. Setting the maxtasksperchild parameter provides an automat" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-maxtasksperchild-to-prevent-memory-leaks-in-python">Using
+maxtasksperchild to Prevent Memory Leaks in Python</h1>
+<p>When executing data-intensive or long-running workloads with Python's
+<code>multiprocessing.Pool</code>, worker processes often accumulate
+memory over time and fail to release it back to the operating system.
+Setting the <code>maxtasksperchild</code> parameter provides an
+automatic worker recycling mechanism that terminates and replaces worker
+processes after a specified number of completed tasks. This article
+explains how memory bloat occurs in multiprocessing workflows, how
+<code>maxtasksperchild</code> reliably solves the issue, and how to
+select the right value for your workload.</p>
+<h3 id="the-problem-persistent-memory-bloat-in-worker-pools">The
+Problem: Persistent Memory Bloat in Worker Pools</h3>
+<p>By default, an instance of <code>multiprocessing.Pool</code>
+initializes a static set of worker processes that persist for the entire
+lifespan of the pool. As these workers process tasks, several factors
+can cause their memory footprints to grow uncontrollably:</p>
+<ul>
+<li><strong>C-Extension Allocations:</strong> Libraries written in C or
+C++ (such as NumPy, Pandas, or PyTorch) frequently allocate heap memory
+outside the direct control of Python’s memory allocator, occasionally
+leading to low-level leaks.</li>
+<li><strong>Memory Fragmentation:</strong> Python's internal memory
+manager (<code>pymalloc</code>) holds onto memory allocated from the
+system for small objects. Even if the objects are dereferenced, the
+underlying memory pages may not be returned to the OS kernel due to
+fragmentation.</li>
+<li><strong>Unintended Global or Closure References:</strong> Objects
+kept alive in global scope or via circular references can bypass
+standard garbage collection runs between tasks.</li>
+</ul>
+<p>Because default worker processes never exit, this accumulated
+overhead persists, eventually causing the system to run out of RAM and
+trigger the Operating System's Out-Of-Memory (OOM) killer.</p>
+<h3 id="how-maxtasksperchild-solves-the-issue">How
+<code>maxtasksperchild</code> Solves the Issue</h3>
+<p>The <code>maxtasksperchild</code> parameter instructs the pool
+manager to terminate a worker process after it has executed a set number
+of tasks and replace it with a brand-new worker.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing <span class="im">import</span> Pool</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Replaces each worker process after completing 10 tasks</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> Pool(processes<span class="op">=</span><span class="dv">4</span>, maxtasksperchild<span class="op">=</span><span class="dv">10</span>) <span class="im">as</span> pool:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    results <span class="op">=</span> pool.<span class="bu">map</span>(heavy_task, dataset)</span></code></pre></div>
+<p>The utility of this setting lies in how operating systems manage
+process lifecycles. When a worker process terminates, the operating
+system unconditionally reclaims all virtual memory, file descriptors,
+and resources associated with that process's PID. Any uncollected
+garbage, fragmented heaps, or C-level memory leaks are cleared
+automatically without requiring explicit manual cleanup routines in
+Python.</p>
+<h3 id="tuning-maxtasksperchild">Tuning
+<code>maxtasksperchild</code></h3>
+<p>Choosing the optimal value for <code>maxtasksperchild</code> requires
+balancing memory reclamation against the overhead of spawning new
+processes:</p>
+<ul>
+<li><strong><code>maxtasksperchild=1</code></strong>: Ideal for massive
+batch jobs where individual tasks consume gigabytes of RAM or interact
+with legacy native libraries prone to severe leaks. The process teardown
+cost is negligible compared to the execution time of the task.</li>
+<li><strong><code>maxtasksperchild=50</code> to
+<code>1000</code></strong>: Best for medium-to-large pipelines where
+individual tasks complete quickly. It amortizes the overhead of process
+creation across many tasks while regularly pruning fragmented
+memory.</li>
+<li><strong>Fork vs. Spawn Considerations</strong>: On POSIX systems
+using <code>fork</code>, spawning replacement workers is fast. On
+platforms using <code>spawn</code> (such as Windows or macOS by
+default), process creation entails starting a fresh Python interpreter
+and importing modules, which introduces higher latency. In
+<code>spawn</code> environments, setting higher values for
+<code>maxtasksperchild</code> avoids performance degradation.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Is Numba and How Does JIT Accelerate Python? - python</title>
+    <meta name="description" content="Numba is an open-source just-in-time (JIT) compiler designed to dramatically accelerate numeric and array-oriented Python code. This article explains what Numba is, details how the @jit decorator translates Python functions into native machine instructio">
+    <link rel="canonical" href="https://salivity.github.io/python/article/what-is-numba-and-how-does-jit-accelerate-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="What Is Numba and How Does JIT Accelerate Python? - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/what-is-numba-and-how-does-jit-accelerate-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Numba is an open-source just-in-time (JIT) compiler designed to dramatically accelerate numeric and array-oriented Python code. This article explains what Numba is, details how the @jit decorator translates Python functions into native machine instructio" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="what-is-numba-and-how-does-jit-accelerate-python">What Is Numba
+and How Does JIT Accelerate Python?</h1>
+<p>Numba is an open-source just-in-time (JIT) compiler designed to
+dramatically accelerate numeric and array-oriented Python code. This
+article explains what Numba is, details how the <code>@jit</code>
+decorator translates Python functions into native machine instructions
+at runtime, and highlights the mechanisms that allow Python to achieve
+execution speeds comparable to C or Fortran.</p>
+<h2 id="understanding-numba">Understanding Numba</h2>
+<p>Python is an interpreted language, which offers rapid development and
+high readability at the expense of raw execution speed. While libraries
+like NumPy mitigate this limitation through precompiled C routines,
+purely native Python loops and custom numerical algorithms often
+encounter significant performance bottlenecks due to dynamic
+type-checking and interpreter overhead.</p>
+<p>Numba bridges this gap. It specifically targets mathematical
+algorithms and NumPy array manipulations, compiling selected Python
+functions directly into optimized native machine code while your program
+runs.</p>
+<h2 id="how-the-jit-decorator-operates-at-runtime">How the
+<code>@jit</code> Decorator Operates at Runtime</h2>
+<p>The primary interface for Numba is the <code>@jit</code> decorator
+(or its strict equivalent, <code>@njit</code>). Applying this decorator
+changes the standard Python execution pipeline into a multi-step
+compilation process managed through LLVM:</p>
+<ol type="1">
+<li><strong>Interception and Type Inference:</strong> When a decorated
+function is first called, Numba intercepts the Python bytecode. Because
+Python variables do not have static types, Numba inspects the concrete
+data types of the arguments passed during that specific function
+call.</li>
+<li><strong>Intermediate Representation (IR):</strong> Numba translates
+the function's Python bytecode into its own control flow representation,
+resolving variable types based on the inspected inputs.</li>
+<li><strong>LLVM Code Generation:</strong> The typed IR is converted
+into LLVM Intermediate Representation. LLVM applies advanced compiler
+optimization passes, such as loop unrolling, constant folding, dead code
+elimination, and vectorization (SIMD).</li>
+<li><strong>Machine Code Emission:</strong> LLVM emits native machine
+code tailored to the host CPU architecture.</li>
+<li><strong>Caching and Execution:</strong> The generated machine code
+is executed, and Numba caches it in memory. Subsequent function calls
+utilizing the same argument types skip the compilation phase entirely
+and run the precompiled native code directly at full hardware
+speed.</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> numba <span class="im">import</span> jit</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">@jit</span>(nopython<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> monte_carlo_pi(nsamples):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    acc <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(nsamples):</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> np.random.random()</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        y <span class="op">=</span> np.random.random()</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (x<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> y<span class="op">**</span><span class="dv">2</span>) <span class="op">&lt;=</span> <span class="fl">1.0</span>:</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            acc <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="fl">4.0</span> <span class="op">*</span> acc <span class="op">/</span> nsamples</span></code></pre></div>
+<h2 id="compilation-modes-object-mode-vs-nopython-mode">Compilation
+Modes: Object Mode vs. nopython Mode</h2>
+<p>Numba operates in two primary modes:</p>
+<ul>
+<li><strong>nopython Mode (<code>nopython=True</code> or
+<code>@njit</code>):</strong> In this mode, the compiler strictly
+translates the code without invoking the CPython runtime. It removes
+dynamic type checks and bypasses Python object overhead entirely. If any
+line of code cannot be compiled without Python runtime interaction (such
+as unsupported third-party libraries or arbitrary Python objects), Numba
+raises a compilation error. This mode yields the highest performance
+gains.</li>
+<li><strong>Object Mode:</strong> If Numba cannot fully compile the code
+to pure machine instructions, it falls back to object mode unless
+<code>nopython=True</code> is enforced. Object mode compiles loops where
+possible while interacting directly with standard Python objects,
+resulting in marginal or negligible performance improvements.</li>
+</ul>
+<h2 id="key-benefits-of-runtime-acceleration">Key Benefits of Runtime
+Acceleration</h2>
+<ul>
+<li><strong>Elimination of Interpreter Overhead:</strong> Code compiled
+under <code>nopython=True</code> operates free from the CPython
+interpreter loop, enabling tight, multi-iteration loops to run
+natively.</li>
+<li><strong>Seamless NumPy Integration:</strong> Numba natively
+recognizes NumPy arrays, data types, and common array math operations,
+optimizing array element access without intermediate array
+allocations.</li>
+<li><strong>Hardware Vectorization:</strong> The LLVM backend
+automatically structures loops to utilize modern CPU vector extensions,
+including SSE and AVX instructions.</li>
+<li><strong>Optional Multi-Threading:</strong> By passing
+<code>parallel=True</code> to the decorator, Numba can automatically
+parallelize loop operations across multiple CPU cores without requiring
+complex multi-processing libraries.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

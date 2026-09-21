@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Generational Cyclic Garbage Collector Explained - python</title>
+    <meta name="description" content="Python relies primarily on reference counting for memory management, but reference counting cannot reclaim objects caught in reference cycles. The generational cyclic garbage collector is a specialized subsystem in Python (specifically CPython) designed">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-generational-cyclic-garbage-collector-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Generational Cyclic Garbage Collector Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-generational-cyclic-garbage-collector-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python relies primarily on reference counting for memory management, but reference counting cannot reclaim objects caught in reference cycles. The generational cyclic garbage collector is a specialized subsystem in Python (specifically CPython) designed" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-generational-cyclic-garbage-collector-explained">Python
+Generational Cyclic Garbage Collector Explained</h1>
+<p>Python relies primarily on reference counting for memory management,
+but reference counting cannot reclaim objects caught in reference
+cycles. The generational cyclic garbage collector is a specialized
+subsystem in Python (specifically CPython) designed to detect and
+reclaim these isolated, self-referencing groups of objects. By
+categorizing objects into three distinct "generations" based on their
+lifespan, the collector optimizes performance, ensuring that memory
+leaks from cyclical dependencies are resolved without constantly
+scanning all allocated memory.</p>
+<h3 id="the-problem-reference-cycles">The Problem: Reference Cycles</h3>
+<p>Standard reference counting works by tracking how many references
+point to an object. When that count drops to zero, the object’s memory
+is deallocated immediately. However, reference counting fails when two
+or more objects reference each other, such as:</p>
+<ul>
+<li>A linked list node pointing back to its predecessor.</li>
+<li>A parent object referencing a child that maintains a reference back
+to the parent.</li>
+<li>An object appending itself to its own internal list.</li>
+</ul>
+<p>When the external references to these objects are deleted, their
+internal reference counts remain above zero. Because standard reference
+counting never drops their counters to zero, these objects become
+unreachable yet remain allocated in memory.</p>
+<h3 id="the-role-of-the-cyclic-collector">The Role of the Cyclic
+Collector</h3>
+<p>The primary role of the cyclic garbage collector is to resolve these
+unreachable cycles. It does not scan every object in Python; instead, it
+focuses solely on container objects—such as lists, dictionaries, tuples,
+sets, and user-defined class instances—that are capable of holding
+references to other objects. Atomic types like integers, floats, and
+strings cannot hold references to other objects and are therefore
+ignored by the cyclic collector, reducing overhead.</p>
+<p>To identify cycles, the collector tracks all active container objects
+in a double-linked list. When a collection cycle runs, it determines an
+object's effective reachability by calculating its "trial" reference
+counts. It subtracts references caused by other container objects in the
+candidate pool. If an object’s references drop to zero during this
+trial, it means the object is only reachable via other objects within
+that isolated cycle, confirming that the entire group is unreachable
+garbage eligible for deallocation.</p>
+<h3 id="the-generational-mechanism">The Generational Mechanism</h3>
+<p>Constantly inspecting every container object in a program would
+create massive performance bottlenecks. Python solves this by
+implementing the "weak generational hypothesis," which observes that
+most objects have short lifespans and die shortly after creation.</p>
+<p>The garbage collector divides container objects into three
+generations:</p>
+<ul>
+<li><strong>Generation 0:</strong> Contains all newly allocated
+container objects. Collections here occur most frequently.</li>
+<li><strong>Generation 1:</strong> Objects that survive a collection
+cycle in Generation 0 are promoted to Generation 1. Collections here
+happen less frequently.</li>
+<li><strong>Generation 2:</strong> Objects that survive a collection
+cycle in Generation 1 are promoted to Generation 2, representing
+long-lived objects (such as modules and global state). This generation
+is collected least often.</li>
+</ul>
+<h3 id="thresholds-and-triggers">Thresholds and Triggers</h3>
+<p>The collector uses a threshold system to decide when to run. When the
+number of allocations in Generation 0 minus the number of deallocations
+exceeds a predefined threshold (viewable via
+<code>gc.get_threshold()</code>), a Generation 0 collection is
+triggered. If Generation 0 has been collected a specified number of
+times, a Generation 1 collection is executed, and so on up to Generation
+2.</p>
+<p>Developers can inspect and interact with this process directly using
+Python's built-in <code>gc</code> module. The module provides methods to
+force collections (<code>gc.collect()</code>), alter threshold
+frequencies (<code>gc.set_threshold()</code>), or disable automatic
+garbage collection entirely (<code>gc.disable()</code>) in
+performance-critical sections where cycles are either absent or manually
+handled.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

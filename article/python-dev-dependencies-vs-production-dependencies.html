@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Dev Dependencies vs Production Dependencies - python</title>
+    <meta name="description" content="In Python packaging, managing external libraries effectively requires separating production dependencies from development dependencies. Production dependencies are the runtime packages essential for your application or library to execute its primary func">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-dev-dependencies-vs-production-dependencies">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Dev Dependencies vs Production Dependencies - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-dev-dependencies-vs-production-dependencies" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python packaging, managing external libraries effectively requires separating production dependencies from development dependencies. Production dependencies are the runtime packages essential for your application or library to execute its primary func" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-dev-dependencies-vs-production-dependencies">Python Dev
+Dependencies vs Production Dependencies</h1>
+<p>In Python packaging, managing external libraries effectively requires
+separating production dependencies from development dependencies.
+Production dependencies are the runtime packages essential for your
+application or library to execute its primary functions in a live
+environment, whereas development dependencies are auxiliary tools used
+exclusively for testing, formatting, linting, and documentation during
+the software lifecycle. Separating these dependencies minimizes security
+vulnerabilities, reduces container image sizes, prevents version
+conflicts, and streamlines deployment pipelines.</p>
+<h2 id="what-are-production-dependencies">What Are Production
+Dependencies?</h2>
+<p>Production dependencies—often called runtime dependencies—are the
+packages your code imports directly to perform its core tasks. Without
+these libraries, the application will encounter import errors or crash
+at runtime.</p>
+<ul>
+<li><strong>Examples:</strong> <code>fastapi</code>,
+<code>requests</code>, <code>sqlalchemy</code>,
+<code>pydantic</code>.</li>
+<li><strong>Purpose:</strong> Executing application logic, interacting
+with databases, serving web endpoints, or performing data analysis.</li>
+<li><strong>Target Audience:</strong> The end-users of your application
+or developers installing your published library from the Python Package
+Index (PyPI).</li>
+</ul>
+<p>In standard <code>pyproject.toml</code> configurations (PEP 621),
+production dependencies are defined under the main
+<code>[project]</code> table:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode toml"><code class="sourceCode toml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[project]</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">name</span> <span class="op">=</span> <span class="st">&quot;my-package&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="dt">version</span> <span class="op">=</span> <span class="st">&quot;0.1.0&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="dt">dependencies</span> <span class="op">=</span> <span class="op">[</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;requests&gt;=2.28.0&quot;</span><span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;pydantic&gt;=2.0.0&quot;</span><span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="op">]</span></span></code></pre></div>
+<h2 id="what-are-development-dependencies">What Are Development
+Dependencies?</h2>
+<p>Development dependencies are libraries required only by developers
+working on the codebase or by automated Continuous Integration (CI)
+pipelines. They are never required to execute the application in a
+production environment.</p>
+<ul>
+<li><strong>Examples:</strong> <code>pytest</code> (testing),
+<code>black</code> (formatting), <code>ruff</code> or
+<code>flake8</code> (linting), <code>mypy</code> (static type checking),
+and <code>sphinx</code> (documentation).</li>
+<li><strong>Purpose:</strong> Ensuring code quality, verifying
+functionality, generating documentation, and packaging the
+software.</li>
+<li><strong>Target Audience:</strong> Core maintainers, open-source
+contributors, and automated build servers.</li>
+</ul>
+<p>In traditional setups, these were isolated in a
+<code>requirements-dev.txt</code> file. In modern
+<code>pyproject.toml</code> configurations, they are categorized under
+optional dependencies or specific dependency groups:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode toml"><code class="sourceCode toml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Using PEP 621 optional dependencies</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">[project.optional-dependencies]</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="dt">dev</span> <span class="op">=</span> <span class="op">[</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;pytest&gt;=7.0.0&quot;</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;ruff&gt;=0.1.0&quot;</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;mypy&gt;=1.0.0&quot;</span><span class="op">,</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">]</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Or using Poetry dependency groups</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">[tool.poetry.group.dev.dependencies]</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="dt">pytest</span> <span class="op">=</span> <span class="st">&quot;^7.0.0&quot;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="dt">ruff</span> <span class="op">=</span> <span class="st">&quot;^0.1.0&quot;</span></span></code></pre></div>
+<h2 id="key-differences">Key Differences</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Production Dependencies</th>
+<th style="text-align: left;">Development Dependencies</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Execution Context</strong></td>
+<td style="text-align: left;">Live server, cloud instance, client
+runtime</td>
+<td style="text-align: left;">Local machine, CI/CD runners, build
+agents</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>PyPI Distribution</strong></td>
+<td style="text-align: left;">Automatically installed when running
+<code>pip install your-package</code></td>
+<td style="text-align: left;">Omitted by default; must be explicitly
+requested</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Impact on Security</strong></td>
+<td style="text-align: left;">High (directly exposed to attack vectors
+in production)</td>
+<td style="text-align: left;">Low (isolated from production
+environments)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Image Size Impact</strong></td>
+<td style="text-align: left;">Necessary footprint</td>
+<td style="text-align: left;">Unnecessary bloat if bundled into release
+artifacts</td>
+</tr>
+</tbody>
+</table>
+<h2 id="why-the-distinction-matters">Why the Distinction Matters</h2>
+<h3 id="1-security-and-attack-surface">1. Security and Attack
+Surface</h3>
+<p>Every package introduced into a production environment adds potential
+security vulnerabilities. Developer tools like test runners or
+documentation generators frequently require extensive dependency trees
+of their own. Excluding them from production significantly lowers the
+risk of supply chain attacks and Common Vulnerabilities and Exposures
+(CVEs).</p>
+<h3 id="2-deployment-speed-and-artifact-size">2. Deployment Speed and
+Artifact Size</h3>
+<p>Container images (such as Docker) and deployment bundles should be as
+lightweight as possible. Installing unnecessary development tools
+inflates image sizes, increases memory consumption, and prolongs
+continuous deployment build steps.</p>
+<h3 id="3-avoiding-dependency-conflicts">3. Avoiding Dependency
+Conflicts</h3>
+<p>Development tools often have strict dependency requirements that can
+clash with production libraries. By decoupling them, developers can
+upgrade application-critical libraries without being blocked by pinned
+versions in testing frameworks or linters.</p>
+<h2 id="best-practices-for-management">Best Practices for
+Management</h2>
+<ul>
+<li><strong>Separate Requirement Files:</strong> If using standard
+<code>pip</code>, maintain distinct files such as
+<code>requirements.txt</code> for runtime and
+<code>requirements-dev.txt</code> (which often includes
+<code>-r requirements.txt</code>) for developers.</li>
+<li><strong>Adopt Dependency Groups:</strong> When using modern
+packaging managers like Poetry, PDM, or Hatch, organize dependencies
+into granular groups (e.g., <code>dev</code>, <code>test</code>,
+<code>docs</code>) rather than combining all non-production packages
+into a single list.</li>
+<li><strong>Use Multi-Stage Docker Builds:</strong> Install both
+production and development dependencies in early build stages for
+running tests, but copy only the production virtual environment into the
+final deployment image.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

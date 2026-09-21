@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pattern-Based File Searching in Python with glob - python</title>
+    <meta name="description" content="Python's built-in glob module provides an efficient, readable way to search file systems using Unix shell-style wildcards. This guide explains how glob matches filenames, handles pattern syntax, traverses complex directory trees recursively, and minimize">
+    <link rel="canonical" href="https://salivity.github.io/python/article/pattern-based-file-searching-in-python-with-glob">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pattern-Based File Searching in Python with glob - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/pattern-based-file-searching-in-python-with-glob" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's built-in glob module provides an efficient, readable way to search file systems using Unix shell-style wildcards. This guide explains how glob matches filenames, handles pattern syntax, traverses complex directory trees recursively, and minimize" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pattern-based-file-searching-in-python-with-glob">Pattern-Based
+File Searching in Python with glob</h1>
+<p>Python's built-in <code>glob</code> module provides an efficient,
+readable way to search file systems using Unix shell-style wildcards.
+This guide explains how <code>glob</code> matches filenames, handles
+pattern syntax, traverses complex directory trees recursively, and
+minimizes memory consumption when handling large datasets.</p>
+<h3 id="how-glob-works">How glob Works</h3>
+<p>Under the hood, <code>glob</code> combines the standard
+<code>os.scandir()</code> (or <code>os.listdir()</code>) directory
+reading functions with the pattern-matching logic implemented in the
+<code>fnmatch</code> module. Unlike standard string matching,
+<code>glob</code> matches file paths against wildcard patterns before
+returning the results as strings.</p>
+<p>Because it interacts directly with the underlying filesystem rather
+than loading entire directory structures into memory first, it provides
+a fast and lightweight alternative to manual path iteration.</p>
+<h3 id="supported-pattern-syntax">Supported Pattern Syntax</h3>
+<p>The <code>glob</code> module relies on three primary wildcard
+operators:</p>
+<ul>
+<li><strong>Asterisk (<code>*</code>)</strong>: Matches zero or more
+characters within a single directory level. For example,
+<code>*.py</code> matches all Python files in the current folder, but
+will not look inside subfolders.</li>
+<li><strong>Question Mark (<code>?</code>)</strong>: Matches exactly one
+character. For example, <code>image_?0.png</code> matches
+<code>image_10.png</code> and <code>image_20.png</code>, but not
+<code>image_100.png</code>.</li>
+<li><strong>Character Ranges (<code>[...]</code>)</strong>: Matches any
+single character specified in the brackets. Ranges can be alphanumeric,
+such as <code>[0-9]</code> or <code>[a-z]</code>. For example,
+<code>log_[0-9].txt</code> matches single-digit logs. You can negate
+ranges with an exclamation mark, like <code>[!0-9]</code>.</li>
+</ul>
+<p>To escape special characters like <code>*</code> or <code>?</code>
+that are literal parts of a file name, wrap them in brackets (e.g.,
+<code>[?]</code> or <code>[*]</code>).</p>
+<h3 id="recursive-searching-with-">Recursive Searching with
+<code>**</code></h3>
+<p>By default, <code>glob</code> restricts wildcard evaluation to single
+directory levels. To search through arbitrary depths in directory trees,
+set the <code>recursive</code> parameter to <code>True</code> and use
+the double-asterisk (<code>**</code>) pattern.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> glob</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Search for all .csv files across all subdirectories</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>csv_files <span class="op">=</span> glob.glob(<span class="st">&#39;/path/to/data/**/*.csv&#39;</span>, recursive<span class="op">=</span><span class="va">True</span>)</span></code></pre></div>
+<p>When <code>recursive=True</code> is enabled:</p>
+<ul>
+<li>The <code>**</code> segment matches zero, one, or multiple nested
+directories.</li>
+<li>Trailing separators handle root and leaf levels smoothly.</li>
+<li>Setting <code>recursive=False</code> (the default) causes Python to
+treat <code>**</code> identically to a single <code>*</code>.</li>
+</ul>
+<h3 id="memory-management-with-iglob">Memory Management with
+<code>iglob</code></h3>
+<p>The standard <code>glob.glob()</code> function reads all matching
+file paths into memory and returns them as a Python list. If you are
+scanning extensive directory trees containing millions of files, this
+list can lead to significant memory overhead.</p>
+<p>To avoid this, use <code>glob.iglob()</code>. It accepts the same
+arguments as <code>glob.glob()</code> but returns a generator that
+yields matching file paths lazily:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> glob</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Lazily iterate through matching files</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> file_path <span class="kw">in</span> glob.iglob(<span class="st">&#39;/var/log/**/*.log&#39;</span>, recursive<span class="op">=</span><span class="va">True</span>):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Process each file individually without loading all paths into memory</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(file_path)</span></code></pre></div>
+<h3 id="modern-alternative-pathlibpathglob">Modern Alternative:
+<code>pathlib.Path.glob</code></h3>
+<p>Starting in Python 3.4, the object-oriented <code>pathlib</code>
+module also includes <code>glob()</code> and <code>rglob()</code>
+methods. While the standalone <code>glob</code> module operates on
+standard string paths, <code>pathlib</code> returns <code>Path</code>
+objects:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>root <span class="op">=</span> Path(<span class="st">&#39;/path/to/data&#39;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># rglob automatically applies recursive search</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> root.rglob(<span class="st">&#39;*.csv&#39;</span>):</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="bu">file</span>.name, <span class="bu">file</span>.resolve())</span></code></pre></div>
+<p>Use the standard <code>glob</code> module when working with
+string-based path pipelines and legacy codebases, and use
+<code>pathlib.Path.glob</code> when building object-oriented path
+manipulation logic.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

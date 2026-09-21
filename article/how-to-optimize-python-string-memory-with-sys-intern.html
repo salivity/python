@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Optimize Python String Memory with sys.intern - python</title>
+    <meta name="description" content="Python's sys.intern() function optimizes memory usage and accelerates comparisons by ensuring that only one unique instance of an identical string exists in memory. When dealing with large volumes of repetitive string data, such as parsing CSVs, logs, or">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-optimize-python-string-memory-with-sys-intern">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Optimize Python String Memory with sys.intern - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-optimize-python-string-memory-with-sys-intern" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's sys.intern() function optimizes memory usage and accelerates comparisons by ensuring that only one unique instance of an identical string exists in memory. When dealing with large volumes of repetitive string data, such as parsing CSVs, logs, or" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-optimize-python-string-memory-with-sysintern">How to
+Optimize Python String Memory with sys.intern</h1>
+<p>Python's <code>sys.intern()</code> function optimizes memory usage
+and accelerates comparisons by ensuring that only one unique instance of
+an identical string exists in memory. When dealing with large volumes of
+repetitive string data, such as parsing CSVs, logs, or JSON payloads,
+duplicate strings consume substantial amounts of RAM. By explicitly
+interning these strings, you consolidate duplicate objects into single
+references, dramatically lowering memory overhead and enabling
+constant-time (<span class="math inline">\(O(1)\)</span>) identity
+comparisons.</p>
+<h2 id="understanding-string-interning-in-python">Understanding String
+Interning in Python</h2>
+<p>String interning is a technique where Python stores only one copy of
+each distinct string value in an internal lookup table (the interned
+string pool). When a string is interned, all subsequent references to
+that string point to the exact same memory address.</p>
+<p>CPython automatically interns certain strings at compile time:</p>
+<ul>
+<li>Variable names, function names, and class attributes.</li>
+<li>Python keywords and identifiers.</li>
+<li>Small string literals that look like valid Python identifiers
+(letters, digits, and underscores).</li>
+</ul>
+<p>However, strings created dynamically at runtime—such as user inputs,
+file contents, or database queries—are <strong>not</strong>
+automatically interned, even if they share the same characters as
+existing strings.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Dynamically created strings are stored at different memory addresses</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> <span class="st">&quot;&quot;</span>.join([<span class="st">&quot;user&quot;</span>, <span class="st">&quot;_&quot;</span>, <span class="st">&quot;status&quot;</span>])</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> <span class="st">&quot;&quot;</span>.join([<span class="st">&quot;user&quot;</span>, <span class="st">&quot;_&quot;</span>, <span class="st">&quot;status&quot;</span>])</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(a <span class="op">==</span> b)  <span class="co"># True (same value)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(a <span class="kw">is</span> b)  <span class="co"># False (different memory addresses)</span></span></code></pre></div>
+<h2 id="how-sysintern-works">How <code>sys.intern()</code> Works</h2>
+<p>The <code>sys.intern()</code> function exposes Python’s internal
+string table to user code. When you pass a string to
+<code>sys.intern(string)</code>, the interpreter performs the
+following:</p>
+<ol type="1">
+<li>It checks its internal string pool for a matching value.</li>
+<li>If found, it returns the reference to the previously interned
+string, allowing the new duplicate string to be garbage collected.</li>
+<li>If not found, it adds the new string to the pool and returns its
+reference.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> sys.<span class="bu">intern</span>(<span class="st">&quot;&quot;</span>.join([<span class="st">&quot;user&quot;</span>, <span class="st">&quot;_&quot;</span>, <span class="st">&quot;status&quot;</span>]))</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> sys.<span class="bu">intern</span>(<span class="st">&quot;&quot;</span>.join([<span class="st">&quot;user&quot;</span>, <span class="st">&quot;_&quot;</span>, <span class="st">&quot;status&quot;</span>]))</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(a <span class="kw">is</span> b)  <span class="co"># True (both variables point to the same memory object)</span></span></code></pre></div>
+<h2 id="memory-optimization-in-practice">Memory Optimization in
+Practice</h2>
+<p>Consider an application parsing a large CSV file containing millions
+of records, where each record contains repetitive categorical data like
+country codes or status flags:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Without interning: Allocates a new string object for each entry</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>records_uninterned <span class="op">=</span> [<span class="st">&quot;ACTIVE&quot;</span> <span class="op">+</span> <span class="st">&quot;&quot;</span> <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1_000_000</span>)]</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># With interning: Only one string object is allocated in memory</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>records_interned <span class="op">=</span> [sys.<span class="bu">intern</span>(<span class="st">&quot;ACTIVE&quot;</span> <span class="op">+</span> <span class="st">&quot;&quot;</span>) <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1_000_000</span>)]</span></code></pre></div>
+<p>In the first example, Python creates 1,000,000 distinct string
+objects, each consuming around 50 to 80 bytes of overhead plus the
+payload. In the second example, Python creates only one string object in
+memory, and the list merely stores 1,000,000 pointers (8 bytes each on
+64-bit systems), reducing overall memory consumption significantly.</p>
+<h2 id="speed-optimization-via-identity-comparisons">Speed Optimization
+via Identity Comparisons</h2>
+<p>Beyond memory reduction, <code>sys.intern()</code> improves execution
+speed.</p>
+<p>Normal string equality checks (<code>==</code>) require
+character-by-character comparison (<span
+class="math inline">\(O(n)\)</span> time complexity in the worst case).
+Because interned strings are guaranteed to share the exact same memory
+address if their values are identical, you can use the identity operator
+(<code>is</code>):</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Pointer comparison: O(1) time complexity</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> string_a <span class="kw">is</span> string_b:</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<p>Dictionary lookups and set operations also benefit from interning
+because Python can quickly compare string keys by memory address before
+falling back to full equality checks.</p>
+<h2 id="best-practices-and-limitations">Best Practices and
+Limitations</h2>
+<p>To use <code>sys.intern()</code> effectively, consider the following
+trade-offs:</p>
+<ul>
+<li><strong>Use for low-cardinality datasets:</strong> Interning works
+best when there are many duplicate strings (e.g., categories, enum
+values, state codes).</li>
+<li><strong>Avoid for high-cardinality datasets:</strong> Interning
+unique strings (such as UUIDs, timestamps, or arbitrary user comments)
+wastes memory. Interned strings typically live for the entire lifetime
+of the Python process and cannot be garbage collected from the internal
+pool.</li>
+<li><strong>Interning has a runtime cost:</strong> Calling
+<code>sys.intern()</code> requires a hash table lookup. Only use it when
+the savings in memory or comparison speed outweigh the CPU cost of the
+interning operation.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

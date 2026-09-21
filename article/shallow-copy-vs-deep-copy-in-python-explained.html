@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shallow Copy vs Deep Copy in Python Explained - python</title>
+    <meta name="description" content="In Python, duplicating an object is primarily achieved through either a shallow copy or a deep copy, and understanding the operational difference between the two is vital for preventing unexpected bugs when mutating data. While both approaches generate a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/shallow-copy-vs-deep-copy-in-python-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Shallow Copy vs Deep Copy in Python Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/shallow-copy-vs-deep-copy-in-python-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, duplicating an object is primarily achieved through either a shallow copy or a deep copy, and understanding the operational difference between the two is vital for preventing unexpected bugs when mutating data. While both approaches generate a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="shallow-copy-vs-deep-copy-in-python-explained">Shallow Copy vs
+Deep Copy in Python Explained</h1>
+<p>In Python, duplicating an object is primarily achieved through either
+a shallow copy or a deep copy, and understanding the operational
+difference between the two is vital for preventing unexpected bugs when
+mutating data. While both approaches generate a new outer container
+object, they diverge fundamentally in how they treat nested, mutable
+elements. A shallow copy inserts references to the original nested
+objects into the new container, meaning modifications to inner items
+affect both instances. Conversely, a deep copy recursively duplicates
+every object encountered within the original structure, creating an
+entirely independent clone. This guide covers the mechanics of each
+copying method, their operational differences, and practical examples of
+their behavior.</p>
+<h2 id="the-foundation-assignment-vs-copying">The Foundation: Assignment
+vs. Copying</h2>
+<p>Before comparing shallow and deep copies, it is essential to
+distinguish them from standard variable assignment (<code>=</code>).
+Assigning a variable does not create a new object; it merely creates a
+new reference (or alias) bound to the existing object in memory:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>original <span class="op">=</span> [<span class="dv">1</span>, [<span class="dv">2</span>, <span class="dv">3</span>]]</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>alias <span class="op">=</span> original  <span class="co"># Both point to the exact same memory address</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>alias.append(<span class="dv">4</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(original)  <span class="co"># Output: [1, [2, 3], 4]</span></span></code></pre></div>
+<p>To create an actual independent container rather than a reference,
+Python provides the built-in <code>copy</code> module.</p>
+<h2 id="what-is-a-shallow-copy">What is a Shallow Copy?</h2>
+<p>A shallow copy creates a new collection object, but populates it with
+references to the child objects contained in the original.</p>
+<h3 id="how-to-create-a-shallow-copy">How to Create a Shallow Copy</h3>
+<p>Shallow copies can be constructed using:</p>
+<ul>
+<li>The <code>copy()</code> function from the <code>copy</code> module:
+<code>copy.copy(x)</code></li>
+<li>Built-in object methods, such as <code>list.copy()</code> or
+<code>dict.copy()</code></li>
+<li>Slice notation on sequences: <code>x[:]</code></li>
+<li>Type constructors: <code>list(x)</code>, <code>dict(x)</code>,
+<code>set(x)</code></li>
+</ul>
+<h3 id="operational-behavior">Operational Behavior</h3>
+<p>Because a shallow copy creates a new container, adding or removing
+elements from the top-level container does not impact the original.
+However, because child objects are copied by reference, mutating a
+nested mutable item alters that item across both the original and the
+copied structure.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> copy</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>original <span class="op">=</span> [<span class="dv">1</span>, [<span class="dv">2</span>, <span class="dv">3</span>]]</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>shallow <span class="op">=</span> copy.copy(original)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Modifying the top-level list</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>shallow.append(<span class="dv">4</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(original)  <span class="co"># Output: [1, [2, 3]] (unaffected)</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(shallow)   <span class="co"># Output: [1, [2, 3], 4]</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Modifying a nested object</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>shallow[<span class="dv">1</span>].append(<span class="dv">99</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(original)  <span class="co"># Output: [1, [2, 3, 99]] (affected!)</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(shallow)   <span class="co"># Output: [1, [2, 3, 99], 4]</span></span></code></pre></div>
+<h2 id="what-is-a-deep-copy">What is a Deep Copy?</h2>
+<p>A deep copy constructs a new collection object and then recursively
+copies all nested objects found inside it.</p>
+<h3 id="how-to-create-a-deep-copy">How to Create a Deep Copy</h3>
+<p>A deep copy is created using:</p>
+<ul>
+<li>The <code>deepcopy()</code> function from the <code>copy</code>
+module: <code>copy.deepcopy(x)</code></li>
+</ul>
+<h3 id="operational-behavior-1">Operational Behavior</h3>
+<p>Because deep copying operates recursively, it walks the entire object
+graph. Every mutable child, grandchild, and nested element is duplicated
+at a new memory address. Consequently, changes made anywhere inside the
+deep-copied structure—regardless of nesting depth—will never reflect in
+the original object.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> copy</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>original <span class="op">=</span> [<span class="dv">1</span>, [<span class="dv">2</span>, <span class="dv">3</span>]]</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>deep <span class="op">=</span> copy.deepcopy(original)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Modifying a nested object</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>deep[<span class="dv">1</span>].append(<span class="dv">99</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(original)  <span class="co"># Output: [1, [2, 3]] (completely isolated)</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(deep)      <span class="co"># Output: [1, [2, 3, 99]]</span></span></code></pre></div>
+<h2 id="key-operational-differences">Key Operational Differences</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Shallow Copy (<code>copy.copy</code>)</th>
+<th style="text-align: left;">Deep Copy
+(<code>copy.deepcopy</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Recursion</strong></td>
+<td style="text-align: left;">Copies only the immediate parent
+container.</td>
+<td style="text-align: left;">Recursively copies all child and nested
+objects.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Nested Object
+Identity</strong></td>
+<td style="text-align: left;">Shares memory addresses
+(<code>id()</code>) of nested items.</td>
+<td style="text-align: left;">Generates new memory addresses
+(<code>id()</code>) for nested items.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Side Effects</strong></td>
+<td style="text-align: left;">Mutating nested objects affects the
+original.</td>
+<td style="text-align: left;">Fully isolated; no side effects on the
+original.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Performance</strong></td>
+<td style="text-align: left;">Fast execution; minimal memory
+overhead.</td>
+<td style="text-align: left;">Slower execution; higher memory
+consumption.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Cyclic References</strong></td>
+<td style="text-align: left;">Not applicable (does not traverse
+children).</td>
+<td style="text-align: left;">Automatically tracked via an internal memo
+dictionary to prevent infinite loops.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="when-to-use-each">When to Use Each</h2>
+<ul>
+<li><strong>Use a Shallow Copy</strong> when dealing with flat data
+structures (lists or dictionaries containing only immutable types like
+integers, strings, or tuples), or when nested objects are intentionally
+meant to be shared across containers to save memory.</li>
+<li><strong>Use a Deep Copy</strong> when dealing with complex, nested
+data structures (such as trees, graphs, or multi-dimensional matrices)
+where modifications to the duplicate must remain strictly isolated from
+the original data.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

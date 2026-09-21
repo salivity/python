@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Jython Executes Python Scripts Inside the JVM - python</title>
+    <meta name="description" content="Jython enables the seamless execution of Python scripts on the Java Virtual Machine by compiling Python code directly into Java bytecode, mapping Python’s dynamic types to Java objects, and leveraging the JVM's native execution architecture. Rather tha">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-jython-executes-python-scripts-inside-the-jvm">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Jython Executes Python Scripts Inside the JVM - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-jython-executes-python-scripts-inside-the-jvm" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Jython enables the seamless execution of Python scripts on the Java Virtual Machine by compiling Python code directly into Java bytecode, mapping Python’s dynamic types to Java objects, and leveraging the JVM's native execution architecture. Rather tha" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-jython-executes-python-scripts-inside-the-jvm">How Jython
+Executes Python Scripts Inside the JVM</h1>
+<p>Jython enables the seamless execution of Python scripts on the Java
+Virtual Machine by compiling Python code directly into Java bytecode,
+mapping Python’s dynamic types to Java objects, and leveraging the JVM's
+native execution architecture. Rather than running as an emulator or
+relying on the CPython C-extension layer, Jython functions as a full
+implementation of the Python language written entirely in Java. This
+architecture grants Python scripts direct access to the standard Java
+class library, multithreading capabilities, and memory management
+without requiring foreign function interfaces.</p>
+<h3 id="1-direct-bytecode-compilation">1. Direct Bytecode
+Compilation</h3>
+<p>Jython does not interpret CPython bytecode (<code>.pyc</code> files).
+Instead, it processes Python source code (<code>.py</code>) through a
+dedicated compiler pipeline:</p>
+<ul>
+<li><strong>Parsing and AST Generation:</strong> Jython parses Python
+source code and builds an Abstract Syntax Tree (AST) representing the
+program's structure.</li>
+<li><strong>Java Bytecode Emission:</strong> The compiler translates
+this AST directly into standard Java bytecode (<code>.class</code>
+format) in memory.</li>
+<li><strong>Dynamic Class Loading:</strong> Jython uses custom Java
+<code>ClassLoader</code> instances to load the emitted bytecode into the
+JVM runtime immediately.</li>
+</ul>
+<p>Because the code is converted into standard Java bytecode, it
+benefits from the JVM’s Just-In-Time (JIT) compiler (HotSpot), which
+optimizes hot execution paths down to machine code at runtime.</p>
+<h3 id="2-the-pyobject-type-system">2. The <code>PyObject</code> Type
+System</h3>
+<p>The primary challenge of hosting Python on the JVM is reconciling
+Python’s dynamic type system with Java’s static type system. Jython
+achieves this through its object hierarchy:</p>
+<ul>
+<li><strong>Universal Base Class:</strong> Every Python object in Jython
+derives from a core Java class called
+<code>org.python.core.PyObject</code>.</li>
+<li><strong>Primitive and Type Wrapping:</strong> Core Python types map
+to specialized Java classes extending <code>PyObject</code>. For
+example, a Python integer is represented by <code>PyInteger</code>,
+strings by <code>PyString</code>, and dictionaries by
+<code>PyDictionary</code>.</li>
+<li><strong>Dynamic Dispatch:</strong> Operations like attribute
+lookups, method calls, and arithmetic operations are routed through
+methods defined on <code>PyObject</code> (such as
+<code>__findattr__</code>, <code>__call__</code>, and
+<code>__add__</code>), enabling dynamic resolution at runtime while
+remaining compliant with JVM method invocation instructions.</li>
+</ul>
+<h3 id="3-java-reflection-and-interoperability">3. Java Reflection and
+Interoperability</h3>
+<p>Jython provides bi-directional interoperability by introspecting Java
+classes dynamically:</p>
+<ul>
+<li><strong>Reflection-Based Importing:</strong> When a Python script
+executes <code>from java.util import ArrayList</code>, Jython uses the
+Java Reflection API to inspect the requested class, identify its
+constructors, fields, and methods, and expose them as Python-accessible
+attributes.</li>
+<li><strong>Automatic Type Coercion:</strong> Jython handles dynamic
+casting between Python and Java types. If a Java method expects a
+<code>java.lang.String</code>, Jython converts a Python string
+automatically. Similarly, Java arrays, collections, and primitives are
+wrapped to exhibit Pythonic behavior (such as indexing and
+iteration).</li>
+<li><strong>Dynamic Proxies and Subclassing:</strong> Python scripts can
+implement Java interfaces or subclass concrete Java classes. Jython uses
+dynamic proxy generation to synthesize real Java classes at runtime that
+delegate method invocations back into the Python execution layer.</li>
+</ul>
+<h3 id="4-concurrency-and-native-threading">4. Concurrency and Native
+Threading</h3>
+<p>CPython relies on a Global Interpreter Lock (GIL) to synchronize
+thread-safe access to internal state, restricting CPU-bound multi-core
+parallelism. Jython eliminates the GIL entirely by delegating execution
+directly to the underlying JVM:</p>
+<ul>
+<li><strong>Mapping to <code>java.lang.Thread</code>:</strong> Python
+threads in Jython are direct wrappers around Java native threads.</li>
+<li><strong>Concurrent Execution:</strong> Python threads run
+concurrently across all available CPU cores without lock contention from
+a global interpreter lock.</li>
+<li><strong>JVM-Level Synchronization:</strong> Jython relies on the
+JVM's concurrent data structures and memory model to guarantee internal
+thread safety.</li>
+</ul>
+<h3 id="5-memory-management-via-jvm-garbage-collection">5. Memory
+Management via JVM Garbage Collection</h3>
+<p>CPython primarily uses reference counting combined with a cyclical
+garbage collector to reclaim unused memory. Jython replaces this entire
+subsystem by utilizing the JVM's native Garbage Collector (GC):</p>
+<ul>
+<li><strong>Elimination of Reference Counting:</strong> Objects do not
+maintain active reference count counters, reducing overhead during
+variable reassignment and destruction.</li>
+<li><strong>Automatic Reclamation:</strong> The JVM automatically tracks
+object graphs, detects unreferenced instances (including cyclic
+references), and performs compaction across memory generations.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

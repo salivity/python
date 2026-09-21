@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scikit-Learn Fit Predict Transform API Explained - python</title>
+    <meta name="description" content="This article explores how Scikit-Learn implements its uniform fit, transform, and predict workflow in Python, examining the object-oriented architecture, base classes, and mixins that govern this design. You will learn the specific roles of estimators, t">
+    <link rel="canonical" href="https://salivity.github.io/python/article/scikit-learn-fit-predict-transform-api-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Scikit-Learn Fit Predict Transform API Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/scikit-learn-fit-predict-transform-api-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how Scikit-Learn implements its uniform fit, transform, and predict workflow in Python, examining the object-oriented architecture, base classes, and mixins that govern this design. You will learn the specific roles of estimators, t" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="scikit-learn-fit-predict-transform-api-explained">Scikit-Learn
+Fit Predict Transform API Explained</h1>
+<p>This article explores how Scikit-Learn implements its uniform
+<code>fit</code>, <code>transform</code>, and <code>predict</code>
+workflow in Python, examining the object-oriented architecture, base
+classes, and mixins that govern this design. You will learn the specific
+roles of estimators, transformers, and predictors, how internal state is
+managed, and how this standardized interface enables seamless model
+swapping and complex pipeline construction.</p>
+<h3 id="the-object-oriented-architecture">The Object-Oriented
+Architecture</h3>
+<p>Scikit-Learn achieves interface consistency through a disciplined
+object-oriented design built on Python classes and multiple inheritance.
+Rather than relying on a rigid, single class hierarchy, the framework
+separates functionality into distinct roles: estimators, transformers,
+and predictors.</p>
+<p>All algorithms inherit from <code>sklearn.base.BaseEstimator</code>.
+This base class automatically provides standard boilerplate
+functionality, such as:</p>
+<ul>
+<li>Parameter inspection via <code>get_params()</code> and
+<code>set_params()</code>.</li>
+<li>Clean string representations of objects.</li>
+<li>Seamless compatibility with model selection tools like
+<code>GridSearchCV</code>.</li>
+</ul>
+<p>To add specific capabilities, classes inherit from lightweight mixin
+classes, such as <code>TransformerMixin</code>,
+<code>ClassifierMixin</code>, or <code>RegressorMixin</code>.</p>
+<h3 id="estimators-and-the-fit-method">Estimators and the
+<code>fit</code> Method</h3>
+<p>An <strong>estimator</strong> is any object that learns from data.
+The learning mechanism is strictly implemented through the
+<code>fit</code> method:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimator.fit(X, y<span class="op">=</span><span class="va">None</span>)</span></code></pre></div>
+<ul>
+<li><strong>Parameters:</strong> <code>X</code> represents the training
+feature matrix (typically 2D array-like), and <code>y</code> represents
+the target values (optional for unsupervised tasks).</li>
+<li><strong>Execution:</strong> When <code>fit</code> is executed, the
+estimator estimates internal parameters from the data and stores them as
+attributes.</li>
+<li><strong>Naming Convention:</strong> Any attribute learned during
+<code>fit</code> is saved with a trailing underscore (e.g.,
+<code>model.coef_</code>, <code>model.means_</code>, or
+<code>scaler.scale_</code>). This prevents collisions with
+hyperparameters passed during initialization (e.g.,
+<code>n_clusters</code> or <code>C</code>).</li>
+<li><strong>Return Value:</strong> By convention, <code>fit</code>
+always returns <code>self</code> to allow method chaining.</li>
+</ul>
+<h3 id="transformers-and-the-transform-method">Transformers and the
+<code>transform</code> Method</h3>
+<p>A <strong>transformer</strong> modifies data based on parameters
+learned during <code>fit</code>. Transformers implement the
+<code>transform</code> method:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>X_transformed <span class="op">=</span> transformer.transform(X)</span></code></pre></div>
+<ul>
+<li><strong>Role:</strong> Transformers take an input dataset
+<code>X</code> and return a modified version, such as scaled features,
+encoded categories, or dimensionality-reduced representations.</li>
+<li><strong><code>TransformerMixin</code>:</strong> By inheriting from
+<code>TransformerMixin</code>, a class automatically gains a
+<code>fit_transform</code> method without needing to write custom code.
+The mixin provides a default implementation equivalent to calling
+<code>fit(X, y).transform(X)</code>, though many transformers override
+this with an optimized version to avoid redundant computations.</li>
+</ul>
+<h3 id="predictors-and-the-predict-method">Predictors and the
+<code>predict</code> Method</h3>
+<p>A <strong>predictor</strong> makes predictions on new data based on
+parameters learned during <code>fit</code>. Predictors implement the
+<code>predict</code> method:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> predictor.predict(X)</span></code></pre></div>
+<ul>
+<li><strong>Role:</strong> Given an array <code>X</code>, the predictor
+returns an array of predictions <code>y_pred</code> matching the number
+of samples in <code>X</code>.</li>
+<li><strong>Additional Prediction Interfaces:</strong> Supervised models
+often implement complementary methods:
+<ul>
+<li><code>predict_proba(X)</code>: Returns class probabilities for
+classification tasks.</li>
+<li><code>decision_function(X)</code>: Returns confidence scores.</li>
+</ul></li>
+<li><strong>Mixins:</strong> <code>ClassifierMixin</code> and
+<code>RegressorMixin</code> provide default <code>score(X, y)</code>
+implementations (mean accuracy for classifiers, coefficient of
+determination <span class="math inline">\(R^2\)</span> for
+regressors).</li>
+</ul>
+<h3 id="composition-via-pipelines">Composition via Pipelines</h3>
+<p>The consistency of <code>fit</code>, <code>transform</code>, and
+<code>predict</code> allows Scikit-Learn to treat complex workflows as
+single estimators through <code>sklearn.pipeline.Pipeline</code>.</p>
+<p>A pipeline chains multiple transformers together, followed by an
+optional final predictor:</p>
+<ol type="1">
+<li>When calling <code>pipeline.fit(X, y)</code>, each intermediate step
+calls <code>fit_transform</code> and passes the resulting data to the
+next step.</li>
+<li>The final step only calls <code>fit</code>.</li>
+<li>When calling <code>pipeline.predict(X)</code>, the intermediate
+steps call <code>transform</code> in sequence, and the final step calls
+<code>predict</code>.</li>
+</ol>
+<p>This design enforces clean boundaries between model stages,
+completely eliminates data leakage during cross-validation, and allows
+entire machine learning workflows to be executed with a single line of
+code.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

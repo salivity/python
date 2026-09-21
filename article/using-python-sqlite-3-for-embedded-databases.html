@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using Python sqlite3 for Embedded Databases - python</title>
+    <meta name="description" content="The sqlite3 module is a built-in Python library that provides a lightweight, disk-based, and serverless relational database engine. By implementing the Python Database API Specification v2.0 (PEP 249), it allows developers to integrate structured data st">
+    <link rel="canonical" href="https://salivity.github.io/python/article/using-python-sqlite-3-for-embedded-databases">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using Python sqlite3 for Embedded Databases - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/using-python-sqlite-3-for-embedded-databases" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The sqlite3 module is a built-in Python library that provides a lightweight, disk-based, and serverless relational database engine. By implementing the Python Database API Specification v2.0 (PEP 249), it allows developers to integrate structured data st" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-python-sqlite3-for-embedded-databases">Using Python
+sqlite3 for Embedded Databases</h1>
+<p>The <code>sqlite3</code> module is a built-in Python library that
+provides a lightweight, disk-based, and serverless relational database
+engine. By implementing the Python Database API Specification v2.0 (PEP
+249), it allows developers to integrate structured data storage,
+querying, and transaction management directly into their applications
+without installing, configuring, or running a dedicated external
+database server. This article details the core functionalities of the
+<code>sqlite3</code> module, including database connections, SQL
+execution, parameterized queries, transaction controls, and advanced
+customization features.</p>
+<h3 id="serverless-and-in-memory-storage">Serverless and In-Memory
+Storage</h3>
+<p>Unlike client-server database systems like PostgreSQL or MySQL,
+SQLite runs in the same process as the application. The
+<code>sqlite3</code> module provides two primary storage modes through
+<code>sqlite3.connect()</code>:</p>
+<ul>
+<li><strong>Persistent File Storage:</strong> Providing a file path
+creates or opens a single standalone file on disk, making data
+persistent and easily portable.</li>
+<li><strong>In-Memory Storage:</strong> Passing <code>":memory:"</code>
+as the file path creates a temporary database stored entirely in RAM,
+which provides high read and write speeds ideal for caching, testing, or
+temporary data processing.</li>
+</ul>
+<h3 id="connection-and-cursor-abstractions">Connection and Cursor
+Abstractions</h3>
+<p>Database interaction is governed by two main objects:</p>
+<ul>
+<li><strong>Connection Objects:</strong> Created via
+<code>sqlite3.connect()</code>, these manage the database state,
+isolation levels, and transactions.</li>
+<li><strong>Cursor Objects:</strong> Obtained via
+<code>connection.cursor()</code>, these execute SQL commands, traverse
+record sets, and track execution context.</li>
+</ul>
+<h3 id="sql-execution-and-data-retrieval">SQL Execution and Data
+Retrieval</h3>
+<p>The module offers straightforward methods to execute queries and
+retrieve records:</p>
+<ul>
+<li><code>execute()</code>: Runs a single SQL statement.</li>
+<li><code>executemany()</code>: Efficiently executes a parameterized SQL
+command across an iterable sequence of parameters, optimizing bulk
+inserts.</li>
+<li><code>executescript()</code>: Executes multiple SQL statements
+separated by semicolons in a single call.</li>
+<li>Data retrieval methods include <code>fetchone()</code> to fetch the
+next record, <code>fetchmany(size)</code> to retrieve a batch, and
+<code>fetchall()</code> to return all remaining rows as Python
+tuples.</li>
+</ul>
+<h3 id="parameterized-queries-for-security">Parameterized Queries for
+Security</h3>
+<p>To prevent SQL injection attacks, <code>sqlite3</code> natively
+supports parameterized queries rather than string formatting. It
+supports two placeholder styles:</p>
+<ul>
+<li><strong>qmark style:</strong> Uses <code>?</code> placeholders
+matching a tuple of values (e.g.,
+<code>cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))</code>).</li>
+<li><strong>named style:</strong> Uses named keys with a leading colon
+matching a dictionary (e.g.,
+<code>cursor.execute("SELECT * FROM users WHERE name = :name", {"name": "Alice"})</code>).</li>
+</ul>
+<h3 id="transaction-management-and-acid-compliance">Transaction
+Management and ACID Compliance</h3>
+<p>The <code>sqlite3</code> module ensures complete ACID (Atomicity,
+Consistency, Isolation, Durability) compliance. By default, transactions
+are opened implicitly before Data Modification Language (DML) statements
+such as <code>INSERT</code>, <code>UPDATE</code>, or
+<code>DELETE</code>.</p>
+<ul>
+<li>Changes are permanently saved using
+<code>connection.commit()</code>.</li>
+<li>Incomplete or failed operations can be reverted using
+<code>connection.rollback()</code>.</li>
+<li>Connections can act as context managers using Python's
+<code>with</code> statement, which automatically commits transactions
+upon successful block completion or rolls them back if an exception
+occurs.</li>
+</ul>
+<h3 id="row-factories-and-structured-access">Row Factories and
+Structured Access</h3>
+<p>By default, queries return rows as standard Python tuples. The module
+allows customization of the output structure through the
+<code>row_factory</code> attribute:</p>
+<ul>
+<li>Setting <code>connection.row_factory = sqlite3.Row</code> transforms
+results into mapping-like objects that support both index-based and
+case-insensitive column name-based lookups, as well as conversion to
+standard Python dictionaries.</li>
+<li>Custom callable factories can be implemented to map retrieved rows
+directly into custom data classes or objects.</li>
+</ul>
+<h3 id="data-type-conversion-and-custom-adapters">Data Type Conversion
+and Custom Adapters</h3>
+<p>SQLite uses dynamic typing, and the <code>sqlite3</code> module
+manages conversions between basic SQLite storage classes (NULL, INTEGER,
+REAL, TEXT, BLOB) and Python native types (<code>None</code>,
+<code>int</code>, <code>float</code>, <code>str</code>,
+<code>bytes</code>). For unsupported types:</p>
+<ul>
+<li><strong>Adapters:</strong> Registered via
+<code>sqlite3.register_adapter()</code>, adapters define how custom
+Python objects convert into types SQLite natively handles.</li>
+<li><strong>Converters:</strong> Registered via
+<code>sqlite3.register_converter()</code>, converters parse stored
+SQLite data back into specific Python objects upon query retrieval.</li>
+</ul>
+<h3 id="user-defined-functions-and-extensions">User-Defined Functions
+and Extensions</h3>
+<p>The module allows developers to extend SQL syntax using standard
+Python code:</p>
+<ul>
+<li><code>connection.create_function()</code>: Registers custom Python
+functions as callable scalar functions within SQL queries.</li>
+<li><code>connection.create_aggregate()</code>: Registers custom classes
+to act as user-defined SQL aggregate functions.</li>
+<li><code>connection.create_collation()</code>: Defines custom sorting
+algorithms directly usable in <code>ORDER BY</code> clauses.</li>
+<li><code>connection.enable_load_extension()</code>: Allows loading
+compiled C extensions for advanced features like full-text search or
+geospatial data processing.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

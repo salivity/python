@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Readline Module: History and Auto-Completion - python</title>
+    <meta name="description" content="The Python readline module provides standard interfaces for reading lines of text from interactive terminals, significantly enhancing command-line interfaces (CLIs). It equips Python programs with Unix-like command-line editing capabilities, persistent c">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-readline-module-history-and-auto-completion">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Readline Module: History and Auto-Completion - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-readline-module-history-and-auto-completion" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Python readline module provides standard interfaces for reading lines of text from interactive terminals, significantly enhancing command-line interfaces (CLIs). It equips Python programs with Unix-like command-line editing capabilities, persistent c" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-readline-module-history-and-auto-completion">Python
+Readline Module: History and Auto-Completion</h1>
+<p>The Python <code>readline</code> module provides standard interfaces
+for reading lines of text from interactive terminals, significantly
+enhancing command-line interfaces (CLIs). It equips Python programs with
+Unix-like command-line editing capabilities, persistent command history
+tracking, and customizable tab-completion systems. By tapping into the
+underlying GNU Readline or BSD <code>libedit</code> libraries,
+developers can transform basic interactive prompts into fully featured
+terminal environments.</p>
+<h3 id="interactive-command-history">Interactive Command History</h3>
+<p>The <code>readline</code> module automatically tracks user input
+during an active interactive session, allowing users to scroll through
+previously entered commands using the Up and Down arrow keys. Beyond
+in-memory recall during a running session, the module provides functions
+to persist and manage history across sessions:</p>
+<ul>
+<li><strong>Reading and Writing History Files:</strong> You can load
+past commands on startup and save new commands upon exit using
+<code>readline.read_history_file(filename)</code> and
+<code>readline.write_history_file(filename)</code>. Pairing this with
+Python's standard <code>atexit</code> module ensures that user history
+persists automatically.</li>
+<li><strong>Managing History Size:</strong> To prevent history files
+from growing indefinitely,
+<code>readline.set_history_length(length)</code> limits the maximum
+number of lines saved.</li>
+<li><strong>Direct History Manipulation:</strong> Functions such as
+<code>readline.get_current_history_length()</code>,
+<code>readline.get_history_item(index)</code>, and
+<code>readline.remove_history_item(pos)</code> allow developers to
+inspect, sanitize, or modify command entries programmatically, such as
+removing sensitive information like passwords.</li>
+</ul>
+<h3 id="tab-auto-completion">Tab Auto-Completion</h3>
+<p>The <code>readline</code> module enables context-aware
+auto-completion through custom completion functions, traditionally
+triggered by the Tab key.</p>
+<p>To implement auto-completion, a developer sets a custom completion
+function using <code>readline.set_completer(completer_function)</code>
+and configures the key binding via
+<code>readline.parse_and_bind("tab: complete")</code>.</p>
+<p>The completer function follows a specific design pattern:</p>
+<ol type="1">
+<li>It accepts two arguments: the prefix <code>text</code> typed by the
+user, and an integer <code>state</code>.</li>
+<li>The function is called repeatedly with incrementing values of
+<code>state</code> (0, 1, 2, ...) until it returns
+<code>None</code>.</li>
+<li>For each call, it returns the next matching completion candidate
+string.</li>
+</ol>
+<p>Additionally, the module provides control over word delimiters via
+<code>readline.set_completer_delims(string)</code>. By modifying
+delimiters, you determine what constitutes a "word" when the user
+triggers completion, which is essential for autocompleting complex
+patterns like file system paths, email addresses, or subcommands.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

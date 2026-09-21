@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python round() Behavior for Half-Way Cases - python</title>
+    <meta name="description" content="Python's built-in round() function handles half-way values using a strategy known as "round half to even" or "banker's rounding." Unlike the common schoolbook method of always rounding .5 upward, Python rounds midway values to the nearest even number to">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-round-behavior-for-half-way-cases">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python round() Behavior for Half-Way Cases - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-round-behavior-for-half-way-cases" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's built-in round() function handles half-way values using a strategy known as "round half to even" or "banker's rounding." Unlike the common schoolbook method of always rounding .5 upward, Python rounds midway values to the nearest even number to" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-round-behavior-for-half-way-cases">Python round()
+Behavior for Half-Way Cases</h1>
+<p>Python's built-in <code>round()</code> function handles half-way
+values using a strategy known as "round half to even" or "banker's
+rounding." Unlike the common schoolbook method of always rounding
+<code>.5</code> upward, Python rounds midway values to the nearest even
+number to minimize cumulative statistical bias. This article explains
+how this mechanism works, why it is implemented, how floating-point
+representation affects the results, and how to implement traditional
+rounding when necessary.</p>
+<h2 id="the-round-half-to-even-rule">The "Round Half to Even" Rule</h2>
+<p>In Python 3, when an exact tie occurs—meaning a number is precisely
+halfway between two possible rounded values—<code>round()</code> chooses
+the nearest <strong>even</strong> integer.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Rounding to the nearest integer</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">round</span>(<span class="fl">0.5</span>))  <span class="co"># Output: 0 (0 is even)</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">round</span>(<span class="fl">1.5</span>))  <span class="co"># Output: 2 (2 is even)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">round</span>(<span class="fl">2.5</span>))  <span class="co"># Output: 2 (2 is even)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">round</span>(<span class="fl">3.5</span>))  <span class="co"># Output: 4 (4 is even)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">round</span>(<span class="fl">4.5</span>))  <span class="co"># Output: 4 (4 is even)</span></span></code></pre></div>
+<p>The same behavior applies to negative numbers:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">round</span>(<span class="op">-</span><span class="fl">0.5</span>))  <span class="co"># Output: 0</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">round</span>(<span class="op">-</span><span class="fl">1.5</span>))  <span class="co"># Output: -2</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">round</span>(<span class="op">-</span><span class="fl">2.5</span>))  <span class="co"># Output: -2</span></span></code></pre></div>
+<p>This behavior also extends to fractional positions when passing an
+optional <code>ndigits</code> argument:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">round</span>(<span class="fl">1.25</span>, <span class="dv">1</span>))  <span class="co"># Output: 1.2 (2 is even)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">round</span>(<span class="fl">1.35</span>, <span class="dv">1</span>))  <span class="co"># Output: 1.4 (4 is even)</span></span></code></pre></div>
+<h2 id="why-python-uses-bankers-rounding">Why Python Uses Banker's
+Rounding</h2>
+<p>Traditional arithmetic rounding ("round half up") always rounds ties
+toward positive infinity or away from zero. When performing calculations
+over large datasets, consistently rounding up introduces a positive
+upward bias in sums and averages.</p>
+<p>Banker's rounding conforms to the IEEE 754 standard for
+floating-point arithmetic. By rounding half-way cases to the nearest
+even digit, roughly half of the ties are rounded down and half are
+rounded up, neutralizing the drift and maintaining statistical accuracy
+over multiple operations.</p>
+<h2 id="the-impact-of-floating-point-precision">The Impact of
+Floating-Point Precision</h2>
+<p>Sometimes <code>round()</code> produces results that seem
+inconsistent with the "round half to even" rule. For example:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">round</span>(<span class="fl">2.675</span>, <span class="dv">2</span>))  <span class="co"># Output: 2.67, expected 2.68</span></span></code></pre></div>
+<p>This occurs not because the rounding rule failed, but because most
+decimal fractions cannot be represented exactly in binary floating-point
+format. When Python stores <code>2.675</code>, the underlying binary
+representation is slightly less than the decimal value:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> decimal <span class="im">import</span> Decimal</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(Decimal(<span class="fl">2.675</span>))</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: 2.67499999999999982236431605997495353221893310546875</span></span></code></pre></div>
+<p>Because the stored number is actually closer to <code>2.67</code>
+than to <code>2.68</code>, Python rounds down. It is not an exact
+halfway tie from the machine's perspective.</p>
+<h2 id="how-to-implement-standard-round-half-up">How to Implement
+Standard "Round Half Up"</h2>
+<p>If your use case requires standard arithmetic rounding (such as
+financial calculations requiring traditional rounding up at
+<code>.5</code>), use the <code>decimal</code> module:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> decimal <span class="im">import</span> Decimal, ROUND_HALF_UP</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> round_half_up(val, places<span class="op">=</span><span class="dv">0</span>):</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    d <span class="op">=</span> Decimal(<span class="bu">str</span>(val))</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    pattern <span class="op">=</span> <span class="st">&#39;1&#39;</span> <span class="cf">if</span> places <span class="op">==</span> <span class="dv">0</span> <span class="cf">else</span> <span class="ss">f&quot;1.</span><span class="sc">{</span><span class="st">&#39;0&#39;</span> <span class="op">*</span> places<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">float</span>(d.quantize(Decimal(pattern), rounding<span class="op">=</span>ROUND_HALF_UP))</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(round_half_up(<span class="fl">2.5</span>))    <span class="co"># Output: 3.0</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(round_half_up(<span class="fl">3.5</span>))    <span class="co"># Output: 4.0</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(round_half_up(<span class="fl">2.675</span>, <span class="dv">2</span>))  <span class="co"># Output: 2.68</span></span></code></pre></div>
+<p>Using <code>Decimal</code> avoids binary representation errors by
+preserving the exact base-10 value and explicitly applying the
+<code>ROUND_HALF_UP</code> strategy.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How numpy.linalg.solve Computes Linear Equations - python</title>
+    <meta name="description" content="This article explains how Python’s numpy.linalg.solve() function computes exact solutions to systems of linear equations represented in the matrix form $Ax = b$. It covers the underlying mathematical algorithms, its integration with low-level Fortran l">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-numpy-linalg-solve-computes-linear-equations">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How numpy.linalg.solve Computes Linear Equations - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-numpy-linalg-solve-computes-linear-equations" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how Python’s numpy.linalg.solve() function computes exact solutions to systems of linear equations represented in the matrix form $Ax = b$. It covers the underlying mathematical algorithms, its integration with low-level Fortran l" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-numpylinalgsolve-computes-linear-equations">How
+numpy.linalg.solve Computes Linear Equations</h1>
+<p>This article explains how Python’s <code>numpy.linalg.solve()</code>
+function computes exact solutions to systems of linear equations
+represented in the matrix form <span class="math inline">\(Ax =
+b\)</span>. It covers the underlying mathematical algorithms, its
+integration with low-level Fortran libraries, why it avoids explicit
+matrix inversion, and the computational steps involved in finding the
+unknown vector <span class="math inline">\(x\)</span>.</p>
+<h3 id="the-underlying-engine-lapack">The Underlying Engine: LAPACK</h3>
+<p>Python's NumPy library does not implement the core numerical
+algorithms for matrix equations from scratch in Python or C. Instead,
+<code>numpy.linalg.solve()</code> acts as a high-level wrapper around
+LAPACK (Linear Algebra PACKage), an optimized library written in Fortran
+and C.</p>
+<p>Specifically, <code>numpy.linalg.solve()</code> delegates computation
+to the LAPACK <code>_gesv</code> routine family:</p>
+<ul>
+<li><code>sgesv</code> for single-precision floats
+(<code>float32</code>)</li>
+<li><code>dgesv</code> for double-precision floats
+(<code>float64</code>)</li>
+<li><code>cgesv</code> for single-precision complex numbers
+(<code>complex64</code>)</li>
+<li><code>zgesv</code> for double-precision complex numbers
+(<code>complex128</code>)</li>
+</ul>
+<p>These routines utilize modern CPU features, cache hierarchies, and
+multi-threading through optimized BLAS (Basic Linear Algebra
+Subprograms) implementations such as OpenBLAS, Intel MKL, or Apple
+Accelerate.</p>
+<h3 id="the-algorithm-lu-factorization-with-partial-pivoting">The
+Algorithm: LU Factorization with Partial Pivoting</h3>
+<p>The standard approach to solving <span class="math inline">\(Ax =
+b\)</span> using <code>numpy.linalg.solve()</code> involves LU
+decomposition with partial pivoting. Rather than calculating the matrix
+inverse <span class="math inline">\(A^{-1}\)</span>, the algorithm
+factors the square coefficient matrix <span
+class="math inline">\(A\)</span> into lower and upper triangular
+components:</p>
+<p><span class="math display">\[PA = LU\]</span></p>
+<ul>
+<li><strong><span class="math inline">\(P\)</span> (Permutation
+Matrix):</strong> Keeps track of row swaps (pivoting) required to place
+the largest available numerical value on the diagonal, minimizing
+round-off errors and preventing division by zero.</li>
+<li><strong><span class="math inline">\(L\)</span> (Lower Triangular
+Matrix):</strong> A unit lower triangular matrix where all diagonal
+elements are 1 and all elements above the diagonal are 0.</li>
+<li><strong><span class="math inline">\(U\)</span> (Upper Triangular
+Matrix):</strong> An upper triangular matrix where all elements below
+the diagonal are 0.</li>
+</ul>
+<h3 id="solving-the-system-via-substitution">Solving the System via
+Substitution</h3>
+<p>Once the matrix <span class="math inline">\(A\)</span> is factored
+into <span class="math inline">\(P\)</span>, <span
+class="math inline">\(L\)</span>, and <span
+class="math inline">\(U\)</span>, the equation <span
+class="math inline">\(Ax = b\)</span> transforms into:</p>
+<p><span class="math display">\[LUx = Pb\]</span></p>
+<p>The solver then computes the vector <span
+class="math inline">\(x\)</span> in two distinct, computationally
+inexpensive steps:</p>
+<ol type="1">
+<li><strong>Forward Substitution:</strong> NumPy solves the system <span
+class="math inline">\(Ly = Pb\)</span> for <span
+class="math inline">\(y\)</span>. Because <span
+class="math inline">\(L\)</span> is lower triangular, the first variable
+is solved immediately, and each subsequent variable is solved by
+substituting the known variables into the next equation.</li>
+<li><strong>Back Substitution:</strong> With <span
+class="math inline">\(y\)</span> determined, the system solves <span
+class="math inline">\(Ux = y\)</span> for <span
+class="math inline">\(x\)</span>. Because <span
+class="math inline">\(U\)</span> is upper triangular, the last variable
+is determined first, and the remaining variables are obtained by
+substituting upward.</li>
+</ol>
+<h3 id="why-avoid-matrix-inversion">Why Avoid Matrix Inversion?</h3>
+<p>A common mathematical representation for solving <span
+class="math inline">\(Ax = b\)</span> is <span class="math inline">\(x =
+A^{-1}b\)</span>. However, <code>numpy.linalg.solve()</code>
+intentionally avoids calling <code>numpy.linalg.inv()</code>.</p>
+<p>Direct matrix inversion requires roughly three times more
+floating-point operations than LU decomposition followed by
+substitution. Furthermore, calculating an explicit inverse introduces
+significant numerical instability due to finite floating-point
+precision, making <code>numpy.linalg.solve()</code> both faster and
+significantly more accurate.</p>
+<h3 id="requirements-and-error-handling">Requirements and Error
+Handling</h3>
+<p>For <code>numpy.linalg.solve()</code> to execute:</p>
+<ul>
+<li>Matrix <span class="math inline">\(A\)</span> must be strictly
+two-dimensional, square (<span class="math inline">\(N \times
+N\)</span>), and non-singular (its determinant must not be zero).</li>
+<li>Vector or matrix <span class="math inline">\(b\)</span> must have
+compatible dimensions with <span class="math inline">\(A\)</span> (<span
+class="math inline">\(N\)</span> or <span class="math inline">\(N \times
+M\)</span>).</li>
+</ul>
+<p>If <span class="math inline">\(A\)</span> is singular or
+ill-conditioned, LAPACK detects a zero pivot during the LU factorization
+stage, causing NumPy to raise a
+<code>numpy.linalg.LinAlgError: Singular matrix</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

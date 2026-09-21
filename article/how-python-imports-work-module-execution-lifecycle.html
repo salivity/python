@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Imports Work: Module Execution Lifecycle - python</title>
+    <meta name="description" content="When a Python script executes an import statement, the runtime initiates a rigorous, multi-stage lifecycle to resolve, load, and initialize the requested code before binding it to the current scope. This article details the exact execution lifecycle of a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-imports-work-module-execution-lifecycle">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Imports Work: Module Execution Lifecycle - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-imports-work-module-execution-lifecycle" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When a Python script executes an import statement, the runtime initiates a rigorous, multi-stage lifecycle to resolve, load, and initialize the requested code before binding it to the current scope. This article details the exact execution lifecycle of a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-imports-work-module-execution-lifecycle">How Python
+Imports Work: Module Execution Lifecycle</h1>
+<p>When a Python script executes an <code>import</code> statement, the
+runtime initiates a rigorous, multi-stage lifecycle to resolve, load,
+and initialize the requested code before binding it to the current
+scope. This article details the exact execution lifecycle of a Python
+module during import, tracking the process from the initial lookup in
+<code>sys.modules</code>, through finder and loader hooks governed by
+PEP 451, to bytecode compilation, isolated execution, and namespace
+binding.</p>
+<h3 id="1-the-cache-check-sysmodules">1. The Cache Check
+(<code>sys.modules</code>)</h3>
+<p>Before performing any filesystem or network operations, Python checks
+the global cache located at <code>sys.modules</code>.</p>
+<ul>
+<li><strong>Cache Hit:</strong> If the module name exists in
+<code>sys.modules</code>, Python immediately returns the cached module
+object. Execution skips the search, load, and initialization steps
+entirely.</li>
+<li><strong>Cache Miss:</strong> If the module is not found, or if its
+entry is explicitly set to <code>None</code> (indicating a cached
+negative lookup), Python initiates the search phase.</li>
+</ul>
+<h3 id="2-the-search-phase-finders-and-sysmeta_path">2. The Search Phase
+(Finders and <code>sys.meta_path</code>)</h3>
+<p>Python delegates the task of locating the module to a sequence of
+"finders" registered in the <code>sys.meta_path</code> list. By default,
+this list contains:</p>
+<ol type="1">
+<li><strong><code>BuiltinImporter</code>:</strong> Searches for modules
+compiled directly into the Python interpreter (e.g., <code>sys</code>,
+<code>builtins</code>).</li>
+<li><strong><code>FrozenImporter</code>:</strong> Searches for frozen
+modules compiled into bytecode and bundled with the binary.</li>
+<li><strong><code>PathFinder</code>:</strong> Searches the filesystem
+using paths listed in <code>sys.path</code> and any package
+<code>__path__</code> attributes.</li>
+</ol>
+<p>Each finder implements the
+<code>find_spec(fullname, path, target=None)</code> method. The runtime
+iterates through <code>sys.meta_path</code> sequentially. The first
+finder that recognizes the module returns a <code>ModuleSpec</code>
+object (PEP 451), which encapsulates all metadata required to load the
+module, such as its loader, origin, submodule search locations, and
+caching flags. If no finder returns a valid specification, Python raises
+a <code>ModuleNotFoundError</code>.</p>
+<h3 id="3-module-creation-and-cache-reservation">3. Module Creation and
+Cache Reservation</h3>
+<p>Once a <code>ModuleSpec</code> is obtained, the associated loader
+(found on <code>spec.loader</code>) manages the creation and population
+of the module object.</p>
+<ol type="1">
+<li><strong>Instantiation:</strong> The loader invokes
+<code>spec.loader.create_module(spec)</code>. If this returns
+<code>None</code>, Python falls back to default creation semantics via
+<code>types.ModuleType(spec.name)</code>.</li>
+<li><strong>Boilerplate Attributes:</strong> Python sets core attributes
+on the module object based on the spec, including <code>__name__</code>,
+<code>__file__</code>, <code>__cached__</code>, <code>__doc__</code>,
+<code>__loader__</code>, <code>__package__</code>, and
+<code>__spec__</code>.</li>
+<li><strong>Early Insertion into <code>sys.modules</code>:</strong>
+Crucially, Python adds the freshly allocated, unexecuted module to
+<code>sys.modules</code> <em>before</em> running its code. This step
+prevents infinite recursion in circular import scenarios
+(<code>Module A</code> imports <code>Module B</code>, which imports
+<code>Module A</code>).</li>
+</ol>
+<h3 id="4-code-loading-and-compilation">4. Code Loading and
+Compilation</h3>
+<p>If the module is backed by source code on disk (standard
+<code>.py</code> files managed by <code>SourceFileLoader</code>):</p>
+<ol type="1">
+<li><strong>Bytecode Lookup:</strong> Python checks for a valid,
+precompiled <code>.pyc</code> file in the <code>__pycache__</code>
+directory matching the current interpreter version and source file
+timestamp/hash.</li>
+<li><strong>Compilation:</strong> If the cache is missing or stale, the
+source code is read, parsed into an Abstract Syntax Tree (AST), and
+compiled into a Python code object.</li>
+<li><strong>Bytecode Write:</strong> If permissions allow, the newly
+compiled bytecode is written to <code>__pycache__</code> asynchronously
+or immediately for future use.</li>
+</ol>
+<h3 id="5-module-execution-exec_module">5. Module Execution
+(<code>exec_module</code>)</h3>
+<p>With an empty module object registered in <code>sys.modules</code>
+and a valid code object ready, the loader executes the module:</p>
+<ol type="1">
+<li>The runtime calls <code>spec.loader.exec_module(module)</code>.</li>
+<li>The code object is evaluated inside the module’s dictionary
+namespace (<code>module.__dict__</code>).</li>
+<li>Every top-level statement executes sequentially:
+<ul>
+<li>Class and function definitions are evaluated, creating code objects
+and assigning them to module-level names.</li>
+<li>Top-level variable assignments populate
+<code>module.__dict__</code>.</li>
+<li>Nested <code>import</code> statements trigger recursive executions
+of this entire lifecycle.</li>
+<li>Any arbitrary code (e.g., <code>print()</code>, loops, network
+calls) executes immediately.</li>
+</ul></li>
+</ol>
+<p>If an unhandled exception occurs during <code>exec_module</code>, the
+import aborts. Python removes the incompletely initialized module from
+<code>sys.modules</code> to prevent a broken state from persisting, and
+the exception bubbles up to the caller.</p>
+<h3 id="6-name-binding">6. Name Binding</h3>
+<p>After successful execution, control returns to the scope where the
+import statement originated. The runtime binds the loaded module or its
+attributes to the local namespace:</p>
+<ul>
+<li><code>import foo</code>: Binds the identifier <code>foo</code> to
+the loaded module object.</li>
+<li><code>import foo.bar</code>: Loads <code>foo</code>, loads
+<code>foo.bar</code>, sets <code>bar</code> as an attribute on
+<code>foo</code>, and binds <code>foo</code> to the local
+namespace.</li>
+<li><code>from foo import bar</code>: Loads <code>foo</code>, retrieves
+the attribute <code>bar</code> from <code>foo.__dict__</code>, and binds
+<code>bar</code> directly into the current scope.</li>
+<li><code>import foo as baz</code>: Binds the module <code>foo</code> to
+the identifier <code>baz</code>.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

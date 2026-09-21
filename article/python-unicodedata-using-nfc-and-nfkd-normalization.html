@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python unicodedata: Using NFC and NFKD Normalization - python</title>
+    <meta name="description" content="This article provides an overview of how Python's built-in unicodedata module handles Unicode normalization, focusing on the NFC and NFKD forms. You will learn the difference between canonical and compatibility equivalence, understand the internal algori">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-unicodedata-using-nfc-and-nfkd-normalization">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python unicodedata: Using NFC and NFKD Normalization - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-unicodedata-using-nfc-and-nfkd-normalization" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of how Python's built-in unicodedata module handles Unicode normalization, focusing on the NFC and NFKD forms. You will learn the difference between canonical and compatibility equivalence, understand the internal algori" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-unicodedata-using-nfc-and-nfkd-normalization">Python
+unicodedata: Using NFC and NFKD Normalization</h1>
+<p>This article provides an overview of how Python's built-in
+<code>unicodedata</code> module handles Unicode normalization, focusing
+on the NFC and NFKD forms. You will learn the difference between
+canonical and compatibility equivalence, understand the internal
+algorithmic process Python uses to decompose and compose characters, and
+see practical code examples to ensure consistent text processing.</p>
+<h2 id="understanding-unicode-equivalence">Understanding Unicode
+Equivalence</h2>
+<p>In Unicode, visually identical characters can often be represented by
+different sequences of code points. For example, the character
+<code>é</code> can be represented as a single precomposed code point
+(<code>\u00e9</code>, Latin small letter e with acute) or as a
+decomposed sequence of two code points: the base letter <code>e</code>
+(<code>\u0065</code>) followed by the combining acute accent
+(<code>\u0301</code>).</p>
+<p>Because these distinct byte sequences appear identical to users,
+comparing them directly in Python with the <code>==</code> operator will
+return <code>False</code> unless they are normalized. Normalization
+transforms text into a standardized binary representation based on two
+types of equivalence:</p>
+<ul>
+<li><strong>Canonical Equivalence:</strong> Characters that have the
+same visual appearance and linguistic meaning (e.g., <code>é</code> as
+one code point vs. <code>e</code> + <code>´</code>).</li>
+<li><strong>Compatibility Equivalence:</strong> Characters that
+represent the same semantic construct but may differ in visual
+formatting or typography (e.g., the ligature <code>ﬁ</code>, the circled
+digit <code>①</code>, or superscript <code>²</code>).</li>
+</ul>
+<h2 id="the-normalization-forms-nfc-vs-nfkd">The Normalization Forms:
+NFC vs. NFKD</h2>
+<p>The <code>unicodedata.normalize()</code> function accepts four
+standard Unicode normalization forms: <strong>NFC</strong>,
+<strong>NFD</strong>, <strong>NFKC</strong>, and
+<strong>NFKD</strong>.</p>
+<ul>
+<li><strong>NFD (Canonical Decomposition):</strong> Translates
+characters into their base components and separate combining marks using
+canonical equivalence.</li>
+<li><strong>NFC (Canonical Decomposition, followed by Canonical
+Composition):</strong> First decomposes characters into canonical
+components, then immediately recombines them into single precomposed
+characters where possible. This is the most common form used for web
+content and general text storage.</li>
+<li><strong>NFKD (Compatibility Decomposition):</strong> Decomposes
+characters using both canonical and compatibility mappings. It strips
+formatting distinctions—for instance, converting the superscript
+<code>²</code> into a standard <code>2</code>, or breaking the ligature
+<code>ﬁ</code> into separate <code>f</code> and <code>i</code>
+characters.</li>
+<li><strong>NFKC (Compatibility Decomposition, followed by Canonical
+Composition):</strong> Applies compatibility decomposition to reduce
+styled characters to standard equivalents, then applies canonical
+composition to merge compatible base characters and accents.</li>
+</ul>
+<h2 id="how-unicodedata-executes-normalization">How
+<code>unicodedata</code> Executes Normalization</h2>
+<p>Python implements the <code>unicodedata</code> module through a
+compiled C extension (<code>unicodedata.c</code>) that packages tables
+derived from the official Unicode Character Database (UCD). When you
+invoke <code>unicodedata.normalize(form, unistr)</code>, the module
+executes a multi-step algorithmic pipeline:</p>
+<ol type="1">
+<li><strong>Decomposition Lookup:</strong> The engine iterates through
+the input string. For <strong>NFC</strong>, it queries the database for
+canonical decomposition mappings. For <strong>NFKD</strong>, it queries
+both canonical and compatibility decomposition mappings. If a character
+maps to multiple decomposed code points, the lookup recurses until no
+further decomposition is possible.</li>
+<li><strong>Canonical Ordering:</strong> Once decomposed, combining
+marks are sorted deterministically based on their <strong>Canonical
+Combining Class (CCC)</strong>, an integer assigned by the Unicode
+standard. Marks with a CCC of zero (typically base characters) remain in
+place, while non-zero combining marks are sorted in ascending order by
+their CCC value.</li>
+<li><strong>Composition (NFC only):</strong> For NFC, the engine reads
+the ordered stream and attempts to combine the primary base character
+with subsequent combining marks. It references a two-character
+composition lookup table. A pair is merged into a single code point only
+if the character is not blocked by an intervening character with the
+same or higher combining class. Because NFKD is a decomposition-only
+format, this step is skipped for NFKD.</li>
+</ol>
+<h2 id="practical-python-implementation">Practical Python
+Implementation</h2>
+<p>Normalization is executed using the
+<code>unicodedata.normalize()</code> method by passing the desired form
+as a string along with the target text.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> unicodedata</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Two visually identical strings with different code points</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>s1 <span class="op">=</span> <span class="st">&quot;</span><span class="ch">\u00e9</span><span class="st">&quot;</span>  <span class="co"># Precomposed &#39;é&#39;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>s2 <span class="op">=</span> <span class="st">&quot;e</span><span class="ch">\u0301</span><span class="st">&quot;</span>  <span class="co"># Decomposed &#39;e&#39; + combining accent</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(s1 <span class="op">==</span> s2)  <span class="co"># Output: False</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Normalizing to NFC (Canonical Composition)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>nfc_s1 <span class="op">=</span> unicodedata.normalize(<span class="st">&quot;NFC&quot;</span>, s1)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>nfc_s2 <span class="op">=</span> unicodedata.normalize(<span class="st">&quot;NFC&quot;</span>, s2)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(nfc_s1 <span class="op">==</span> nfc_s2)  <span class="co"># Output: True</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(nfc_s2))  <span class="co"># Output: 1</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Normalizing to NFKD (Compatibility Decomposition)</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>styled_text <span class="op">=</span> <span class="st">&quot;2⁵ and ﬁle&quot;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>nfkd_text <span class="op">=</span> unicodedata.normalize(<span class="st">&quot;NFKD&quot;</span>, styled_text)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(nfkd_text)  <span class="co"># Output: &quot;25 and file&quot;</span></span></code></pre></div>
+<p>Use <strong>NFC</strong> when you need predictable equality checks
+without altering text layout or losing typographical distinction. Use
+<strong>NFKD</strong> when building search indexes, standardizing user
+input, or stripping accents and special formatting for downstream
+processing.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

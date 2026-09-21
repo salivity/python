@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Django Generic CBV Method Execution Order - python</title>
+    <meta name="description" content="Understanding the internal method resolution and execution order in Django’s Generic Class-Based Views (CBVs) is essential for effectively overriding behavior and debugging requests. When an HTTP request enters a Django CBV, it traverses a structured l">
+    <link rel="canonical" href="https://salivity.github.io/python/article/django-generic-cbv-method-execution-order">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Django Generic CBV Method Execution Order - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/django-generic-cbv-method-execution-order" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Understanding the internal method resolution and execution order in Django’s Generic Class-Based Views (CBVs) is essential for effectively overriding behavior and debugging requests. When an HTTP request enters a Django CBV, it traverses a structured l" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="django-generic-cbv-method-execution-order">Django Generic CBV
+Method Execution Order</h1>
+<p>Understanding the internal method resolution and execution order in
+Django’s Generic Class-Based Views (CBVs) is essential for effectively
+overriding behavior and debugging requests. When an HTTP request enters
+a Django CBV, it traverses a structured lifecycle starting from the URL
+configuration, passing through request initialization and dispatching,
+executing view-specific handler logic, and finally returning an
+<code>HttpResponse</code>. This article breaks down the exact internal
+execution flow for standard read and write generic views, as well as the
+role Python's Method Resolution Order (MRO) plays in CBV mixins.</p>
+<h2 id="the-entry-point-as_view-and-setup">The Entry Point:
+<code>as_view()</code> and <code>setup()</code></h2>
+<p>The lifecycle of any Django class-based view begins in the
+<code>urls.py</code> file using the class method
+<code>as_view()</code>.</p>
+<ol type="1">
+<li><strong><code>as_view()</code></strong>: Converts the view class
+into a callable view function. It creates an isolated instance of the
+class for each incoming request to ensure thread safety.</li>
+<li><strong><code>setup()</code></strong>: Called at the beginning of
+the view instance execution. It initializes key attributes on
+<code>self</code>, primarily <code>self.request</code>,
+<code>self.args</code>, and <code>self.kwargs</code>.</li>
+</ol>
+<h2 id="the-routing-engine-dispatch">The Routing Engine:
+<code>dispatch()</code></h2>
+<p>Once <code>setup()</code> concludes, the view calls
+<code>dispatch(request, *args, **kwargs)</code>.</p>
+<ul>
+<li><code>dispatch()</code> inspects the HTTP request method
+(<code>GET</code>, <code>POST</code>, <code>PUT</code>,
+<code>DELETE</code>, etc.).</li>
+<li>It matches the lowercase HTTP verb to an identically named method on
+the view instance (e.g., <code>get()</code> or
+<code>post()</code>).</li>
+<li>If the method exists on the class, <code>dispatch()</code> delegates
+execution to it.</li>
+<li>If the method is not defined or not allowed, it delegates to
+<code>http_method_not_allowed()</code>.</li>
+</ul>
+<hr />
+<h2 id="execution-order-read-views-listview-and-detailview">Execution
+Order: Read Views (<code>ListView</code> and
+<code>DetailView</code>)</h2>
+<p>For a standard <code>GET</code> request to a <code>DetailView</code>
+or <code>ListView</code>, execution follows this sequence after
+<code>dispatch()</code>:</p>
+<ol type="1">
+<li><strong><code>get(request, *args, **kwargs)</code></strong>: The
+primary handler for <code>GET</code> requests.</li>
+<li><strong>Retrieving Data</strong>:
+<ul>
+<li><strong><code>get_queryset()</code></strong>: Defines the base
+queryset.</li>
+<li><strong><code>get_object()</code></strong> <em>(DetailView
+only)</em>: Retrieves a single model instance using the queryset and URL
+parameters (<code>pk</code> or <code>slug</code>).</li>
+<li><strong><code>paginate_queryset()</code></strong> <em>(ListView
+only)</em>: Handles pagination if <code>paginate_by</code> is
+defined.</li>
+</ul></li>
+<li><strong><code>get_context_data(**kwargs)</code></strong>: Compiles
+the context dictionary passed to the template. It injects the object or
+object list, pagination details, and any custom context data.</li>
+<li><strong><code>render_to_response(context)</code></strong>: Uses a
+response mixin to render the output:
+<ul>
+<li><strong><code>get_template_names()</code></strong>: Determines which
+template file to use based on model configuration or class
+attributes.</li>
+<li>Returns an <code>HttpResponse</code> containing the rendered
+HTML.</li>
+</ul></li>
+</ol>
+<hr />
+<h2 id="execution-order-write-views-createview-and-updateview">Execution
+Order: Write Views (<code>CreateView</code> and
+<code>UpdateView</code>)</h2>
+<p>When submitting a form via a <code>POST</code> request to a
+<code>CreateView</code> or <code>UpdateView</code>, the flow branches
+based on validation:</p>
+<ol type="1">
+<li><strong><code>post(request, *args, **kwargs)</code></strong>: The
+primary handler for <code>POST</code> requests.</li>
+<li><strong><code>get_object()</code></strong> <em>(UpdateView
+only)</em>: Identifies the target record being edited.</li>
+<li><strong>Form Instantiation</strong>:
+<ul>
+<li><strong><code>get_form_class()</code></strong>: Resolves the form
+class to use (either explicitly specified or derived from
+<code>model</code> and <code>fields</code>).</li>
+<li><strong><code>get_form_kwargs()</code></strong>: Collects input data
+(<code>request.POST</code>, <code>request.FILES</code>) and instance
+data to instantiate the form.</li>
+<li><strong><code>get_form()</code></strong>: Instantiates and returns
+the form object.</li>
+</ul></li>
+<li><strong>Validation Check</strong>: Calls
+<code>form.is_valid()</code>.</li>
+</ol>
+<h3 id="the-valid-branch-form_valid">The Valid Branch:
+<code>form_valid()</code></h3>
+<p>If the form data is valid:</p>
+<ol type="1">
+<li><strong><code>form_valid(form)</code></strong>: Saves the model
+instance (<code>form.save()</code>).</li>
+<li><strong><code>get_success_url()</code></strong>: Resolves the
+destination URL for the redirect.</li>
+<li>Returns an <code>HttpResponseRedirect</code>.</li>
+</ol>
+<h3 id="the-invalid-branch-form_invalid">The Invalid Branch:
+<code>form_invalid()</code></h3>
+<p>If the form data fails validation:</p>
+<ol type="1">
+<li><strong><code>form_invalid(form)</code></strong>: Prepares the error
+state.</li>
+<li><strong><code>get_context_data(form=form)</code></strong>: Injects
+the invalid form containing validation errors into the template
+context.</li>
+<li><strong><code>render_to_response(context)</code></strong>:
+Re-renders the form page for the user with an HTTP 200 response.</li>
+</ol>
+<hr />
+<h2 id="pythons-method-resolution-order-mro-in-mixins">Python's Method
+Resolution Order (MRO) in Mixins</h2>
+<p>Django’s generic views rely on multiple inheritance through mixins
+(e.g., <code>SingleObjectMixin</code>,
+<code>TemplateResponseMixin</code>). Python determines which version of
+an overridden method to execute using the C3 Linearization algorithm
+(MRO).</p>
+<ul>
+<li><strong>Left-to-Right Precedence</strong>: Classes listed first in
+the inheritance declaration take precedence over classes listed
+later.</li>
+<li><strong>Base View Placement</strong>: The base view (e.g.,
+<code>View</code>, <code>TemplateView</code>) must always appear as the
+right-most class in the inheritance list.</li>
+<li><strong>Super Calls</strong>: Always use
+<code>super().method_name(*args, **kwargs)</code> inside custom mixins
+to ensure the execution chain passes cleanly to the next class in the
+MRO without skipping core behavior.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

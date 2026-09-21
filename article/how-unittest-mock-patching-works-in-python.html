@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How unittest.mock Patching Works in Python - python</title>
+    <meta name="description" content="In Python unit testing, the unittest.mock library isolates code under test by replacing real functions, methods, or entire objects with configurable mocks. This article explains the internal mechanics of unittest.mock.patch, detailing how dynamic attribu">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-unittest-mock-patching-works-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How unittest.mock Patching Works in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-unittest-mock-patching-works-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python unit testing, the unittest.mock library isolates code under test by replacing real functions, methods, or entire objects with configurable mocks. This article explains the internal mechanics of unittest.mock.patch, detailing how dynamic attribu" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-unittestmock-patching-works-in-python">How unittest.mock
+Patching Works in Python</h1>
+<p>In Python unit testing, the <code>unittest.mock</code> library
+isolates code under test by replacing real functions, methods, or entire
+objects with configurable mocks. This article explains the internal
+mechanics of <code>unittest.mock.patch</code>, detailing how dynamic
+attribute replacement operates at runtime, why the "patch where an
+object is looked up" rule is critical, and how to effectively apply
+patches using decorators, context managers, and autospecing.</p>
+<h2 id="the-core-mechanism-dynamic-attribute-replacement">The Core
+Mechanism: Dynamic Attribute Replacement</h2>
+<p>Under the hood, <code>unittest.mock.patch</code> works by temporarily
+modifying an attribute on a target module, class, or object using
+Python's dynamic namespace capabilities.</p>
+<p>When you invoke <code>patch("target_module.target_attribute")</code>,
+the patching mechanism performs the following sequence:</p>
+<ol type="1">
+<li><strong>Import and Resolution:</strong> It parses the provided
+target string, imports the specified module if it is not already loaded,
+and traverses the namespace to find the target attribute.</li>
+<li><strong>State Preservation:</strong> It stores a reference to the
+original attribute or function.</li>
+<li><strong>Replacement:</strong> It replaces the target attribute on
+the module or class dictionary with a <code>MagicMock</code> instance
+(or another specified object) using <code>setattr()</code>.</li>
+<li><strong>Execution:</strong> It runs the test block, passing the mock
+object to the test function if called as a decorator, or yielding it
+within a context block.</li>
+<li><strong>Restoration:</strong> Regardless of whether the test passes
+or raises an exception, an underlying <code>finally</code> block
+triggers <code>setattr()</code> to restore the original object to its
+namespace.</li>
+</ol>
+<h2 id="the-golden-rule-patch-where-an-object-is-looked-up">The Golden
+Rule: Patch Where an Object Is Looked Up</h2>
+<p>The most common point of failure when using <code>patch</code> stems
+from misunderstanding Python's import system. <code>patch</code> does
+not alter an object globally across all memory; it alters the reference
+inside a specific namespace.</p>
+<p>Consider this project structure:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># database.py</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> <span class="ex">connect</span>():</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;Real Connection&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># service.py</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> database <span class="im">import</span> <span class="ex">connect</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_data():</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ex">connect</span>()</span></code></pre></div>
+<p>If you write a test for <code>get_data()</code>, patching
+<code>database.connect</code> will fail:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Incorrect: Patches database.py, but service.py already holds its own reference</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span>(<span class="st">&quot;database.connect&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_get_data(mock_connect):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    mock_connect.return_value <span class="op">=</span> <span class="st">&quot;Mock Connection&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> get_data() <span class="op">==</span> <span class="st">&quot;Mock Connection&quot;</span>  <span class="co"># Fails: Still returns &quot;Real Connection&quot;</span></span></code></pre></div>
+<p>Because <code>service.py</code> executed
+<code>from database import connect</code>, the <code>connect</code>
+function was bound directly to the <code>service</code> module's local
+namespace. To intercept the call, you must patch where the name is
+looked up:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Correct: Patches the reference inside service.py</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span>(<span class="st">&quot;service.connect&quot;</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_get_data(mock_connect):</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    mock_connect.return_value <span class="op">=</span> <span class="st">&quot;Mock Connection&quot;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> get_data() <span class="op">==</span> <span class="st">&quot;Mock Connection&quot;</span>  <span class="co"># Passes</span></span></code></pre></div>
+<h2 id="patching-techniques">Patching Techniques</h2>
+<p>The <code>unittest.mock.patch</code> API provides three primary ways
+to manage the lifecycle of a patched object.</p>
+<h3 id="1-function-and-method-decorators">1. Function and Method
+Decorators</h3>
+<p>Decorating a test function automatically creates, starts, and tears
+down the patch for that specific test run. The generated mock is passed
+as an argument to the test method.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> unittest.mock <span class="im">import</span> patch</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span>(<span class="st">&quot;service.external_api_call&quot;</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_feature(mock_api):</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    mock_api.return_value <span class="op">=</span> {<span class="st">&quot;status&quot;</span>: <span class="dv">200</span>}</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Test logic here</span></span></code></pre></div>
+<p>When stacking multiple <code>@patch</code> decorators, the arguments
+are passed in bottom-up order:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span>(<span class="st">&quot;service.logger&quot;</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span>(<span class="st">&quot;service.external_api_call&quot;</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_order(mock_api, mock_logger):</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># mock_api matches the bottom decorator</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># mock_logger matches the top decorator</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<h3 id="2-context-managers">2. Context Managers</h3>
+<p>Using <code>patch</code> as a context manager restricts the patch to
+a localized block of code within the test, which is useful when testing
+multiple states inside one test function:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> unittest.mock <span class="im">import</span> patch</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_context_manager():</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> patch(<span class="st">&quot;service.external_api_call&quot;</span>) <span class="im">as</span> mock_api:</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        mock_api.return_value <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Code executed here interacts with the mock</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Outside the block, the original object is restored</span></span></code></pre></div>
+<h3 id="3-manual-start-and-stop">3. Manual Start and Stop</h3>
+<p>When working with <code>unittest.TestCase.setUp</code> and
+<code>tearDown</code> methods, or pytest fixtures, you can manage the
+patcher lifecycle manually:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pytest</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> unittest.mock <span class="im">import</span> patch</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="at">@pytest.fixture</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mock_external_service():</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    patcher <span class="op">=</span> patch(<span class="st">&quot;service.external_api_call&quot;</span>)</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    mock_obj <span class="op">=</span> patcher.start()</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">yield</span> mock_obj</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    patcher.stop()</span></code></pre></div>
+<h2 id="specialized-patch-methods">Specialized Patch Methods</h2>
+<p>Beyond standard attribute replacement, the library provides
+specialized helpers for different types of mocking:</p>
+<ul>
+<li><strong><code>patch.object(target, attribute)</code></strong>:
+Patches directly using an object reference instead of a string import
+path, preventing typos:
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> service</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> patch.<span class="bu">object</span>(service, <span class="st">&quot;connect&quot;</span>, return_value<span class="op">=</span><span class="va">True</span>):</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    ...</span></code></pre></div></li>
+<li><strong><code>patch.dict(in_dict, values, clear=False)</code></strong>:
+Temporarily modifies dictionaries, such as <code>os.environ</code>:
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> patch.<span class="bu">dict</span>(<span class="st">&quot;os.environ&quot;</span>, {<span class="st">&quot;API_KEY&quot;</span>: <span class="st">&quot;test-token&quot;</span>}):</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    ...</span></code></pre></div></li>
+<li><strong><code>patch.multiple(target, **kwargs)</code></strong>:
+Modifies multiple attributes on the same object simultaneously.</li>
+</ul>
+<h2 id="preventing-drift-with-autospec">Preventing Drift with
+Autospec</h2>
+<p>By default, mocks accept any method call or attribute access, even if
+the underlying function or class being mocked does not define them. This
+can lead to false-positive tests where code calls non-existent methods
+without failing.</p>
+<p>Setting <code>autospec=True</code> inspects the target object and
+restricts the mock interface to match the real object's attributes,
+methods, and call signatures:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Raises TypeError if connect() is called with the wrong number of arguments</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span>(<span class="st">&quot;service.connect&quot;</span>, autospec<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_with_validation(mock_connect):</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    mock_connect(<span class="st">&quot;unexpected_arg&quot;</span>)  <span class="co"># Raises TypeError during test run</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

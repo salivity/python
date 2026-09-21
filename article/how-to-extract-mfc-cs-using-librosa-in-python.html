@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Extract MFCCs Using Librosa in Python - python</title>
+    <meta name="description" content="Mel-frequency cepstral coefficients (MFCCs) are essential features in audio processing, speech recognition, and music information retrieval that represent the short-term power spectrum of sound based on human auditory perception. In Python, the Librosa l">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-extract-mfc-cs-using-librosa-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Extract MFCCs Using Librosa in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-extract-mfc-cs-using-librosa-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Mel-frequency cepstral coefficients (MFCCs) are essential features in audio processing, speech recognition, and music information retrieval that represent the short-term power spectrum of sound based on human auditory perception. In Python, the Librosa l" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-extract-mfccs-using-librosa-in-python">How to Extract
+MFCCs Using Librosa in Python</h1>
+<p>Mel-frequency cepstral coefficients (MFCCs) are essential features in
+audio processing, speech recognition, and music information retrieval
+that represent the short-term power spectrum of sound based on human
+auditory perception. In Python, the Librosa library simplifies the
+extraction of MFCCs through a multi-step mathematical pipeline
+consisting of windowing, Fourier transformation, Mel filter bank
+application, logarithmic scaling, and the Discrete Cosine Transform
+(DCT). This guide breaks down the underlying process Librosa uses to
+compute MFCCs and provides a concise implementation to extract them from
+any standard audio file.</p>
+<hr />
+<h3 id="the-mathematical-extraction-pipeline">The Mathematical
+Extraction Pipeline</h3>
+<p>Librosa executes five core digital signal processing stages when
+computing MFCCs:</p>
+<ol type="1">
+<li><strong>Framing and Windowing (STFT):</strong> Audio signals are
+non-stationary, meaning their statistical properties change over time.
+Librosa slices the continuous audio signal into short overlapping frames
+(typically 20 to 40 milliseconds) using a Hann window. It then computes
+the Short-Time Fourier Transform (STFT) to transition the audio from the
+time domain to the frequency domain.</li>
+<li><strong>Power Spectrum Calculation:</strong> The magnitude of the
+STFT is squared to calculate the power spectrum for each frame,
+revealing the energy distribution across various frequencies.</li>
+<li><strong>Mel Filter Bank Application:</strong> Humans perceive pitch
+non-linearly, hearing differences more acutely at lower frequencies than
+higher ones. Librosa maps the linear frequency spectrum onto the Mel
+scale using triangular overlapping band-pass filters: <span
+class="math display">\[m = 2595 \log_{10}(1 + \frac{f}{700})\]</span>
+Multiplying the power spectrum by these filter banks produces the Mel
+spectrum.</li>
+<li><strong>Logarithmic Energy Compression:</strong> Human perception of
+loudness is also logarithmic. Librosa computes the natural logarithm of
+the Mel filter bank energies, bringing the signal closer to perceived
+human hearing dynamics and reducing sensitivity to variations in input
+volume.</li>
+<li><strong>Discrete Cosine Transform (DCT):</strong> Because adjacent
+Mel bands are highly correlated, Librosa applies a Discrete Cosine
+Transform (specifically, DCT-II) to the log energies. This decorrelates
+the filter bank energies and yields a compressed representation: the
+cepstral coefficients. The lower-order coefficients capture the overall
+spectral envelope (formants and vocal tract shape), while higher-order
+coefficients represent fine spectral details (pitch).</li>
+</ol>
+<hr />
+<h3 id="python-implementation">Python Implementation</h3>
+<p>To extract MFCCs using Librosa, load the audio file and call the
+<code>librosa.feature.mfcc</code> function:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> librosa</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Load the audio file (default resample rate is 22050 Hz)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>audio_path <span class="op">=</span> <span class="st">&quot;sample_audio.wav&quot;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>y, sr <span class="op">=</span> librosa.load(audio_path, sr<span class="op">=</span><span class="va">None</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Extract MFCCs</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># n_mfcc specifies the number of coefficients to return</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>mfccs <span class="op">=</span> librosa.feature.mfcc(y<span class="op">=</span>y, sr<span class="op">=</span>sr, n_mfcc<span class="op">=</span><span class="dv">13</span>, n_fft<span class="op">=</span><span class="dv">2048</span>, hop_length<span class="op">=</span><span class="dv">512</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Output shape: (n_mfcc, time_frames)</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;MFCC matrix shape:&quot;</span>, mfccs.shape)</span></code></pre></div>
+<hr />
+<h3 id="critical-parameters-explained">Critical Parameters
+Explained</h3>
+<ul>
+<li><strong><code>y</code> and <code>sr</code></strong>: The raw audio
+time series (1D NumPy array) and the sampling rate (samples per
+second).</li>
+<li><strong><code>n_mfcc</code></strong>: The number of coefficients to
+return. Standard speech processing typically uses between 13 and 20
+coefficients. Music analysis or complex classification tasks often
+increase this to 40.</li>
+<li><strong><code>n_fft</code></strong>: The length of the FFT window. A
+common default is 2048, which balances time and frequency
+resolution.</li>
+<li><strong><code>hop_length</code></strong>: The number of audio
+samples between adjacent frames. The default is 512, which creates
+roughly a 75% overlap between frames for smooth temporal
+continuity.</li>
+</ul>
+<hr />
+<h3 id="extracting-dynamic-features-delta-and-delta-delta">Extracting
+Dynamic Features (Delta and Delta-Delta)</h3>
+<p>MFCCs only represent static spectral envelopes per frame. To capture
+how sound changes dynamically over time, you can compute first-order
+(velocity) and second-order (acceleration) derivatives:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute first derivative (Delta)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>mfcc_delta <span class="op">=</span> librosa.feature.delta(mfccs)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute second derivative (Delta-Delta)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>mfcc_delta2 <span class="op">=</span> librosa.feature.delta(mfccs, order<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Stack features into a single composite representation</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>composite_features <span class="op">=</span> np.vstack([mfccs, mfcc_delta, mfcc_delta2])</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;Composite feature shape:&quot;</span>, composite_features.shape)</span></code></pre></div>
+<p>Stacking static MFCCs with delta and delta-delta features produces a
+comprehensive 39- or 40-dimensional feature vector per frame, providing
+optimal input features for machine learning models and audio
+classifiers.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

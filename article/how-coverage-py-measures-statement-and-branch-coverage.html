@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Coverage.py Measures Statement and Branch Coverage - python</title>
+    <meta name="description" content="coverage.py is the standard tool for measuring code coverage in Python, determining precisely which parts of a codebase run during automated tests. To calculate statement and branch coverage, the tool combines static source-code analysis with dynamic exe">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-coverage-py-measures-statement-and-branch-coverage">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Coverage.py Measures Statement and Branch Coverage - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-coverage-py-measures-statement-and-branch-coverage" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="coverage.py is the standard tool for measuring code coverage in Python, determining precisely which parts of a codebase run during automated tests. To calculate statement and branch coverage, the tool combines static source-code analysis with dynamic exe" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-coveragepy-measures-statement-and-branch-coverage">How
+Coverage.py Measures Statement and Branch Coverage</h1>
+<p><code>coverage.py</code> is the standard tool for measuring code
+coverage in Python, determining precisely which parts of a codebase run
+during automated tests. To calculate statement and branch coverage, the
+tool combines static source-code analysis with dynamic execution
+tracing. It parses the Python Abstract Syntax Tree (AST) to identify
+every executable line and potential control-flow branch, and then hooks
+into Python's execution runtime to record which lines and transitional
+paths actually execute.</p>
+<h2 id="tracing-execution-at-runtime">Tracing Execution at Runtime</h2>
+<p>At the core of <code>coverage.py</code> is its execution tracer. When
+running a test suite under coverage monitoring, the tool hooks into the
+Python interpreter using one of three mechanisms:</p>
+<ol type="1">
+<li><strong>The C Tracer Extension:</strong> By default,
+<code>coverage.py</code> uses an optimized C-extension that hooks into
+<code>PyEval_SetTrace</code>. This approach minimizes performance
+overhead while tracking execution events.</li>
+<li><strong><code>sys.settrace</code>:</strong> If the C extension is
+unavailable, <code>coverage.py</code> falls back to the pure-Python
+<code>sys.settrace</code> function. This callback intercepts interpreter
+events such as function calls, line executions, and returns.</li>
+<li><strong>PEP 669 Monitoring:</strong> In modern Python versions
+(3.12+), <code>coverage.py</code> can use the low-overhead monitoring
+API defined by PEP 669, which generates events specifically for line
+execution and branching without the heavy overhead of traditional
+tracing.</li>
+</ol>
+<h2 id="measuring-statement-coverage">Measuring Statement Coverage</h2>
+<p>Statement coverage measures whether each individual executable
+statement in a file was executed at least once. <code>coverage.py</code>
+computes this in two phases:</p>
+<h3 id="1-static-analysis-finding-executable-lines">1. Static Analysis
+(Finding Executable Lines)</h3>
+<p>Before execution completes, <code>coverage.py</code> compiles the
+target Python source files into ASTs and bytecode. This analysis filters
+out non-executable code, including:</p>
+<ul>
+<li>Comments and docstrings</li>
+<li>Blank lines</li>
+<li>Type-checking guards and type annotations</li>
+<li>Declarative statements that do not emit line-specific bytecode</li>
+</ul>
+<p>The result is a set of line numbers representing all possible
+executable statements for each file.</p>
+<h3 id="2-dynamic-tracking">2. Dynamic Tracking</h3>
+<p>Whenever the tracer detects that the interpreter has advanced to a
+new line, it records that line number into an in-memory set.</p>
+<p>At report time, statement coverage is calculated using a
+straightforward formula:</p>
+<p><span class="math display">\[\text{Statement Coverage} =
+\frac{\text{Executed Statements}}{\text{Total Executable Statements}}
+\times 100\]</span></p>
+<h2 id="measuring-branch-coverage">Measuring Branch Coverage</h2>
+<p>Branch coverage (enabled via the <code>--branch</code> flag)
+determines whether every boolean decision point in the code evaluated to
+both <code>True</code> and <code>False</code>, exploring all possible
+execution paths.</p>
+<p>Rather than simply tracking whether a line was reached, branch
+coverage tracks <strong>arcs</strong>—the transitions from one line to
+another.</p>
+<h3 id="1-generating-the-control-flow-graph-cfg">1. Generating the
+Control Flow Graph (CFG)</h3>
+<p><code>coverage.py</code> analyzes the AST of each file to map out the
+possible control flow jumps. For every decision point, it identifies the
+source line and all valid target destination lines:</p>
+<ul>
+<li><strong><code>if</code> statements:</strong> An arc leads to the
+body of the <code>if</code> (when <code>True</code>), and another arc
+leads to the <code>elif</code>, <code>else</code>, or subsequent line
+(when <code>False</code>).</li>
+<li><strong>Loops (<code>for</code> and <code>while</code>):</strong>
+Arcs exist for entering the loop body, repeating the loop, and exiting
+the loop (or moving to an <code>else</code> block).</li>
+<li><strong>Exception blocks
+(<code>try</code>/<code>except</code>):</strong> Arcs exist for normal
+completion as well as jumps directly to exception handlers.</li>
+</ul>
+<p>Each possible pathway is represented as a directed pair of line
+numbers: <code>(from_line, to_line)</code>.</p>
+<h3 id="2-tracking-arcs">2. Tracking Arcs</h3>
+<p>When branch coverage is enabled, the runtime tracer records line
+transitions rather than solitary line numbers. It keeps track of the
+previously executed line and records the pair
+<code>(last_line, current_line)</code> as an executed arc.</p>
+<h3 id="3-calculating-the-branch-ratio">3. Calculating the Branch
+Ratio</h3>
+<p>At the end of execution, <code>coverage.py</code> compares the
+executed arcs against the list of expected arcs compiled from the AST. A
+branch is marked as:</p>
+<ul>
+<li><strong>Fully covered:</strong> Both the <code>True</code> and
+<code>False</code> destinations were taken.</li>
+<li><strong>Partially covered (missing branch):</strong> The condition
+executed, but only one outcome occurred (for example, an <code>if</code>
+condition was met, but never bypassed).</li>
+<li><strong>Uncovered:</strong> The condition line was never reached at
+all.</li>
+</ul>
+<p>Branch coverage provides a more thorough assessment than statement
+coverage alone, exposing edge cases and untested fallback logic within
+conditional blocks.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

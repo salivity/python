@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python dis Module: Disassembling Bytecode Explained - python</title>
+    <meta name="description" content="This article explores how Python's built-in dis module translates raw, binary bytecode into human-readable instructions. It covers Python’s compilation pipeline, the internal structure of code objects, the mapping of numeric opcodes to human-readable n">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-dis-module-disassembling-bytecode-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python dis Module: Disassembling Bytecode Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-dis-module-disassembling-bytecode-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how Python's built-in dis module translates raw, binary bytecode into human-readable instructions. It covers Python’s compilation pipeline, the internal structure of code objects, the mapping of numeric opcodes to human-readable n" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-dis-module-disassembling-bytecode-explained">Python dis
+Module: Disassembling Bytecode Explained</h1>
+<p>This article explores how Python's built-in <code>dis</code> module
+translates raw, binary bytecode into human-readable instructions. It
+covers Python’s compilation pipeline, the internal structure of code
+objects, the mapping of numeric opcodes to human-readable names, and how
+argument references are resolved into variables, constants, and line
+numbers.</p>
+<h2 id="from-source-code-to-bytecode">From Source Code to Bytecode</h2>
+<p>Before Python executes code, it compiles the source text into an
+intermediate representation known as bytecode. The source code is first
+parsed into an Abstract Syntax Tree (AST), which the compiler evaluates
+to produce a <code>code</code> object.</p>
+<p>A code object contains the raw execution instructions alongside
+metadata required by the Python Virtual Machine (PVM). Key attributes
+stored in a code object include:</p>
+<ul>
+<li><code>co_code</code>: The raw sequence of bytecode instructions as a
+<code>bytes</code> object.</li>
+<li><code>co_consts</code>: A tuple containing literals and constants
+referenced in the scope.</li>
+<li><code>co_varnames</code>: A tuple of local variable names.</li>
+<li><code>co_names</code>: A tuple of global, imported, or attribute
+names.</li>
+<li><code>co_linetable</code>: An encoding that maps bytecode offsets to
+source code line numbers.</li>
+</ul>
+<h2 id="the-structure-of-bytecode-instructions">The Structure of
+Bytecode Instructions</h2>
+<p>Starting with Python 3.6, Python uses a 16-bit "wordcode" format for
+its instruction set. Each instruction consists of two bytes:</p>
+<ol type="1">
+<li><strong>Opcode (1 byte):</strong> A number between 0 and 255
+representing the specific operation (e.g., load a value, perform
+addition, return).</li>
+<li><strong>Argument / Oparg (1 byte):</strong> A numeric index or value
+between 0 and 255 used by the operation. If an instruction requires an
+argument larger than 255, Python prepends an <code>EXTENDED_ARG</code>
+opcode to expand the value.</li>
+</ol>
+<p>For instructions that do not require an argument, the argument byte
+is set to zero and ignored by the virtual machine.</p>
+<h2 id="how-the-dis-module-reads-and-translates-bytes">How the
+<code>dis</code> Module Reads and Translates Bytes</h2>
+<p>The <code>dis</code> module acts as a decoder for the
+<code>bytes</code> stored in <code>co_code</code>. When you pass a
+function, method, or code object to <code>dis.dis()</code>, the module
+performs several sequential steps to format the data into readable
+text.</p>
+<h3 id="1-decoding-opcodes">1. Decoding Opcodes</h3>
+<p>The <code>dis</code> module iterates through <code>co_code</code> two
+bytes at a time. It takes the first byte (the numeric opcode) and maps
+it to a string name using the internal lookup table
+<code>opcode.opname</code>.</p>
+<p>For example, if the first byte is the integer <code>100</code>, the
+module looks up index 100 in <code>opname</code>, which returns the
+string <code>'LOAD_CONST'</code>.</p>
+<h3 id="2-resolving-arguments">2. Resolving Arguments</h3>
+<p>The second byte represents the raw argument index. Different opcodes
+interact with different lookup tables in the code object. The
+<code>dis</code> module determines the type of argument based on opcode
+categories:</p>
+<ul>
+<li><strong>Constants:</strong> Opcodes such as <code>LOAD_CONST</code>
+use the argument byte as an index to access values in
+<code>co_consts</code>.</li>
+<li><strong>Local Variables:</strong> Opcodes such as
+<code>LOAD_FAST</code> or <code>STORE_FAST</code> use the argument to
+index into <code>co_varnames</code>.</li>
+<li><strong>Global/Attribute Names:</strong> Opcodes such as
+<code>LOAD_GLOBAL</code> or <code>LOAD_ATTR</code> use the argument to
+index into <code>co_names</code>.</li>
+<li><strong>Jump Targets:</strong> Control-flow instructions calculate
+relative or absolute bytecode offsets based on the argument to display
+the target instruction location.</li>
+</ul>
+<p>When <code>dis</code> detects one of these opcodes, it fetches the
+actual value or name from the appropriate tuple and formats it alongside
+the raw argument.</p>
+<h3 id="3-mapping-line-numbers">3. Mapping Line Numbers</h3>
+<p>The module reads the <code>co_linetable</code> (or
+<code>co_lnotab</code> in versions prior to Python 3.11) to determine
+which line of source code generated the instruction. It checks the
+current byte offset against this mapping to determine when a new line
+begins.</p>
+<h2 id="understanding-the-disassembled-output">Understanding the
+Disassembled Output</h2>
+<p>When <code>dis.dis()</code> outputs the results, it formats each
+instruction into distinct columns:</p>
+<pre class="text"><code>  1           0 LOAD_CONST               1 (&#39;hello&#39;)
+              2 STORE_FAST               0 (message)
+              4 LOAD_CONST               0 (None)
+              6 RETURN_VALUE</code></pre>
+<p>The columns represent:</p>
+<ol type="1">
+<li><strong>Source Line Number (e.g., <code>1</code>):</strong> The line
+of the original Python script where the operation originates. It only
+appears on the first instruction generated by that line.</li>
+<li><strong>Instruction Offset (e.g., <code>0</code>, <code>2</code>,
+<code>4</code>, <code>6</code>):</strong> The byte index of the
+instruction within <code>co_code</code>. Because instructions are two
+bytes each, these increment by 2 (or more if <code>EXTENDED_ARG</code>
+or inline caches are present in newer versions).</li>
+<li><strong>Opcode Name (e.g., <code>LOAD_CONST</code>,
+<code>STORE_FAST</code>):</strong> The human-readable string mapped from
+the opcode byte.</li>
+<li><strong>Raw Argument (e.g., <code>1</code>,
+<code>0</code>):</strong> The literal numerical value of the argument
+byte.</li>
+<li><strong>Resolved Argument (e.g., <code>('hello')</code>,
+<code>(message)</code>):</strong> The human-readable interpretation
+derived by <code>dis</code> querying <code>co_consts</code>,
+<code>co_varnames</code>, or <code>co_names</code>.</li>
+</ol>
+<p>By unpacking binary pairs into operation names and cross-referencing
+argument indices with the code object’s internal metadata tables, the
+<code>dis</code> module provides full transparency into how the Python
+Virtual Machine executes code.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

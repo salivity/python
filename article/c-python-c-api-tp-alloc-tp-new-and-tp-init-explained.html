@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPython C-API: tp_alloc, tp_new, and tp_init Explained - python</title>
+    <meta name="description" content="Creating custom extension types in the CPython C-API requires managing how instances are allocated in memory, constructed, and initialized. When a Python class is instantiated, CPython delegates these responsibilities across three dedicated slots in the">
+    <link rel="canonical" href="https://salivity.github.io/python/article/c-python-c-api-tp-alloc-tp-new-and-tp-init-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="CPython C-API: tp_alloc, tp_new, and tp_init Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/c-python-c-api-tp-alloc-tp-new-and-tp-init-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Creating custom extension types in the CPython C-API requires managing how instances are allocated in memory, constructed, and initialized. When a Python class is instantiated, CPython delegates these responsibilities across three dedicated slots in the" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="cpython-c-api-tp_alloc-tp_new-and-tp_init-explained">CPython
+C-API: tp_alloc, tp_new, and tp_init Explained</h1>
+<p>Creating custom extension types in the CPython C-API requires
+managing how instances are allocated in memory, constructed, and
+initialized. When a Python class is instantiated, CPython delegates
+these responsibilities across three dedicated slots in the
+<code>PyTypeObject</code> struct: <code>tp_alloc</code>,
+<code>tp_new</code>, and <code>tp_init</code>. This article explains the
+exact purpose of each slot, how they interact, and their roles in the
+object creation lifecycle.</p>
+<hr />
+<h3 id="the-object-lifecycle-overview">The Object Lifecycle
+Overview</h3>
+<p>When code calls a type like <code>obj = MyType(arg1, key=val)</code>,
+CPython's default type call handler (<code>type_call</code>) executes a
+three-phase sequence:</p>
+<ol type="1">
+<li><strong><code>tp_new</code></strong> is invoked to construct and
+return an instance of the class.</li>
+<li>Inside <code>tp_new</code>, <strong><code>tp_alloc</code></strong>
+is typically called to reserve heap memory for that instance.</li>
+<li>If <code>tp_new</code> successfully returns an instance of
+<code>MyType</code> (or a subclass), CPython automatically calls
+<strong><code>tp_init</code></strong> to initialize the instance's
+state.</li>
+</ol>
+<hr />
+<h3 id="1-tp_alloc-memory-allocation">1. <code>tp_alloc</code>: Memory
+Allocation</h3>
+<div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>PyObject<span class="op">*</span> <span class="op">(*</span>allocfunc<span class="op">)(</span>PyTypeObject <span class="op">*</span>type<span class="op">,</span> Py_ssize_t nitems<span class="op">);</span></span></code></pre></div>
+<h4 id="purpose">Purpose</h4>
+<p><code>tp_alloc</code> handles the low-level allocation of raw memory
+required to store an instance of the type.</p>
+<h4 id="responsibilities">Responsibilities</h4>
+<ul>
+<li><strong>Memory Allocation:</strong> It allocates the correct amount
+of memory based on <code>type-&gt;tp_basicsize</code> (and
+<code>type-&gt;tp_itemsize</code> for variable-length objects like
+tuples or strings).</li>
+<li><strong>Header Setup:</strong> It initializes the object's
+<code>ob_refcnt</code> to <code>1</code> and sets its
+<code>ob_type</code> pointer to the target type.</li>
+<li><strong>Zero-Filling:</strong> It typically zeroes out the rest of
+the allocated memory block to ensure pointers start in a clean
+<code>NULL</code> state.</li>
+</ul>
+<h4 id="usage">Usage</h4>
+<p>Most custom extension types do not need to implement their own
+<code>tp_alloc</code>. Instead, they inherit or explicitly set
+<code>PyType_GenericAlloc</code>. Custom implementations are only
+necessary if an extension requires specialized memory pools, arena
+allocators, or unique alignment constraints.</p>
+<hr />
+<h3 id="2-tp_new-instance-construction">2. <code>tp_new</code>: Instance
+Construction</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>PyObject<span class="op">*</span> <span class="op">(*</span>newfunc<span class="op">)(</span>PyTypeObject <span class="op">*</span>subtype<span class="op">,</span> PyObject <span class="op">*</span>args<span class="op">,</span> PyObject <span class="op">*</span>kwds<span class="op">);</span></span></code></pre></div>
+<h4 id="purpose-1">Purpose</h4>
+<p><code>tp_new</code> represents the constructor of the class and
+corresponds directly to Python's <code>__new__()</code> method. Its
+primary role is to produce and return an instance of the type.</p>
+<h4 id="responsibilities-1">Responsibilities</h4>
+<ul>
+<li><strong>Triggering Allocation:</strong> It typically calls
+<code>subtype-&gt;tp_alloc(subtype, nitems)</code> to obtain
+uninitialized memory for the object.</li>
+<li><strong>Immutable Field Setup:</strong> Because <code>tp_new</code>
+controls the initial creation, any C-level pointers, structures, or
+immutable data that must exist before initialization should be
+configured here.</li>
+<li><strong>Subtype Handling:</strong> When inherited,
+<code>tp_new</code> receives the final subtype being instantiated,
+allowing base classes to allocate memory with the derived type's
+layout.</li>
+<li><strong>Instance Control:</strong> It can return an existing
+instance instead of creating a new one (e.g., implementing singletons,
+interned values, or flyweight patterns).</li>
+</ul>
+<h4 id="return-value">Return Value</h4>
+<ul>
+<li>Returns a new reference to the created <code>PyObject*</code>.</li>
+<li>Returns <code>NULL</code> if an error occurs (setting a Python
+exception).</li>
+</ul>
+<hr />
+<h3 id="3-tp_init-instance-initialization">3. <code>tp_init</code>:
+Instance Initialization</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">(*</span>initproc<span class="op">)(</span>PyObject <span class="op">*</span>self<span class="op">,</span> PyObject <span class="op">*</span>args<span class="op">,</span> PyObject <span class="op">*</span>kwds<span class="op">);</span></span></code></pre></div>
+<h4 id="purpose-2">Purpose</h4>
+<p><code>tp_init</code> represents the initializer of the class and
+corresponds directly to Python's <code>__init__()</code> method. It
+receives the already-allocated instance and configures its mutable
+state.</p>
+<h4 id="responsibilities-2">Responsibilities</h4>
+<ul>
+<li><strong>Argument Parsing:</strong> It parses positional
+(<code>args</code>) and keyword (<code>kwds</code>) arguments passed to
+the class constructor, typically using
+<code>PyArg_ParseTupleAndKeywords</code>.</li>
+<li><strong>State Configuration:</strong> It assigns initial values to
+instance attributes and populates C-level fields inside the struct.</li>
+<li><strong>Re-initialization Safety:</strong> Because Python permits
+calling <code>obj.__init__()</code> multiple times explicitly on an
+existing object, <code>tp_init</code> must cleanly release or replace
+previous state to prevent memory leaks.</li>
+</ul>
+<h4 id="return-value-1">Return Value</h4>
+<ul>
+<li>Returns <code>0</code> on success.</li>
+<li>Returns <code>-1</code> on error (setting a Python exception).</li>
+</ul>
+<hr />
+<h3 id="summary-of-differences">Summary of Differences</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>tp_alloc</code></th>
+<th style="text-align: left;"><code>tp_new</code></th>
+<th style="text-align: left;"><code>tp_init</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Python Equivalent</strong></td>
+<td style="text-align: left;"><em>None (internal)</em></td>
+<td style="text-align: left;"><code>__new__()</code></td>
+<td style="text-align: left;"><code>__init__()</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Primary Goal</strong></td>
+<td style="text-align: left;">Reserve memory block</td>
+<td style="text-align: left;">Create/return object</td>
+<td style="text-align: left;">Configure object state</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Receives</strong></td>
+<td style="text-align: left;">Type pointer, item count</td>
+<td style="text-align: left;">Type pointer, args, kwargs</td>
+<td style="text-align: left;">Instantiated object, args, kwargs</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Returns</strong></td>
+<td style="text-align: left;">Raw <code>PyObject*</code></td>
+<td style="text-align: left;">Constructed <code>PyObject*</code></td>
+<td style="text-align: left;"><code>int</code> (<code>0</code> or
+<code>-1</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Standard Handler</strong></td>
+<td style="text-align: left;"><code>PyType_GenericAlloc</code></td>
+<td style="text-align: left;">Custom C function</td>
+<td style="text-align: left;">Custom C function</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Django Internationalization and Localization - python</title>
+    <meta name="description" content="Django provides a comprehensive, built-in framework for internationalization (i18n) and localization (l10n), enabling developers to adapt web applications to different languages, date formats, and regional customs. This article outlines the core mechanis">
+    <link rel="canonical" href="https://salivity.github.io/python/article/django-internationalization-and-localization">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Django Internationalization and Localization - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/django-internationalization-and-localization" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Django provides a comprehensive, built-in framework for internationalization (i18n) and localization (l10n), enabling developers to adapt web applications to different languages, date formats, and regional customs. This article outlines the core mechanis" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="django-internationalization-and-localization">Django
+Internationalization and Localization</h1>
+<p>Django provides a comprehensive, built-in framework for
+internationalization (i18n) and localization (l10n), enabling developers
+to adapt web applications to different languages, date formats, and
+regional customs. This article outlines the core mechanisms Django
+offers to achieve this, including the translation engine based on GNU
+gettext, translation hooks in Python code and templates, locale-aware
+URL routing, automated message extraction, and regional format
+localization.</p>
+<h3 id="translation-hooks-in-python-code">Translation Hooks in Python
+Code</h3>
+<p>Django integrates with GNU <code>gettext</code> to enable string
+translation throughout application logic. Developers mark translatable
+strings using the <code>gettext</code> or <code>gettext_lazy</code>
+functions, typically aliased as <code>_</code>.</p>
+<p>Standard <code>gettext</code> translates strings immediately at
+runtime, which is suitable for views. Conversely,
+<code>gettext_lazy</code> evaluates the translation only when the value
+is accessed as a string, making it essential for model field
+definitions, form labels, and module-level constants that load before
+the user's active locale is determined.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.utils.translation <span class="im">import</span> gettext <span class="im">as</span> _</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.utils.translation <span class="im">import</span> gettext_lazy <span class="im">as</span> _lazy</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Product(models.Model):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    name <span class="op">=</span> models.CharField(_lazy(<span class="st">&quot;Product Name&quot;</span>), max_length<span class="op">=</span><span class="dv">100</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> product_view(request):</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    notification <span class="op">=</span> _(<span class="st">&quot;Item added to your cart.&quot;</span>)</span></code></pre></div>
+<h3 id="template-translation-tags">Template Translation Tags</h3>
+<p>For rendering translations inside templates, Django includes the
+<code>i18n</code> template tag library. Once loaded via
+<code>{% load i18n %}</code>, developers can mark text for translation
+using two primary tags:</p>
+<ul>
+<li><code>{% trans "text" %}</code>: Translates simple static
+strings.</li>
+<li><code>{% blocktrans %}</code> or <code>{% blocktranslate %}</code>:
+Handles complex translations involving variables, pluralization, and
+contextual formatting.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>{% load i18n %}</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">h1</span><span class="dt">&gt;</span>{% trans &quot;Welcome to our store&quot; %}<span class="dt">&lt;/</span><span class="kw">h1</span><span class="dt">&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>{% blocktranslate count counter=item_count %}</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    There is {{ counter }} item in your cart.</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>{% plural %}</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    There are {{ counter }} items in your cart.</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>{% endblocktranslate %}</span></code></pre></div>
+<h3 id="message-extraction-and-compilation">Message Extraction and
+Compilation</h3>
+<p>Django automates the translation workflow using management commands
+that interact with the GNU gettext toolkit:</p>
+<ol type="1">
+<li><strong><code>python manage.py makemessages -l &lt;language_code&gt;</code></strong>:
+Scans the codebase for marked strings and generates or updates
+<code>.po</code> (Portable Object) files under the <code>locale/</code>
+directory.</li>
+<li><strong><code>python manage.py compilemessages</code></strong>:
+Compiles edited <code>.po</code> human-readable translation files into
+binary <code>.mo</code> (Machine Object) files, which Django reads at
+runtime for high performance.</li>
+</ol>
+<h3 id="locale-resolution-and-middleware">Locale Resolution and
+Middleware</h3>
+<p>Django determines the active language per request through
+<code>django.middleware.locale.LocaleMiddleware</code>. The middleware
+resolves the requested language following a specific fallback
+sequence:</p>
+<ol type="1">
+<li><strong>URL Language Prefix</strong>: Checked if configured in the
+URL patterns.</li>
+<li><strong>User Session</strong>: Checked for an explicitly set session
+variable.</li>
+<li><strong>Cookie</strong>: Checked for a language preference stored in
+a custom cookie (<code>django_language</code>).</li>
+<li><strong><code>Accept-Language</code> Header</strong>: Analyzed from
+the incoming HTTP request sent by the user's browser.</li>
+<li><strong><code>LANGUAGE_CODE</code></strong>: Defaults to the
+fallback language defined in <code>settings.py</code>.</li>
+</ol>
+<h3 id="internationalized-url-routing">Internationalized URL
+Routing</h3>
+<p>Django provides <code>i18n_patterns</code> to prefix URLs with
+language codes automatically (e.g., <code>/en/about/</code> vs.
+<code>/es/about/</code>). This approach ensures that multilingual pages
+are distinct, shareable, and search-engine friendly.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.conf.urls.i18n <span class="im">import</span> i18n_patterns</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.urls <span class="im">import</span> path</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> . <span class="im">import</span> views</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>urlpatterns <span class="op">=</span> i18n_patterns(</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    path(<span class="st">&quot;about/&quot;</span>, views.about_view, name<span class="op">=</span><span class="st">&quot;about&quot;</span>),</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    prefix_default_language<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<h3 id="format-localization-dates-times-and-numbers">Format Localization
+(Dates, Times, and Numbers)</h3>
+<p>In addition to text translation, Django formats dates, times,
+integers, and floating-point numbers according to regional conventions.
+By setting <code>USE_I18N = True</code> in settings, Django
+automatically applies local formatting to inputs in forms and outputs in
+templates.</p>
+<p>For granular control, developers can use the
+<code>django.utils.formats</code> module or apply template filters like
+<code>{{ my_date|date:"SHORT_DATE_FORMAT" }}</code> to adhere
+dynamically to the active locale's formatting rules.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Uses Reference Counting to Free Memory - python</title>
+    <meta name="description" content="Python manages memory automatically primarily through reference counting, a deterministic mechanism where the runtime tracks how many aliases or references point to an object. Each time an object is referenced, its internal counter increments; when a ref">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-uses-reference-counting-to-free-memory">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Uses Reference Counting to Free Memory - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-uses-reference-counting-to-free-memory" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python manages memory automatically primarily through reference counting, a deterministic mechanism where the runtime tracks how many aliases or references point to an object. Each time an object is referenced, its internal counter increments; when a ref" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-uses-reference-counting-to-free-memory">How Python
+Uses Reference Counting to Free Memory</h1>
+<p>Python manages memory automatically primarily through reference
+counting, a deterministic mechanism where the runtime tracks how many
+aliases or references point to an object. Each time an object is
+referenced, its internal counter increments; when a reference is
+removed, the counter decrements. The moment an object's reference
+counter hits zero, its memory is immediately deallocated and returned to
+the Python memory pool or the operating system, ensuring predictable and
+low-latency cleanup for the majority of runtime allocations.</p>
+<h2 id="the-reference-counter-ob_refcnt">The Reference Counter:
+<code>ob_refcnt</code></h2>
+<p>At the C level (CPython), every object is represented by a structure
+based on <code>PyObject</code>. Inside this base structure exists a
+field named <code>ob_refcnt</code>. This integer field stores the
+current total number of active references to that specific object in
+memory.</p>
+<h2 id="how-references-increase">How References Increase</h2>
+<p>An object’s <code>ob_refcnt</code> is incremented automatically in
+several common scenarios:</p>
+<ul>
+<li><strong>Assignment:</strong> Assigning an object to a new variable
+name (e.g., <code>b = a</code>).</li>
+<li><strong>Data structures:</strong> Adding an object to a collection,
+such as a <code>list</code>, <code>dict</code>, <code>set</code>, or
+<code>tuple</code>.</li>
+<li><strong>Function calls:</strong> Passing the object as an argument
+into a function creates a new local reference in the function's
+scope.</li>
+<li><strong>Attribute binding:</strong> Storing the object as an
+attribute of an instance or class.</li>
+</ul>
+<h2 id="how-references-decrease">How References Decrease</h2>
+<p>An object’s <code>ob_refcnt</code> is decremented when any existing
+reference is broken:</p>
+<ul>
+<li><strong>Scope exit:</strong> A local variable leaves its scope (for
+example, when a function finishes executing, all its local variables are
+cleared).</li>
+<li><strong>Reassignment:</strong> A variable name is bound to a
+different object (e.g., <code>x = 5</code> followed by
+<code>x = 10</code> decrements the count of <code>5</code>).</li>
+<li><strong>Explicit deletion:</strong> Using the <code>del</code>
+statement removes the variable binding rather than the object directly,
+decrementing the object's counter.</li>
+<li><strong>Container removal:</strong> Removing an element from a list,
+dictionary, or other collection.</li>
+</ul>
+<h2 id="the-deallocation-process">The Deallocation Process</h2>
+<p>The defining feature of reference counting is immediate
+reclamation:</p>
+<ol type="1">
+<li>As soon as an operation causes <code>ob_refcnt</code> to transition
+from 1 to 0, Python invokes the type-specific deallocator
+(<code>tp_dealloc</code>) defined in the object's type structure.</li>
+<li>The deallocator decrements the reference counts of any other objects
+that this object referenced.</li>
+<li>The memory block occupied by the object is cleared and marked as
+available for future allocations within Python's internal memory manager
+(PyMalloc) or returned to the system heap.</li>
+</ol>
+<p>Because deallocation happens immediately upon the last reference
+being lost, objects often release associated system resources (such as
+file handles or network sockets) without waiting for a scheduled
+collection phase.</p>
+<h2 id="circular-references-and-the-cyclic-garbage-collector">Circular
+References and the Cyclic Garbage Collector</h2>
+<p>While reference counting is fast and predictable, it cannot reclaim
+memory involved in circular references on its own. A reference cycle
+occurs when two or more objects reference each other (e.g., object A
+points to object B, and object B points to object A), but neither object
+can be reached from anywhere else in the application.</p>
+<p>In this scenario, both objects maintain an <code>ob_refcnt</code> of
+at least 1, preventing standard reference counting from ever reclaiming
+them. To solve this, Python supplements reference counting with a
+secondary, generational cyclic garbage collector. This collector runs
+periodically, detects self-referential groups that are isolated from
+root scopes, breaks the cycles, and forces the deallocation of the
+unreachable objects.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

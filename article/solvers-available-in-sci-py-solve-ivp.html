@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solvers Available in SciPy solve_ivp - python</title>
+    <meta name="description" content="The scipy.integrate.solveivp function is Python's primary tool for solving initial value problems for systems of ordinary differential equations (ODEs). This article provides a clear overview of the six built-in numerical integration methods available in">
+    <link rel="canonical" href="https://salivity.github.io/python/article/solvers-available-in-sci-py-solve-ivp">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Solvers Available in SciPy solve_ivp - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/solvers-available-in-sci-py-solve-ivp" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The scipy.integrate.solveivp function is Python's primary tool for solving initial value problems for systems of ordinary differential equations (ODEs). This article provides a clear overview of the six built-in numerical integration methods available in" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="solvers-available-in-scipy-solve_ivp">Solvers Available in SciPy
+solve_ivp</h1>
+<p>The <code>scipy.integrate.solve_ivp</code> function is Python's
+primary tool for solving initial value problems for systems of ordinary
+differential equations (ODEs). This article provides a clear overview of
+the six built-in numerical integration methods available in
+<code>solve_ivp</code>, breaking down their underlying algorithms,
+performance characteristics, and ideal use cases for both stiff and
+non-stiff systems.</p>
+<hr />
+<h3 id="explicit-solvers-for-non-stiff-problems">Explicit Solvers (For
+Non-Stiff Problems)</h3>
+<p>Explicit methods compute the state of a system at a later time from
+the state of the system at the current time. They are computationally
+efficient per step but become unstable when applied to stiff ODEs.</p>
+<h4 id="1-rk45-default">1. <code>RK45</code> (Default)</h4>
+<ul>
+<li><strong>Method:</strong> Explicit Runge-Kutta method of order 5(4)
+with the Dormand-Prince pair.</li>
+<li><strong>Best Used For:</strong> General-purpose, smooth, non-stiff
+problems where moderate accuracy is sufficient.</li>
+<li><strong>Details:</strong> This is the default solver in
+<code>solve_ivp</code>. It adapts the step size automatically by
+comparing the 4th- and 5th-order solutions to estimate local truncation
+error. It should be the first solver you try on an unknown problem.</li>
+</ul>
+<h4 id="2-rk23">2. <code>RK23</code></h4>
+<ul>
+<li><strong>Method:</strong> Explicit Runge-Kutta method of order 3(2)
+with the Bogacki-Shampine pair.</li>
+<li><strong>Best Used For:</strong> Non-stiff problems where low
+precision is acceptable, or systems with low smoothness
+requirements.</li>
+<li><strong>Details:</strong> <code>RK23</code> takes smaller steps with
+lower computational overhead per step compared to <code>RK45</code>. It
+can be faster than <code>RK45</code> when low tolerances are requested
+or when the derivative evaluation is computationally cheap.</li>
+</ul>
+<h4 id="3-dop853">3. <code>DOP853</code></h4>
+<ul>
+<li><strong>Method:</strong> Explicit Runge-Kutta method of order
+8(5)(3) by Dormand and Prince.</li>
+<li><strong>Best Used For:</strong> Non-stiff problems that require very
+high precision.</li>
+<li><strong>Details:</strong> Using an 8th-order formula,
+<code>DOP853</code> is efficient when tight tolerances (e.g.,
+<code>rtol &lt; 1e-7</code>) are required. It performs more derivative
+evaluations per step than <code>RK45</code>, but compensates by taking
+significantly larger step sizes for high-accuracy constraints.</li>
+</ul>
+<hr />
+<h3 id="implicit-solvers-for-stiff-problems">Implicit Solvers (For Stiff
+Problems)</h3>
+<p>Stiff equations occur when certain components of the solution change
+much more rapidly than others, requiring explicit methods to take
+impractically small steps for stability. Implicit solvers evaluate
+equations at the future time step, requiring system matrix solutions
+(often using Jacobians) to ensure stability.</p>
+<h4 id="4-radau">4. <code>Radau</code></h4>
+<ul>
+<li><strong>Method:</strong> Implicit Runge-Kutta method of the Radau
+IIA family of order 5.</li>
+<li><strong>Best Used For:</strong> Stiff differential equations and
+differential-algebraic systems.</li>
+<li><strong>Details:</strong> <code>Radau</code> provides strong
+numerical stability (it is A-stable and L-stable). It handles severe
+stiffness well and supports user-provided Jacobians to accelerate
+convergence during Newton iterations.</li>
+</ul>
+<h4 id="5-bdf">5. <code>BDF</code></h4>
+<ul>
+<li><strong>Method:</strong> Backward Differentiation Formulas with
+variable order and variable step size.</li>
+<li><strong>Best Used For:</strong> Stiff problems with high-dimensional
+systems or computationally expensive functions.</li>
+<li><strong>Details:</strong> As a linear multistep method,
+<code>BDF</code> reuses evaluations from previous steps, requiring fewer
+function evaluations per step than implicit Runge-Kutta methods like
+<code>Radau</code>. It is a reimplementation of the classic modern stiff
+ODE solver algorithms.</li>
+</ul>
+<h4 id="6-lsoda">6. <code>LSODA</code></h4>
+<ul>
+<li><strong>Method:</strong> Livermore Solver for Ordinary Differential
+Equations with Automatic method switching.</li>
+<li><strong>Best Used For:</strong> Problems where stiffness is unknown
+beforehand or varies across the integration interval.</li>
+<li><strong>Details:</strong> <code>LSODA</code> wraps the original
+Fortran solver. It dynamically switches between the explicit Adams
+method (for non-stiff intervals) and the implicit BDF method (for stiff
+intervals), providing automated flexibility without manual
+intervention.</li>
+</ul>
+<hr />
+<h3 id="how-to-choose-a-solver">How to Choose a Solver</h3>
+<ol type="1">
+<li><strong>Start with <code>RK45</code>:</strong> If the problem is
+non-stiff and requires standard precision, <code>RK45</code> is usually
+the fastest and easiest option.</li>
+<li><strong>Use <code>DOP853</code> for High Accuracy:</strong> If error
+tolerances are stringent (<code>rtol</code> and <code>atol</code> <span
+class="math inline">\(\le 10^{-7}\)</span>), use
+<code>DOP853</code>.</li>
+<li><strong>Switch to <code>Radau</code> or <code>BDF</code> if
+<code>RK45</code> Fails or Runs Extremely Slowly:</strong> If
+integration takes an excessive number of steps, the system is likely
+stiff. Use <code>Radau</code> for strong stability or <code>BDF</code>
+for large systems.</li>
+<li><strong>Use <code>LSODA</code> for Mixed or Unknown
+Behavior:</strong> If you are unsure whether your system exhibits stiff
+behavior at certain intervals, <code>LSODA</code> provides robust
+automated switching.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

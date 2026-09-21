@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Frame Objects and Call Stack Internals - python</title>
+    <meta name="description" content="This article explores how Python manages code execution behind the scenes using frame objects and internal call stacks. It breaks down the structure of PyFrameObject, details how CPython links frames together to trace execution flow, examines key attribu">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-frame-objects-and-call-stack-internals">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Frame Objects and Call Stack Internals - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-frame-objects-and-call-stack-internals" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how Python manages code execution behind the scenes using frame objects and internal call stacks. It breaks down the structure of PyFrameObject, details how CPython links frames together to trace execution flow, examines key attribu" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-frame-objects-and-call-stack-internals">Python Frame
+Objects and Call Stack Internals</h1>
+<p>This article explores how Python manages code execution behind the
+scenes using frame objects and internal call stacks. It breaks down the
+structure of <code>PyFrameObject</code>, details how CPython links
+frames together to trace execution flow, examines key attributes such as
+local namespaces and bytecode pointers, highlights recent architectural
+changes in modern Python versions, and demonstrates how to
+programmatically inspect the call stack at runtime.</p>
+<hr />
+<h3 id="what-is-a-python-frame-object">What Is a Python Frame
+Object?</h3>
+<p>In CPython, a frame object (represented internally by the C structure
+<code>PyFrameObject</code>) is a runtime data structure created whenever
+a code block executes. Functions, module-level code, class definitions,
+and generator calls each produce a frame object.</p>
+<p>While a <strong>code object</strong> (<code>PyCodeObject</code>)
+contains static, immutable data generated during compilation—such as
+bytecode instructions, constant values, and variable names—a
+<strong>frame object</strong> contains the dynamic, mutable state
+required to actually execute that code. This state includes:</p>
+<ul>
+<li><strong>Local variables and cell storage:</strong> Values assigned
+to names within the scope.</li>
+<li><strong>Global and builtin namespaces:</strong> Dictionaries
+providing access to module-level and built-in identifiers.</li>
+<li><strong>Execution pointer:</strong> The offset of the bytecode
+instruction currently being evaluated (<code>f_lasti</code>).</li>
+<li><strong>Evaluation stack:</strong> The value stack used by Python's
+stack-based virtual machine to store intermediate computation
+results.</li>
+</ul>
+<h3 id="how-the-call-stack-is-represented-internally">How the Call Stack
+Is Represented Internally</h3>
+<p>Unlike low-level compiled languages like C or Rust, where the call
+stack resides in a single, contiguous region of operating system memory,
+traditional CPython implements the call stack as a linked list of
+heap-allocated frame objects.</p>
+<p>Each frame contains a pointer to the frame that invoked it:</p>
+<ol type="1">
+<li><strong>The Chain of Execution:</strong> Every frame has an
+<code>f_back</code> attribute. When function <code>A()</code> calls
+function <code>B()</code>, CPython creates a new frame for
+<code>B()</code> and sets its <code>f_back</code> pointer to
+<code>A()</code>'s frame.</li>
+<li><strong>Stack Unwinding and Tracing:</strong> When <code>B()</code>
+finishes or returns a value, the interpreter reads <code>f_back</code>
+to return control to the caller and restores <code>A()</code>'s
+execution context. If an uncaught exception occurs, Python walks
+backward along the <code>f_back</code> pointers to construct the
+traceback message.</li>
+<li><strong>Thread State:</strong> The active frame at the top of the
+execution stack for any given thread is tracked by the thread's state
+structure (<code>PyThreadState-&gt;cframe</code> or
+<code>current_frame</code>).</li>
+</ol>
+<h3 id="anatomy-of-a-frame-object">Anatomy of a Frame Object</h3>
+<p>At the Python level, frame objects expose several read-only and
+mutable attributes:</p>
+<ul>
+<li><code>f_back</code>: The previous execution frame (the caller), or
+<code>None</code> if the frame is at the base of the stack.</li>
+<li><code>f_code</code>: The underlying code object being executed.</li>
+<li><code>f_locals</code>: A dictionary mapping local variable names to
+their current values.</li>
+<li><code>f_globals</code>: The dictionary representing the global
+namespace of the module.</li>
+<li><code>f_builtins</code>: The dictionary of built-in names (e.g.,
+<code>len</code>, <code>range</code>).</li>
+<li><code>f_lasti</code>: The "last instruction"—an integer index
+representing the bytecode instruction currently executing.</li>
+<li><code>f_lineno</code>: The current line number in the source file
+corresponding to <code>f_lasti</code>.</li>
+<li><code>f_trace</code>: A callback function invoked on tracing events
+(used by debuggers like <code>pdb</code> and coverage tools).</li>
+</ul>
+<h3 id="changes-in-python-311-_pyinterpreterframe">Changes in Python
+3.11+: <code>_PyInterpreterFrame</code></h3>
+<p>Starting in Python 3.11, CPython overhauled frame management to
+reduce overhead and improve execution speed.</p>
+<p>Historically, allocating a full heap-based <code>PyFrameObject</code>
+for every function call introduced significant memory allocation
+overhead. Modern CPython uses a lighter internal structure called
+<code>_PyInterpreterFrame</code>.</p>
+<p>These lightweight frames are allocated contiguously in chunks on a
+dedicated evaluation stack per thread. A full Python-visible
+<code>PyFrameObject</code> is now created lazily—only when explicitly
+requested by debugging utilities, profiling tools, or introspection
+calls. When a function returns without its frame ever being inspected,
+the internal frame data is discarded without triggering a generic heap
+allocation.</p>
+<h3 id="inspecting-frames-and-the-call-stack">Inspecting Frames and the
+Call Stack</h3>
+<p>Python allows runtime inspection of frame objects via the
+<code>sys</code> and <code>inspect</code> modules:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> inspect</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> inner():</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Retrieve the current frame directly from the interpreter</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    current_frame <span class="op">=</span> sys._getframe()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Current Function: </span><span class="sc">{</span>current_frame<span class="sc">.</span>f_code<span class="sc">.</span>co_name<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Current Line: </span><span class="sc">{</span>current_frame<span class="sc">.</span>f_lineno<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Caller Function: </span><span class="sc">{</span>current_frame<span class="sc">.</span>f_back<span class="sc">.</span>f_code<span class="sc">.</span>co_name<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Inspecting the entire stack chain</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    caller <span class="op">=</span> current_frame.f_back</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> caller:</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Stack Frame: </span><span class="sc">{</span>caller<span class="sc">.</span>f_code<span class="sc">.</span>co_name<span class="sc">}</span><span class="ss"> in </span><span class="sc">{</span>caller<span class="sc">.</span>f_code<span class="sc">.</span>co_filename<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        caller <span class="op">=</span> caller.f_back</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> outer():</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    inner()</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>outer()</span></code></pre></div>
+<p>The higher-level <code>inspect</code> module provides utility
+functions like <code>inspect.currentframe()</code> and
+<code>inspect.stack()</code>, which wrap these frame pointers into
+structured records containing file paths, context lines, and
+positions.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

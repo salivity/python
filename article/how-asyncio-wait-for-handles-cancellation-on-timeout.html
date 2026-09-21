@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Asyncio wait_for Handles Cancellation on Timeout - python</title>
+    <meta name="description" content="In Python's asynchronous ecosystem, asyncio.waitfor() enforces an execution deadline on an awaitable object. When this deadline expires, asyncio.waitfor() does not simply abandon the underlying coroutine; it initiates an explicit cancellation sequence by">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-asyncio-wait-for-handles-cancellation-on-timeout">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Asyncio wait_for Handles Cancellation on Timeout - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-asyncio-wait-for-handles-cancellation-on-timeout" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python's asynchronous ecosystem, asyncio.waitfor() enforces an execution deadline on an awaitable object. When this deadline expires, asyncio.waitfor() does not simply abandon the underlying coroutine; it initiates an explicit cancellation sequence by" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-asyncio-wait_for-handles-cancellation-on-timeout">How
+Asyncio wait_for Handles Cancellation on Timeout</h1>
+<p>In Python's asynchronous ecosystem, <code>asyncio.wait_for()</code>
+enforces an execution deadline on an awaitable object. When this
+deadline expires, <code>asyncio.wait_for()</code> does not simply
+abandon the underlying coroutine; it initiates an explicit cancellation
+sequence by injecting an <code>asyncio.CancelledError</code> into the
+target task, waits for the task to react to this cancellation, and
+subsequently raises a <code>TimeoutError</code> (or
+<code>asyncio.TimeoutError</code> in Python versions prior to 3.11).
+Understanding these cancellation mechanics is essential for preventing
+leaked background operations, unclosed resources, and unexpected program
+states.</p>
+<h2 id="the-cancellation-workflow">The Cancellation Workflow</h2>
+<p>When a coroutine passed to
+<code>asyncio.wait_for(fut, timeout=...)</code> exceeds the specified
+duration, the event loop triggers the following sequence:</p>
+<ol type="1">
+<li><strong>Task Wrapping</strong>: If the passed awaitable is a raw
+coroutine rather than an existing <code>asyncio.Task</code>,
+<code>wait_for()</code> wraps it into a task using
+<code>asyncio.ensure_future()</code>.</li>
+<li><strong>Dispatching Cancellation</strong>: Upon timeout expiration,
+<code>wait_for()</code> executes <code>task.cancel()</code>. This marks
+the task as cancelling and schedules an
+<code>asyncio.CancelledError</code> to be raised inside the coroutine at
+its next suspension point (<code>await</code>).</li>
+<li><strong>Awaiting Completion</strong>: Crucially,
+<code>wait_for()</code> does not immediately raise
+<code>TimeoutError</code> to the caller. It pauses and awaits the
+wrapped task until it finishes its cleanup and exits.</li>
+<li><strong>Error Translation</strong>: Once the task terminates in
+response to the cancellation, <code>wait_for()</code> catches the
+resulting <code>CancelledError</code> internally and translates it into
+a <code>TimeoutError</code> for the caller.</li>
+</ol>
+<h2 id="task-cleanup-and-suspension-points">Task Cleanup and Suspension
+Points</h2>
+<p>Because <code>wait_for()</code> waits for the inner task to terminate
+after cancelling it, the inner coroutine has the opportunity to run
+cleanup logic defined in <code>try...finally</code> or
+<code>except asyncio.CancelledError</code> blocks:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> worker():</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> asyncio.sleep(<span class="dv">10</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> asyncio.CancelledError:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Cleanup actions occur here</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> close_resources()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span>  <span class="co"># Re-raising is vital to confirm cancellation</span></span></code></pre></div>
+<p>The inner coroutine will only process the cancellation when it yields
+control back to the event loop. If the coroutine is performing
+synchronous, blocking CPU work without awaiting an asynchronous
+operation, the cancellation cannot be injected until the next
+<code>await</code> expression is reached.</p>
+<h2 id="the-cancellation-suppression-trap">The Cancellation Suppression
+Trap</h2>
+<p>A critical nuance in <code>asyncio.wait_for()</code> occurs when the
+wrapped coroutine intercepts and suppresses
+<code>asyncio.CancelledError</code>.</p>
+<p>If a coroutine catches <code>CancelledError</code> and returns a
+value instead of propagating the exception:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> swallowing_worker():</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> asyncio.sleep(<span class="dv">10</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> asyncio.CancelledError:</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&quot;suppressed&quot;</span></span></code></pre></div>
+<p>In this scenario, <code>wait_for()</code> observes that the task
+completed successfully rather than terminating via cancellation.
+Consequently, <code>wait_for()</code> will <strong>not</strong> raise
+<code>TimeoutError</code>; instead, it returns the value
+<code>"suppressed"</code>. To preserve correct timeout behavior, any
+handler catching <code>asyncio.CancelledError</code> inside the wrapped
+task must either re-raise it or allow it to bubble up.</p>
+<h2 id="exception-precedence-during-teardown">Exception Precedence
+During Teardown</h2>
+<p>If the inner coroutine raises a different exception during its
+cancellation cleanup (such as an error occurring inside a
+<code>finally</code> block or within an
+<code>except CancelledError</code> handler), that new exception
+supersedes the cancellation. In this case, <code>wait_for()</code> will
+propagate the secondary exception to the caller instead of raising
+<code>TimeoutError</code>.</p>
+<h2 id="preventing-inner-cancellation-with-asyncioshield">Preventing
+Inner Cancellation with <code>asyncio.shield()</code></h2>
+<p>By default, the timeout and the inner operation are tightly coupled:
+timing out implies cancelling the operation. If an operation must
+continue running in the background even if the caller stops waiting for
+it, <code>asyncio.shield()</code> must be combined with
+<code>wait_for()</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># The task continues running even after wait_for raises TimeoutError</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>task <span class="op">=</span> asyncio.create_task(critical_operation())</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> asyncio.wait_for(asyncio.shield(task), timeout<span class="op">=</span><span class="fl">5.0</span>)</span></code></pre></div>
+<p>In this pattern, when the timeout expires, the cancellation signal is
+absorbed by the shield wrapper, leaving the underlying
+<code>critical_operation()</code> task running uninterrupted.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

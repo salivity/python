@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Django Fields with SQL Column Conversions - python</title>
+    <meta name="description" content="Django's Object-Relational Mapper (ORM) manages most standard database types out of the box, but specialized data structures, legacy schemas, and database-level transformations require custom field implementations. Developers can achieve fine-grained con">
+    <link rel="canonical" href="https://salivity.github.io/python/article/custom-django-fields-with-sql-column-conversions">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Custom Django Fields with SQL Column Conversions - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/custom-django-fields-with-sql-column-conversions" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Django's Object-Relational Mapper (ORM) manages most standard database types out of the box, but specialized data structures, legacy schemas, and database-level transformations require custom field implementations. Developers can achieve fine-grained con" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="custom-django-fields-with-sql-column-conversions">Custom Django
+Fields with SQL Column Conversions</h1>
+<p>Django's Object-Relational Mapper (ORM) manages most standard
+database types out of the box, but specialized data structures, legacy
+schemas, and database-level transformations require custom field
+implementations. Developers can achieve fine-grained control over how
+data is converted between Python and database-specific SQL by
+subclassing Django’s base <code>Field</code> class. This process
+involves overriding specific hook methods that dictate column
+definitions, data preparation, Python instantiation, and SQL query
+formatting.</p>
+<h3 id="defining-the-column-type-with-db_type">Defining the Column Type
+with <code>db_type</code></h3>
+<p>To specify the physical database column type, override the
+<code>db_type</code> method. This method accepts the active database
+<code>connection</code> object, allowing you to return different SQL
+column types based on the underlying database engine (e.g., PostgreSQL,
+MySQL, or SQLite).</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.db <span class="im">import</span> models</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CoordinateField(models.Field):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> db_type(<span class="va">self</span>, connection):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> connection.vendor <span class="op">==</span> <span class="st">&#39;postgresql&#39;</span>:</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="st">&#39;point&#39;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&#39;varchar(64)&#39;</span></span></code></pre></div>
+<h3 id="converting-python-values-to-database-format">Converting Python
+Values to Database Format</h3>
+<p>When passing Python objects to SQL queries (such as during
+<code>INSERT</code> or <code>UPDATE</code> statements), Django passes
+the data through <code>get_prep_value</code>. This method must convert
+complex Python types into primitive formats (like strings, integers, or
+byte arrays) acceptable by the database driver.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_prep_value(<span class="va">self</span>, value):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> value <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> value</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(value, <span class="bu">tuple</span>) <span class="kw">and</span> <span class="bu">len</span>(value) <span class="op">==</span> <span class="dv">2</span>:</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="ss">f&quot;(</span><span class="sc">{</span>value[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">,</span><span class="sc">{</span>value[<span class="dv">1</span>]<span class="sc">}</span><span class="ss">)&quot;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">str</span>(value)</span></code></pre></div>
+<h3 id="converting-database-values-to-python-format">Converting Database
+Values to Python Format</h3>
+<p>Handling values retrieved from the database requires implementing
+<code>from_db_value</code> and <code>to_python</code>.</p>
+<ul>
+<li><code>from_db_value(value, expression, connection)</code>: Called
+whenever data is loaded directly from the database (e.g., via
+<code>.values()</code> or model instantiation). It converts raw database
+values into your targeted Python object.</li>
+<li><code>to_python(value)</code>: Used during validation,
+deserialization, and model form cleaning to ensure input from forms or
+serializers matches the Python representation.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> from_db_value(<span class="va">self</span>, value, expression, connection):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> value <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> value</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Example parsing &quot;(x,y)&quot; into a Python tuple</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        x, y <span class="op">=</span> value.strip(<span class="st">&quot;()&quot;</span>).split(<span class="st">&quot;,&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> (<span class="bu">float</span>(x), <span class="bu">float</span>(y))</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> to_python(<span class="va">self</span>, value):</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(value, <span class="bu">tuple</span>) <span class="kw">or</span> value <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> value</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        x, y <span class="op">=</span> value.strip(<span class="st">&quot;()&quot;</span>).split(<span class="st">&quot;,&quot;</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> (<span class="bu">float</span>(x), <span class="bu">float</span>(y))</span></code></pre></div>
+<h3 id="injecting-custom-sql-for-inserts-and-updates">Injecting Custom
+SQL for Inserts and Updates</h3>
+<p>If the database requires specific SQL functions to process raw data
+during writes (such as PostGIS functions or hashing routines), override
+<code>get_placeholder</code>. By default, Django uses <code>%s</code> as
+the parameter placeholder, but <code>get_placeholder</code> allows you
+to wrap this placeholder in database functions.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_placeholder(<span class="va">self</span>, value, compiler, connection):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> connection.vendor <span class="op">==</span> <span class="st">&#39;postgresql&#39;</span>:</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Wraps the parameter in a database-specific cast or function</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="st">&quot;PointFromText(</span><span class="sc">%s</span><span class="st">)&quot;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&quot;</span><span class="sc">%s</span><span class="st">&quot;</span></span></code></pre></div>
+<h3 id="transforming-sql-on-selection">Transforming SQL on
+Selection</h3>
+<p>To transform data directly in the <code>SELECT</code> clause before
+the database returns it, use <code>select_format</code>. This method
+allows you to wrap the column reference with SQL functions during query
+generation.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> select_format(<span class="va">self</span>, compiler, sql, params):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Wraps the SQL column selection in a custom SQL function</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f&quot;AsText(</span><span class="sc">{</span>sql<span class="sc">}</span><span class="ss">)&quot;</span>, params</span></code></pre></div>
+<h3 id="registering-and-using-the-field">Registering and Using the
+Field</h3>
+<p>Once defined, the custom field can be integrated into standard Django
+models. If the field requires migrations, define
+<code>deconstruct()</code> to properly serialize field arguments for the
+migration framework.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Location(models.Model):</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    name <span class="op">=</span> models.CharField(max_length<span class="op">=</span><span class="dv">100</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    coordinates <span class="op">=</span> CoordinateField()</span></code></pre></div>
+<p>By combining <code>db_type</code>, <code>get_prep_value</code>,
+<code>from_db_value</code>, <code>get_placeholder</code>, and
+<code>select_format</code>, developers can build customized database
+mappings that offload complex computations, formatting, and data parsing
+directly to the database engine.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

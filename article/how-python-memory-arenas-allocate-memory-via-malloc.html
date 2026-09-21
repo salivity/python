@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Memory Arenas Allocate Memory via malloc - python</title>
+    <meta name="description" content="Python manages small-object memory through a specialized allocator within CPython called PyMalloc, which organizes memory hierarchically into arenas, pools, and blocks to minimize overhead. At the top of this hierarchy sits the arena—a large, contiguou">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-memory-arenas-allocate-memory-via-malloc">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Memory Arenas Allocate Memory via malloc - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-memory-arenas-allocate-memory-via-malloc" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python manages small-object memory through a specialized allocator within CPython called PyMalloc, which organizes memory hierarchically into arenas, pools, and blocks to minimize overhead. At the top of this hierarchy sits the arena—a large, contiguou" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-memory-arenas-allocate-memory-via-malloc">How Python
+Memory Arenas Allocate Memory via malloc</h1>
+<p>Python manages small-object memory through a specialized allocator
+within CPython called PyMalloc, which organizes memory hierarchically
+into arenas, pools, and blocks to minimize overhead. At the top of this
+hierarchy sits the arena—a large, contiguous chunk of memory (typically
+256 KiB) requested directly from the operating system using standard C
+library calls such as <code>malloc</code> or virtual memory mappings.
+This article explains how Python's arena mechanism requests system
+memory via <code>malloc</code>, how it subdivides that memory to handle
+runtime objects, and how it eventually releases that memory back to the
+operating system.</p>
+<h2 id="the-cpython-memory-hierarchy">The CPython Memory Hierarchy</h2>
+<p>CPython splits memory management into distinct layers depending on
+the size of the allocation request:</p>
+<ol type="1">
+<li><strong>Large allocations (&gt; 512 bytes):</strong> Python bypasses
+its internal custom allocator and delegates directly to the standard C
+library's <code>malloc</code> (or <code>PyMem_RawMalloc</code>).</li>
+<li><strong>Small allocations (≤ 512 bytes):</strong> Python routes
+requests to PyMalloc. PyMalloc serves these allocations out of
+pre-allocated chunks arranged in three levels:
+<ul>
+<li><strong>Blocks:</strong> The smallest unit, ranging from 8 to 512
+bytes in increments of 8 bytes.</li>
+<li><strong>Pools:</strong> 4 KiB memory pages containing uniform-sized
+blocks.</li>
+<li><strong>Arenas:</strong> 256 KiB structures containing 64 pools
+each.</li>
+</ul></li>
+</ol>
+<h2 id="requesting-system-memory-via-arenas">Requesting System Memory
+via Arenas</h2>
+<p>When Python requires memory for small objects and no existing pool
+has available space, PyMalloc requests a new arena.</p>
+<p>The arena allocator relies on an underlying structure defined in
+CPython's source code (<code>obmalloc.c</code>) as
+<code>struct arena_object</code>. The allocation process proceeds as
+follows:</p>
+<ol type="1">
+<li><strong>Arena Object Tracking:</strong> Python maintains an array of
+<code>arena_object</code> descriptors. If an unused descriptor is
+unavailable, Python expands the descriptor table using standard system
+allocation.</li>
+<li><strong>Invoking the System Allocator:</strong> To back the arena
+descriptor with actual contiguous memory, Python calls
+<code>_PyObject_Arena.alloc</code>, which resolves to standard system
+calls. On modern POSIX systems, this can be <code>mmap</code> for
+anonymous memory, but historically and on many platforms, it uses
+standard C <code>malloc()</code>:
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>p <span class="op">=</span> malloc<span class="op">(</span>ARENA_SIZE<span class="op">);</span> <span class="co">/* ARENA_SIZE is typically 256 KiB (262,144 bytes) */</span></span></code></pre></div></li>
+<li><strong>Address Alignment:</strong> Pools inside an arena must be
+strictly aligned to pool-size boundaries (4 KiB) for PyMalloc to compute
+pool addresses quickly using bitwise masking. Because standard
+<code>malloc</code> does not guarantee 4 KiB alignment, PyMalloc either
+allocates slightly more memory to align the base pointer manually or
+uses platform-specific aligned allocators (such as
+<code>posix_memalign</code> or <code>VirtualAlloc</code> on
+Windows).</li>
+</ol>
+<h2 id="arena-states-and-management">Arena States and Management</h2>
+<p>Arenas are managed through a doubly-linked list sorted by the number
+of available free pools. An arena exists in one of three states:</p>
+<ul>
+<li><strong>Unallocated:</strong> The <code>arena_object</code>
+descriptor exists, but no system memory is currently mapped to it.</li>
+<li><strong>Partially Allocated:</strong> The arena holds active
+objects, but still has free pools available for future allocations.</li>
+<li><strong>Full:</strong> All 64 pools inside the 256 KiB arena are
+occupied.</li>
+</ul>
+<p>Python prioritizes filling partially used arenas before drawing pools
+from completely empty arenas. This strategy minimizes fragmentation and
+keeps total system memory usage low.</p>
+<h2 id="releasing-memory-back-to-the-operating-system">Releasing Memory
+Back to the Operating System</h2>
+<p>Because PyMalloc acquires memory from the system in large 256 KiB
+chunks, individual object deallocations (using <code>free()</code>
+semantics) do not immediately return memory to the OS.</p>
+<p>Instead, when an object is destroyed:</p>
+<ol type="1">
+<li>The corresponding block inside a 4 KiB pool is marked as free.</li>
+<li>When all blocks inside a pool become free, the entire pool is marked
+as free within its parent arena.</li>
+<li>Only when <strong>all 64 pools</strong> inside an arena become
+completely empty can Python deallocate the entire 256 KiB block.</li>
+</ol>
+<p>At that point, Python invokes standard <code>free()</code> (or
+<code>munmap</code>) on the memory pointer held by the
+<code>arena_object</code>. The descriptor is then returned to the unused
+arena pool, reducing the process's resident set size (RSS) and returning
+the physical memory to the operating system.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

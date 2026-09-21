@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customizing Python Serialization with copyreg - python</title>
+    <meta name="description" content="The Python copyreg module provides a mechanism to customize how the pickle and copy modules serialize and reconstruct specific object types. By allowing developers to register custom reduction and constructor functions for classes they do not control or">
+    <link rel="canonical" href="https://salivity.github.io/python/article/customizing-python-serialization-with-copyreg">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Customizing Python Serialization with copyreg - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/customizing-python-serialization-with-copyreg" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Python copyreg module provides a mechanism to customize how the pickle and copy modules serialize and reconstruct specific object types. By allowing developers to register custom reduction and constructor functions for classes they do not control or" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="customizing-python-serialization-with-copyreg">Customizing
+Python Serialization with copyreg</h1>
+<p>The Python <code>copyreg</code> module provides a mechanism to
+customize how the <code>pickle</code> and <code>copy</code> modules
+serialize and reconstruct specific object types. By allowing developers
+to register custom reduction and constructor functions for classes they
+do not control or cannot modify, <code>copyreg</code> enables
+serialization of complex objects, external library classes, and
+C-extension types without altering their original source code.</p>
+<h2 id="the-role-of-copyreg-in-python">The Role of copyreg in
+Python</h2>
+<p>When Python serializes an object using the <code>pickle</code>
+module, it inspects the object for built-in serialization mechanisms,
+such as <code>__reduce__</code> or <code>__reduce_ex__</code>. However,
+modifying class definitions to include these methods is not always
+feasible—especially when working with third-party libraries, legacy
+codebases, or built-in C-extensions.</p>
+<p>The <code>copyreg</code> module acts as a global registry for
+serialization rules. It decouples the serialization logic from the class
+implementation itself, providing a clean, non-invasive way to define how
+any class should be decomposed for pickling and reconstituted during
+unpickling.</p>
+<h2 id="the-registration-process">The Registration Process</h2>
+<p>Custom serialization through <code>copyreg</code> centers around the
+<code>copyreg.pickle()</code> function:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>copyreg.pickle(cls, reduction_function, constructor<span class="op">=</span><span class="va">None</span>)</span></code></pre></div>
+<ul>
+<li><strong><code>cls</code></strong>: The class or type to
+register.</li>
+<li><strong><code>reduction_function</code></strong>: A callable that
+accepts an instance of <code>cls</code> and returns a tuple matching
+Python's pickling protocol (usually a callable and arguments to recreate
+the object).</li>
+<li><strong><code>constructor</code></strong>: An optional callable used
+to validate that an object factory is safe to invoke during
+unpickling.</li>
+</ul>
+<h2 id="step-by-step-implementation">Step-by-Step Implementation</h2>
+<h3 id="1-define-the-target-class">1. Define the Target Class</h3>
+<p>Consider a class that manages data that might ordinarily fail to
+serialize or requires specific handling:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> DatabaseSession:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, connection_string, timeout<span class="op">=</span><span class="dv">30</span>):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.connection_string <span class="op">=</span> connection_string</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.timeout <span class="op">=</span> timeout</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.is_connected <span class="op">=</span> <span class="va">True</span></span></code></pre></div>
+<h3 id="2-define-the-reduction-function">2. Define the Reduction
+Function</h3>
+<p>The reduction function receives the object instance and must return a
+tuple. In its most common form, this tuple contains:</p>
+<ol type="1">
+<li>A callable (factory or constructor) that will create the new
+instance.</li>
+<li>A tuple of arguments to pass to that callable.</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> reduce_database_session(session):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Specify the constructor and the arguments needed to recreate the state</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> (DatabaseSession, (session.connection_string, session.timeout))</span></code></pre></div>
+<h3 id="3-register-the-reducer">3. Register the Reducer</h3>
+<p>Use <code>copyreg.pickle()</code> to map the class to the reduction
+function:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> copyreg</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pickle</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>copyreg.pickle(DatabaseSession, reduce_database_session)</span></code></pre></div>
+<h3 id="4-serialize-and-deserialize">4. Serialize and Deserialize</h3>
+<p>Once registered, standard <code>pickle</code> calls automatically
+apply the custom rule:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>session <span class="op">=</span> DatabaseSession(<span class="st">&quot;postgresql://user:pass@localhost/db&quot;</span>, timeout<span class="op">=</span><span class="dv">60</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Serialization uses the registered reducer</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>serialized_data <span class="op">=</span> pickle.dumps(session)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Deserialization reconstitutes the object via the specified callable</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>restored_session <span class="op">=</span> pickle.loads(serialized_data)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> restored_session.connection_string <span class="op">==</span> session.connection_string</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> restored_session.timeout <span class="op">==</span> session.timeout</span></code></pre></div>
+<h2 id="advanced-state-restoration">Advanced State Restoration</h2>
+<p>If an object's state cannot be fully restored through
+<code>__init__</code> arguments alone, the reduction function can return
+up to six items in the tuple, matching Python's full pickling
+protocol:</p>
+<ol type="1">
+<li><strong>Callable</strong>: The factory function to create the
+object.</li>
+<li><strong>Arguments</strong>: Arguments for the factory function.</li>
+<li><strong>State</strong>: Optional dictionary or state object passed
+to <code>__setstate__</code> or applied to the instance dictionary.</li>
+<li><strong>List iterator</strong>: Optional items to append if the
+object is list-like.</li>
+<li><strong>Dict iterator</strong>: Optional key-value pairs to set if
+the object is dict-like.</li>
+<li><strong>State setter</strong>: Optional callable for setting the
+state instead of <code>__setstate__</code>.</li>
+</ol>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> reduce_with_state(obj):</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    state <span class="op">=</span> {<span class="st">&quot;custom_flag&quot;</span>: <span class="va">True</span>}</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> (obj.<span class="va">__class__</span>, (), state)</span></code></pre></div>
+<h2 id="key-use-cases">Key Use Cases</h2>
+<ul>
+<li><strong>Third-Party Classes</strong>: Adapting objects from external
+libraries that lack native <code>pickle</code> support.</li>
+<li><strong>Data Filtering</strong>: Excluding sensitive attributes
+(such as API keys or open network handles) before serializing an
+object.</li>
+<li><strong>Backward Compatibility</strong>: Migrating legacy pickling
+formats to match newer versions of a class schema without breaking
+existing serialization pipelines.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

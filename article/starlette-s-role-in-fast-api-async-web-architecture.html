@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starlette's Role in FastAPI Async Web Architecture - python</title>
+    <meta name="description" content="FastAPI relies on Starlette as its underlying web foundation to deliver high-performance, non-blocking asynchronous capabilities. While FastAPI provides automatic data validation, dependency injection, and interactive API documentation, Starlette handles">
+    <link rel="canonical" href="https://salivity.github.io/python/article/starlette-s-role-in-fast-api-async-web-architecture">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Starlette's Role in FastAPI Async Web Architecture - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/starlette-s-role-in-fast-api-async-web-architecture" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="FastAPI relies on Starlette as its underlying web foundation to deliver high-performance, non-blocking asynchronous capabilities. While FastAPI provides automatic data validation, dependency injection, and interactive API documentation, Starlette handles" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="starlettes-role-in-fastapi-async-web-architecture">Starlette's
+Role in FastAPI Async Web Architecture</h1>
+<p>FastAPI relies on Starlette as its underlying web foundation to
+deliver high-performance, non-blocking asynchronous capabilities. While
+FastAPI provides automatic data validation, dependency injection, and
+interactive API documentation, Starlette handles the essential low-level
+HTTP networking, ASGI compliance, request-response lifecycles, and
+routing mechanisms. Understanding Starlette's contribution reveals how
+FastAPI achieves its exceptional speed and modern asynchronous workflows
+without reinventing the web server wheel.</p>
+<h3 id="the-asgi-core">The ASGI Core</h3>
+<p>At the heart of FastAPI's speed is the Asynchronous Server Gateway
+Interface (ASGI) specification. Unlike traditional Python frameworks
+that rely on synchronous WSGI (such as standard Flask or Django),
+FastAPI is an ASGI framework entirely because it inherits directly from
+Starlette.</p>
+<p>Starlette implements the ASGI 3.0 specification, allowing Python code
+to interact cleanly with asynchronous servers like Uvicorn or Hypercorn.
+By using <code>async</code> and <code>await</code> natively, Starlette
+ensures that concurrent I/O-bound requests—such as database queries or
+external API calls—do not block the main execution thread. FastAPI
+exposes this architecture directly to the developer, allowing route
+handlers to run concurrently.</p>
+<h3 id="high-performance-routing-and-request-handling">High-Performance
+Routing and Request Handling</h3>
+<p>FastAPI's routing system is a direct extension of Starlette's routing
+engine. Starlette provides:</p>
+<ul>
+<li><strong>Path and Endpoint Matching:</strong> It parses dynamic
+parameters, converts path parameters based on standard patterns, and
+dispatches incoming requests to the appropriate endpoints.</li>
+<li><strong>HTTP Request and Response Objects:</strong> Starlette
+provides the concrete representations of HTTP requests, headers,
+cookies, query parameters, and form data. Responses—including JSON,
+HTML, plaintext, and streaming responses—are all originated in
+Starlette.</li>
+<li><strong>Background Tasks:</strong> Starlette includes a built-in
+<code>BackgroundTask</code> class that allows operations to run after
+returning a response, a feature directly accessible in FastAPI
+routes.</li>
+</ul>
+<p>FastAPI wraps these elements to add Pydantic-based data validation
+and OpenAPI schema generation, but the operational mechanics of the HTTP
+cycle remain Starlette's domain.</p>
+<h3 id="middleware-and-lifecycle-management">Middleware and Lifecycle
+Management</h3>
+<p>Starlette supplies FastAPI with an extensible middleware ecosystem.
+Middleware components process requests before they hit the endpoint and
+alter responses before they reach the client. Features such as
+Cross-Origin Resource Sharing (CORS), GZip compression, and session
+handling in FastAPI are implementations provided directly by
+Starlette.</p>
+<p>Furthermore, Starlette governs the application lifecycle through its
+"lifespan" protocol. It coordinates startup and shutdown events,
+allowing developers to safely initialize and tear down database
+connection pools, cache clients, or machine learning models.</p>
+<h3 id="websockets-and-streaming-support">WebSockets and Streaming
+Support</h3>
+<p>Modern real-time web applications require full-duplex communication
+and streaming data. Starlette includes first-class support for
+WebSockets, handling connection establishment, bidirectional messaging,
+and disconnection events asynchronously. FastAPI inherits this
+implementation without modifications, enabling real-time WebSocket
+endpoints with minimal configuration.</p>
+<h3 id="division-of-responsibility">Division of Responsibility</h3>
+<p>The relationship between Starlette and FastAPI represents a clean
+separation of concerns:</p>
+<ul>
+<li><strong>Starlette</strong> provides the low-level asynchronous web
+mechanics: ASGI implementation, HTTP/WebSocket handling, routing,
+middleware, and network performance.</li>
+<li><strong>FastAPI</strong> provides the high-level developer
+experience: type validation via Pydantic, automatic OpenAPI
+documentation, and a declarative dependency injection system.</li>
+</ul>
+<p>By delegating web transport and async processing to Starlette,
+FastAPI maintains a focused codebase dedicated to developer ergonomics
+while retaining bare-metal asynchronous performance.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

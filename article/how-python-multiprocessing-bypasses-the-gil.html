@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Multiprocessing Bypasses the GIL - python</title>
+    <meta name="description" content="Python's Global Interpreter Lock (GIL) prevents multiple native threads from executing Python bytecode simultaneously within a single process, making traditional multi-threading ineffective for CPU-bound tasks. The multiprocessing module overcomes this l">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-multiprocessing-bypasses-the-gil">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Multiprocessing Bypasses the GIL - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-multiprocessing-bypasses-the-gil" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's Global Interpreter Lock (GIL) prevents multiple native threads from executing Python bytecode simultaneously within a single process, making traditional multi-threading ineffective for CPU-bound tasks. The multiprocessing module overcomes this l" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-multiprocessing-bypasses-the-gil">How Python
+Multiprocessing Bypasses the GIL</h1>
+<p>Python's Global Interpreter Lock (GIL) prevents multiple native
+threads from executing Python bytecode simultaneously within a single
+process, making traditional multi-threading ineffective for CPU-bound
+tasks. The <code>multiprocessing</code> module overcomes this limitation
+not by disabling or modifying the GIL, but by creating entirely separate
+operating system processes. Each process hosts its own independent
+Python interpreter and private memory space, granting each its own
+distinct GIL and enabling true parallel execution across multiple CPU
+cores.</p>
+<h2 id="the-global-interpreter-lock-bottleneck">The Global Interpreter
+Lock Bottleneck</h2>
+<p>In standard CPython, the GIL is a mutual-exclusion lock designed to
+prevent multiple threads from executing Python bytecode at once. This
+mechanism protects CPython's memory management, which relies on
+reference counting, from race conditions.</p>
+<p>When you use the <code>threading</code> module for CPU-intensive
+calculations, the threads must constantly compete for this single lock.
+Consequently, even on a machine with dozens of CPU cores, standard
+multi-threaded Python code executes sequentially on a single core,
+providing no performance gain and often introducing overhead from lock
+contention.</p>
+<h2 id="how-the-multiprocessing-module-works">How the Multiprocessing
+Module Works</h2>
+<p>The <code>multiprocessing</code> module sidesteps the GIL entirely
+through OS-level process isolation rather than thread-level
+concurrency.</p>
+<h3 id="1-independent-interpreters-and-memory-spaces">1. Independent
+Interpreters and Memory Spaces</h3>
+<p>Instead of spawning threads inside an existing process,
+<code>multiprocessing</code> creates brand-new operating system
+processes using methods such as <code>spawn</code>, <code>fork</code>,
+or <code>forkserver</code> (depending on the operating system). Because
+each process runs an entirely isolated CPython runtime:</p>
+<ul>
+<li>Each process has its own dedicated memory address space.</li>
+<li>Reference counting is isolated to each process.</li>
+<li>Each process instantiates its own GIL.</li>
+</ul>
+<p>Because the locks are completely distinct, the operating system's
+process scheduler can distribute these independent processes across
+different physical CPU cores simultaneously. None of the processes block
+each other, achieving true hardware-level parallelism.</p>
+<h3 id="2-inter-process-communication-ipc">2. Inter-Process
+Communication (IPC)</h3>
+<p>Because processes do not share memory space by default, they cannot
+read or write to the same variables directly like threads do. To
+coordinate tasks and aggregate results, the <code>multiprocessing</code>
+module provides built-in IPC mechanisms:</p>
+<ul>
+<li><strong>Queues and Pipes:</strong> Thread- and process-safe
+communication channels built on top of OS-level primitives.</li>
+<li><strong>Shared Memory:</strong> Constructs like <code>Value</code>,
+<code>Array</code>, or the <code>multiprocessing.shared_memory</code>
+module that allow distinct processes to map and share raw memory
+segments directly without copying data.</li>
+</ul>
+<h3 id="3-object-serialization-via-pickle">3. Object Serialization via
+Pickle</h3>
+<p>When passing data between processes using queues or arguments to
+worker functions (such as with <code>multiprocessing.Pool</code>),
+Python serializes the objects into byte streams using
+<code>pickle</code>. The receiving process deserializes the bytes back
+into Python objects. This allows seamless communication across process
+boundaries, though it introduces a computational overhead that must be
+balanced against the performance gains of parallel execution.</p>
+<h2 id="summary">Summary</h2>
+<p>The <code>multiprocessing</code> module does not eliminate the GIL;
+it renders the GIL irrelevant for scaling CPU-bound workloads. By
+delegating tasks to separate processes, each worker gets a private
+Python interpreter and an individual lock, allowing the operating system
+to utilize all available CPU cores concurrently.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

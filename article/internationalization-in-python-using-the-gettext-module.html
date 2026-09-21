@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internationalization in Python Using the gettext Module - python</title>
+    <meta name="description" content="Python implements software internationalization (i18n) and localization (l10n) through its built-in gettext module, which interfaces with the standard GNU gettext translation framework. The module works by decoupling source text from language-specific tr">
+    <link rel="canonical" href="https://salivity.github.io/python/article/internationalization-in-python-using-the-gettext-module">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Internationalization in Python Using the gettext Module - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/internationalization-in-python-using-the-gettext-module" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python implements software internationalization (i18n) and localization (l10n) through its built-in gettext module, which interfaces with the standard GNU gettext translation framework. The module works by decoupling source text from language-specific tr" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1
+id="internationalization-in-python-using-the-gettext-module">Internationalization
+in Python Using the gettext Module</h1>
+<p>Python implements software internationalization (i18n) and
+localization (l10n) through its built-in <code>gettext</code> module,
+which interfaces with the standard GNU gettext translation framework.
+The module works by decoupling source text from language-specific
+translations: developers mark translatable strings in source code using
+an alias (conventionally <code>_()</code>), extract them into Portable
+Object (<code>.po</code>) template files for translators, compile the
+translated catalogs into binary Machine Object (<code>.mo</code>) files,
+and use the <code>gettext</code> runtime API to dynamically resolve
+localized strings according to user locale settings.</p>
+<h3 id="the-gettext-workflow">The gettext Workflow</h3>
+<p>Implementing translations via <code>gettext</code> follows a
+five-step lifecycle:</p>
+<ol type="1">
+<li><strong>Marking translatable strings</strong> in Python code.</li>
+<li><strong>Extracting strings</strong> into a <code>.pot</code>
+(Portable Object Template) file.</li>
+<li><strong>Translating messages</strong> within language-specific
+<code>.po</code> files.</li>
+<li><strong>Compiling <code>.po</code> files</strong> into binary
+<code>.mo</code> files for fast lookup.</li>
+<li><strong>Loading and applying translations</strong> at runtime using
+the <code>gettext</code> API.</li>
+</ol>
+<hr />
+<h3 id="step-1-marking-strings-in-python">Step 1: Marking Strings in
+Python</h3>
+<p>To flag a string for translation, wrap it with a function named
+<code>_()</code>. Python does not define <code>_()</code> by default, so
+it must be mapped to a gettext function:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gettext</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Basic string marking</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>_ <span class="op">=</span> gettext.gettext</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(_(<span class="st">&quot;Hello, World!&quot;</span>))</span></code></pre></div>
+<p>For plural forms, use <code>ngettext</code>, which selects the
+appropriate singular or plural translation based on a numeric count:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>count <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>message <span class="op">=</span> gettext.ngettext(</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;You have </span><span class="sc">%d</span><span class="st"> new notification.&quot;</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;You have </span><span class="sc">%d</span><span class="st"> new notifications.&quot;</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    count</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>) <span class="op">%</span> count</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(message)</span></code></pre></div>
+<hr />
+<h3 id="step-2-directory-structure-for-catalogs">Step 2: Directory
+Structure for Catalogs</h3>
+<p>The <code>gettext</code> module expects binary translation files to
+follow a standard directory layout:</p>
+<pre class="text"><code>project/
+│
+├── main.py
+└── locales/
+    ├── es/
+    │   └── LC_MESSAGES/
+    │       ├── base.po
+    │       └── base.mo
+    └── fr/
+        └── LC_MESSAGES/
+            ├── base.po
+            └── base.mo</code></pre>
+<ul>
+<li><code>locales/</code>: The base directory containing all
+translations.</li>
+<li><code>es/</code>, <code>fr/</code>: Language or locale codes (e.g.,
+ISO 639-1 language codes, optionally with ISO 3166 territory codes like
+<code>en_US</code>).</li>
+<li><code>LC_MESSAGES/</code>: Standard gettext subdirectory.</li>
+<li><code>base</code>: The "domain" name of the application, which
+groups related messages.</li>
+</ul>
+<hr />
+<h3 id="step-3-extracting-and-compiling-translations">Step 3: Extracting
+and Compiling Translations</h3>
+<h4 id="extraction">Extraction</h4>
+<p>Translatable strings are extracted into a <code>.pot</code> template
+using GNU <code>xgettext</code> or Python's <code>pygettext.py</code>
+tool:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">xgettext</span> <span class="at">-d</span> base <span class="at">-o</span> locales/base.pot main.py</span></code></pre></div>
+<p>Translators copy <code>base.pot</code> to
+<code>locales/es/LC_MESSAGES/base.po</code> and fill in the
+<code>msgstr</code> entries:</p>
+<pre class="po"><code>msgid &quot;Hello, World!&quot;
+msgstr &quot;¡Hola, Mundo!&quot;
+
+msgid &quot;You have %d new notification.&quot;
+msgid_plural &quot;You have %d new notifications.&quot;
+msgstr[0] &quot;Tienes %d nueva notificación.&quot;
+msgstr[1] &quot;Tienes %d nuevas notificaciones.&quot;</code></pre>
+<h4 id="compilation">Compilation</h4>
+<p>Before Python can read the <code>.po</code> file, it must be compiled
+to binary <code>.mo</code> format using GNU <code>msgfmt</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">msgfmt</span> locales/es/LC_MESSAGES/base.po <span class="at">-o</span> locales/es/LC_MESSAGES/base.mo</span></code></pre></div>
+<hr />
+<h3 id="step-4-loading-translations-at-runtime">Step 4: Loading
+Translations at Runtime</h3>
+<p>Python's <code>gettext</code> module provides two distinct APIs for
+loading <code>.mo</code> files: the <strong>Class-Based API</strong> and
+the <strong>GNU gettext-Style Global API</strong>.</p>
+<h4 id="the-class-based-api-recommended">The Class-Based API
+(Recommended)</h4>
+<p>The class-based API encapsulates translation state within objects,
+avoiding global state modification. This is preferred for libraries,
+multi-threaded applications, and services handling multiple languages
+simultaneously:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gettext</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>LOCALE_DIR <span class="op">=</span> <span class="st">&quot;locales&quot;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>DOMAIN <span class="op">=</span> <span class="st">&quot;base&quot;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a Translation object for Spanish, falling back to original strings if missing</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>lang_es <span class="op">=</span> gettext.translation(DOMAIN, localedir<span class="op">=</span>LOCALE_DIR, languages<span class="op">=</span>[<span class="st">&quot;es&quot;</span>], fallback<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Use the translation instance directly</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>_ <span class="op">=</span> lang_es.gettext</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(_(<span class="st">&quot;Hello, World!&quot;</span>))  <span class="co"># Output: ¡Hola, Mundo!</span></span></code></pre></div>
+<p>To switch languages dynamically, instantiate a different
+<code>NullTranslations</code> or <code>GNUTranslations</code>
+object:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>lang_fr <span class="op">=</span> gettext.translation(DOMAIN, localedir<span class="op">=</span>LOCALE_DIR, languages<span class="op">=</span>[<span class="st">&quot;fr&quot;</span>], fallback<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(lang_fr.gettext(<span class="st">&quot;Hello, World!&quot;</span>))  <span class="co"># Output: Bonjour, le monde!</span></span></code></pre></div>
+<p>To expose <code>_()</code> globally across builtins, call
+<code>install()</code> on the translation instance:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>lang_es.install()</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Now _() is available globally in the builtins namespace</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(_(<span class="st">&quot;Hello, World!&quot;</span>))</span></code></pre></div>
+<h4 id="the-gnu-gettext-global-api">The GNU gettext Global API</h4>
+<p>The global API mimics the C-language gettext interface by modifying
+the global environment. It is simpler for standalone CLI applications
+where only one locale is active during execution:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gettext</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>gettext.bindtextdomain(<span class="st">&quot;base&quot;</span>, <span class="st">&quot;locales&quot;</span>)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>gettext.textdomain(<span class="st">&quot;base&quot;</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>_ <span class="op">=</span> gettext.gettext</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(_(<span class="st">&quot;Hello, World!&quot;</span>))</span></code></pre></div>
+<hr />
+<h3 id="summary-of-key-functions-in-pythons-gettext">Summary of Key
+Functions in Python's <code>gettext</code></h3>
+<table>
+<thead>
+<tr>
+<th>Function / Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gettext.translation(...)</code></td>
+<td>Searches for, loads, and returns a <code>GNUTranslations</code>
+object.</td>
+</tr>
+<tr>
+<td><code>gettext.gettext(message)</code></td>
+<td>Translates <code>message</code> according to the current global
+domain.</td>
+</tr>
+<tr>
+<td><code>gettext.ngettext(singular, plural, n)</code></td>
+<td>Plural-aware translation in the global domain.</td>
+</tr>
+<tr>
+<td><code>GNUTranslations.gettext(message)</code></td>
+<td>Translates <code>message</code> using a specific translation
+instance.</td>
+</tr>
+<tr>
+<td><code>GNUTranslations.ngettext(...)</code></td>
+<td>Plural-aware translation via a specific translation instance.</td>
+</tr>
+<tr>
+<td><code>GNUTranslations.install(...)</code></td>
+<td>Binds <code>_()</code> into Python's <code>builtins</code> namespace
+globally.</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

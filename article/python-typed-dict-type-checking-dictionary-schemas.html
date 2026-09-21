@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python TypedDict: Type Checking Dictionary Schemas - python</title>
+    <meta name="description" content="Python's typing.TypedDict enables static type checkers to validate dictionaries with fixed sets of keys and specific value types, offering a schema-enforcement mechanism without altering runtime behavior. While standard Python dictionaries are dynamic an">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-typed-dict-type-checking-dictionary-schemas">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python TypedDict: Type Checking Dictionary Schemas - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-typed-dict-type-checking-dictionary-schemas" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's typing.TypedDict enables static type checkers to validate dictionaries with fixed sets of keys and specific value types, offering a schema-enforcement mechanism without altering runtime behavior. While standard Python dictionaries are dynamic an" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-typeddict-type-checking-dictionary-schemas">Python
+TypedDict: Type Checking Dictionary Schemas</h1>
+<p>Python's <code>typing.TypedDict</code> enables static type checkers
+to validate dictionaries with fixed sets of keys and specific value
+types, offering a schema-enforcement mechanism without altering runtime
+behavior. While standard Python dictionaries are dynamic and
+traditionally typed homogenously using annotations like
+<code>dict[str, Any]</code>, <code>TypedDict</code> provides
+fine-grained type safety for structured, heterogeneous dictionary data
+such as JSON payloads and database records.</p>
+<h3 id="the-problem-with-traditional-dictionary-typing">The Problem with
+Traditional Dictionary Typing</h3>
+<p>In standard Python typing, the generic type <code>dict[K, V]</code>
+assumes that all keys share the type <code>K</code> and all values share
+the type <code>V</code>. In real-world applications, structured data
+rarely follows this pattern. For example, an API response often has
+string keys mapped to varied types:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>user <span class="op">=</span> {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;id&quot;</span>: <span class="dv">101</span>,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;name&quot;</span>: <span class="st">&quot;Alice&quot;</span>,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;is_active&quot;</span>: <span class="va">True</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Annotating this object as <code>dict[str, Any]</code> loses all
+structural safety: static analyzers such as Mypy or Pyright cannot
+verify that <code>"id"</code> is an integer, nor can they flag missing
+keys or spelling mistakes such as accessing
+<code>user["is_activ"]</code>.</p>
+<h3 id="how-typeddict-solves-schema-validation">How
+<code>TypedDict</code> Solves Schema Validation</h3>
+<p><code>TypedDict</code> allows developers to define a type schema
+using class syntax or functional syntax. Static type checkers treat
+instances of this type as plain dictionaries at runtime, but enforce key
+presence and value types during static analysis.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypedDict</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> UserProfile(TypedDict):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">id</span>: <span class="bu">int</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    name: <span class="bu">str</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    is_active: <span class="bu">bool</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Correct usage</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>user: UserProfile <span class="op">=</span> {</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;id&quot;</span>: <span class="dv">101</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;name&quot;</span>: <span class="st">&quot;Alice&quot;</span>,</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;is_active&quot;</span>: <span class="va">True</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Type-checker errors:</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Missing required key &#39;is_active&#39;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Incompatible value type for &#39;id&#39; (str instead of int)</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>invalid_user: UserProfile <span class="op">=</span> {</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;id&quot;</span>: <span class="st">&quot;101&quot;</span>,</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;name&quot;</span>: <span class="st">&quot;Bob&quot;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="key-capabilities">Key Capabilities</h3>
+<ol type="1">
+<li><strong>Static Key and Type Enforcement</strong>: Type checkers
+verify that all declared keys exist and their corresponding values match
+the declared types. Accessing an undefined key will trigger an error
+during static analysis.</li>
+<li><strong>Handling Optional Keys</strong>: By default, all declared
+keys are required (<code>total=True</code>). Setting
+<code>total=False</code> makes all keys optional. For granular control
+in Python 3.11+, <code>typing.Required</code> and
+<code>typing.NotRequired</code> specify key requirements on an
+individual basis:</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypedDict, NotRequired</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Configuration(TypedDict):</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    host: <span class="bu">str</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    port: <span class="bu">int</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    timeout: NotRequired[<span class="bu">float</span>]  <span class="co"># Optional key</span></span></code></pre></div>
+<ol start="3" type="1">
+<li><strong>Zero Runtime Overhead</strong>: <code>TypedDict</code>
+creates standard dictionaries. It does not introduce runtime overhead,
+instantiate custom classes, or perform runtime validation like
+<code>pydantic</code> or <code>dataclasses</code>. At runtime,
+<code>isinstance(user, UserProfile)</code> raises a
+<code>TypeError</code> because <code>TypedDict</code> is purely an
+analysis construct.</li>
+</ol>
+<h3 id="practical-role-in-python-codebases">Practical Role in Python
+Codebases</h3>
+<p><code>TypedDict</code> bridges the gap between dynamic dictionaries
+and strict models. It is ideal for codebases consuming external APIs,
+parsing configuration files, or interacting with legacy systems where
+converting raw dictionaries into class instances would add unnecessary
+deserialization cost or break backwards compatibility.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

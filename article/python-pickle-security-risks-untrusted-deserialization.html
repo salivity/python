@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Pickle Security Risks: Untrusted Deserialization - python</title>
+    <meta name="description" content="Python’s pickle module provides a simple way to serialize and deserialize complex object hierarchies, but using it on untrusted data introduces severe security vulnerabilities. The primary danger is Arbitrary Remote Code Execution (RCE), which allows a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-pickle-security-risks-untrusted-deserialization">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Pickle Security Risks: Untrusted Deserialization - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-pickle-security-risks-untrusted-deserialization" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s pickle module provides a simple way to serialize and deserialize complex object hierarchies, but using it on untrusted data introduces severe security vulnerabilities. The primary danger is Arbitrary Remote Code Execution (RCE), which allows a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-pickle-security-risks-untrusted-deserialization">Python
+Pickle Security Risks: Untrusted Deserialization</h1>
+<p>Python’s <code>pickle</code> module provides a simple way to
+serialize and deserialize complex object hierarchies, but using it on
+untrusted data introduces severe security vulnerabilities. The primary
+danger is Arbitrary Remote Code Execution (RCE), which allows attackers
+to run unauthorized commands on the host machine during the
+deserialization process. This article breaks down how untrusted pickle
+deserialization exposes systems to complete compromise, explains the
+mechanics behind the vulnerability, and outlines secure alternatives for
+handling data.</p>
+<h3 id="the-mechanism-behind-pickle-insecurity">The Mechanism Behind
+Pickle Insecurity</h3>
+<p>Unlike human-readable formats like JSON or XML, Python’s
+<code>pickle</code> is not just a data-serialization format; it is a
+bytecode-based stack machine. When <code>pickle.loads()</code> processes
+a payload, it reconstructs objects by executing instructions defined
+within the serialized stream.</p>
+<p>The core vulnerability lies in the Python object reduction protocol,
+specifically the <code>__reduce__</code> method. When an object is
+serialized, <code>__reduce__</code> can return a tuple consisting of a
+callable (such as a function) and arguments for that callable. When
+deserialized, <code>pickle</code> automatically calls this function with
+the provided arguments to reconstruct the object.</p>
+<p>If an attacker controls the serialized data, they can replace
+standard classes with system-level functions like
+<code>os.system</code>, <code>subprocess.Popen</code>, or
+<code>builtins.exec</code>. The moment <code>pickle.loads()</code> is
+executed, the malicious command runs instantly in the context of the
+running Python process without requiring any further action by the
+application.</p>
+<h3 id="key-security-risks">Key Security Risks</h3>
+<ul>
+<li><strong>Remote Code Execution (RCE):</strong> Attackers can gain
+shell access, install malware, or pivot laterally through your
+infrastructure by running system-level commands during
+deserialization.</li>
+<li><strong>Data Exfiltration and Tampering:</strong> An attacker can
+inspect local files, steal API keys, access environment variables, or
+read database credentials accessible to the executing process.</li>
+<li><strong>Denial of Service (DoS):</strong> Malicious payloads can be
+constructed to trigger memory exhaustion, allocate massive recursive
+structures, or force infinite loops that crash the interpreter.</li>
+<li><strong>Integrity Bypass:</strong> Deserialized objects can silently
+replace legitimate runtime dependencies, alter internal application
+logic, or bypass authentication controls.</li>
+</ul>
+<h3 id="why-sandboxing-and-filtering-fail">Why Sandboxing and Filtering
+Fail</h3>
+<p>Developers often attempt to secure <code>pickle</code> by subclassing
+<code>pickle.Unpickler</code> and overriding <code>find_class</code> to
+create an allowlist of permitted classes. While theoretically possible,
+implementing a secure allowlist is exceptionally difficult. Python's
+dynamic nature allows for numerous bypasses through built-in types,
+attribute chains, and internal modules. The official Python
+documentation explicitly states that <code>pickle</code> is not secure
+against erroneous or maliciously constructed data and warns never to
+unpickle data received from an untrusted source.</p>
+<h3 id="safe-alternatives-to-pickle">Safe Alternatives to Pickle</h3>
+<p>To eliminate the risks of deserialization attacks, migrate to formats
+designed exclusively for data interchange rather than object
+reconstruction:</p>
+<ul>
+<li><strong>JSON:</strong> The universal standard for structured data.
+The built-in <code>json</code> module only serializes primitive types
+(strings, numbers, lists, dictionaries) and does not execute code.</li>
+<li><strong>Protocol Buffers or MessagePack:</strong> Highly efficient
+binary serialization formats that enforce strict schemas without
+permitting arbitrary code execution.</li>
+<li><strong>Cryptographic Signatures (HMAC):</strong> If business
+requirements mandate the use of <code>pickle</code>, data must be
+cryptographically signed using a secure secret before serialization
+(e.g., using <code>hmac</code> and <code>hashlib</code>). The
+application must verify the signature before calling
+<code>pickle.loads()</code> to ensure the payload has not been tampered
+with or originated from an external party.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use \_\_match_args\_\_ in Python Pattern Matching - python</title>
+    <meta name="description" content="Python 3.10 introduced structural pattern matching via the match and case statements, allowing developers to inspect and unpack complex data structures cleanly. While custom classes automatically support keyword-based pattern matching, they do not suppor">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-use-match-args-in-python-pattern-matching">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use \_\_match_args\_\_ in Python Pattern Matching - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-use-match-args-in-python-pattern-matching" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python 3.10 introduced structural pattern matching via the match and case statements, allowing developers to inspect and unpack complex data structures cleanly. While custom classes automatically support keyword-based pattern matching, they do not suppor" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-use-__match_args__-in-python-pattern-matching">How to Use
+__match_args__ in Python Pattern Matching</h1>
+<p>Python 3.10 introduced structural pattern matching via the
+<code>match</code> and <code>case</code> statements, allowing developers
+to inspect and unpack complex data structures cleanly. While custom
+classes automatically support keyword-based pattern matching, they do
+not support positional pattern matching out of the box. The
+<code>__match_args__</code> class attribute bridges this gap by defining
+a tuple of attribute names that map positional parameters in a pattern
+directly to an instance's attributes.</p>
+<h3 id="the-problem-keyword-vs-positional-matching">The Problem: Keyword
+vs. Positional Matching</h3>
+<p>When matching instances of user-defined classes, Python naturally
+expects keyword patterns. For example:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Point:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, x, y):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.x <span class="op">=</span> x</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.y <span class="op">=</span> y</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> check_point(pt):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">match</span> pt:</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> Point(x<span class="op">=</span><span class="dv">0</span>, y<span class="op">=</span><span class="dv">0</span>):  <span class="co"># Works by default</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="st">&quot;Origin&quot;</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> Point(<span class="dv">0</span>, <span class="dv">0</span>):      <span class="co"># Raises TypeError: Point() accepts 0 positional sub-patterns</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="st">&quot;Origin&quot;</span>)</span></code></pre></div>
+<p>Attempting to match <code>Point(0, 0)</code> without additional
+configuration raises a <code>TypeError</code>. Python does not
+inherently know whether the first positional argument corresponds to
+<code>x</code> or <code>y</code>.</p>
+<h3 id="the-role-of-__match_args__">The Role of
+<code>__match_args__</code></h3>
+<p><code>__match_args__</code> is a class-level tuple of strings that
+specifies the exact sequence of attributes to bind to positional
+patterns. When Python encounters a pattern with positional arguments, it
+reads <code>__match_args__</code> to translate those positional slots
+into keyword attribute lookups.</p>
+<p>By defining <code>__match_args__</code>, you make positional matching
+work seamlessly:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Point:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">__match_args__</span> <span class="op">=</span> (<span class="st">&quot;x&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, x, y):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.x <span class="op">=</span> x</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.y <span class="op">=</span> y</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> evaluate(pt):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">match</span> pt:</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> Point(<span class="dv">0</span>, <span class="dv">0</span>):</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="st">&quot;Origin&quot;</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> Point(<span class="dv">0</span>, y):</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;On the Y-axis at </span><span class="sc">{</span>y<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> Point(x, <span class="dv">0</span>):</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;On the X-axis at </span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> Point(x, y):</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Point at (</span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">, </span><span class="sc">{</span>y<span class="sc">}</span><span class="ss">)&quot;</span>)</span></code></pre></div>
+<p>When evaluating <code>case Point(0, y)</code>, Python reads the first
+element of <code>__match_args__</code> (<code>"x"</code>) and matches
+<code>0</code> against <code>pt.x</code>. It then reads the second
+element (<code>"y"</code>) and assigns <code>pt.y</code> to the variable
+<code>y</code>.</p>
+<h3 id="automatic-support-in-standard-library-classes">Automatic Support
+in Standard Library Classes</h3>
+<p>You do not always need to define <code>__match_args__</code>
+manually:</p>
+<ul>
+<li><strong>Dataclasses</strong>: Decorating a class with
+<code>@dataclasses.dataclass</code> automatically generates
+<code>__match_args__</code> based on the order in which fields are
+defined.</li>
+<li><strong>Named Tuples</strong>: Classes created via
+<code>collections.namedtuple</code> or <code>typing.NamedTuple</code>
+also generate <code>__match_args__</code> automatically.</li>
+</ul>
+<p>If you are using plain classes, explicit assignment of
+<code>__match_args__</code> is required.</p>
+<h3 id="partial-matching-and-inheritance">Partial Matching and
+Inheritance</h3>
+<p>The number of positional sub-patterns in a <code>case</code>
+statement does not need to equal the total length of
+<code>__match_args__</code>. Positional arguments are matched from left
+to right:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Person:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">__match_args__</span> <span class="op">=</span> (<span class="st">&quot;name&quot;</span>, <span class="st">&quot;age&quot;</span>, <span class="st">&quot;role&quot;</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, name, age, role):</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.name <span class="op">=</span> name</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.age <span class="op">=</span> age</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.role <span class="op">=</span> role</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Matches only the first attribute (&quot;name&quot;) positionally</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="cf">match</span> person:</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">case</span> Person(<span class="st">&quot;Alice&quot;</span>):</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Hello Alice&quot;</span>)</span></code></pre></div>
+<p>Subclasses inherit <code>__match_args__</code> from their parent
+class unless explicitly overridden. When creating a subclass that
+introduces new attributes, redefine <code>__match_args__</code> to
+include both parent and child attributes if you intend to expose the new
+fields to positional matching.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

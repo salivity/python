@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using typing.Concatenate with ParamSpec in Python - python</title>
+    <meta name="description" content="Python's typing.Concatenate works in conjunction with typing.ParamSpec to model callables whose parameter lists are modified by prepending one or more arguments. Introduced in Python 3.10 via PEP 612, it allows static type checkers like mypy and Pyright">
+    <link rel="canonical" href="https://salivity.github.io/python/article/using-typing-concatenate-with-param-spec-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using typing.Concatenate with ParamSpec in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/using-typing-concatenate-with-param-spec-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's typing.Concatenate works in conjunction with typing.ParamSpec to model callables whose parameter lists are modified by prepending one or more arguments. Introduced in Python 3.10 via PEP 612, it allows static type checkers like mypy and Pyright" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-typingconcatenate-with-paramspec-in-python">Using
+typing.Concatenate with ParamSpec in Python</h1>
+<p>Python's <code>typing.Concatenate</code> works in conjunction with
+<code>typing.ParamSpec</code> to model callables whose parameter lists
+are modified by prepending one or more arguments. Introduced in Python
+3.10 via PEP 612, it allows static type checkers like mypy and Pyright
+to track functions that dynamically accept additional leading
+parameters, such as framework-injected dependencies, request objects, or
+bound <code>self</code>/<code>cls</code> references, without losing the
+signature and types of the remaining arguments.</p>
+<h2 id="the-core-problem">The Core Problem</h2>
+<p>Prior to <code>ParamSpec</code> and <code>Concatenate</code>,
+higher-order functions like decorators faced a trade-off. Using
+<code>Callable[..., ReturnType]</code> stripped all information about
+parameter names and types, breaking autocompletion and type checking.
+While <code>ParamSpec</code> captures an entire parameter list
+(<code>*args</code>, <code>**kwargs</code>), it treats the signature as
+an indivisible unit. You cannot simply use
+<code>Callable[[int, P], R]</code> because <code>ParamSpec</code>
+represents the complete argument specification, not a single type.</p>
+<p><code>typing.Concatenate</code> bridges this gap by explicitly
+expressing the addition of positional arguments to the front of an
+existing <code>ParamSpec</code>.</p>
+<h2 id="how-typingconcatenate-works">How <code>typing.Concatenate</code>
+Works</h2>
+<p><code>Concatenate</code> is used exclusively as the first argument of
+a <code>Callable</code> type hint:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Callable[Concatenate[Arg1Type, Arg2Type, P], ReturnType]</span></code></pre></div>
+<p>When evaluated by a type checker, this expression indicates a
+callable that accepts:</p>
+<ol type="1">
+<li>An argument of type <code>Arg1Type</code>.</li>
+<li>An argument of type <code>Arg2Type</code>.</li>
+<li>Followed by whatever remaining arguments are captured by the
+<code>ParamSpec</code> instance <code>P</code>.</li>
+</ol>
+<p>The last argument passed to <code>Concatenate</code> must always be a
+<code>ParamSpec</code> variable.</p>
+<h2 id="practical-example-context-injection">Practical Example: Context
+Injection</h2>
+<p>A common design pattern involves decorators that prepend a context or
+configuration object before calling the original function.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> Callable, ParamSpec, TypeVar, Concatenate</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>P <span class="op">=</span> ParamSpec(<span class="st">&quot;P&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>R <span class="op">=</span> TypeVar(<span class="st">&quot;R&quot;</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> RequestContext:</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    user_id: <span class="bu">int</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> with_context(</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    func: Callable[P, R]</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>) <span class="op">-&gt;</span> Callable[Concatenate[RequestContext, P], R]:</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> wrapper(ctx: RequestContext, <span class="op">*</span>args: P.args, <span class="op">**</span>kwargs: P.kwargs) <span class="op">-&gt;</span> R:</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Executing for user: </span><span class="sc">{</span>ctx<span class="sc">.</span>user_id<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> func(<span class="op">*</span>args, <span class="op">**</span>kwargs)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> wrapper</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Target function</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> send_email(recipient: <span class="bu">str</span>, subject: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">bool</span>:</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">True</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="co"># The decorated function now expects a RequestContext as its first argument</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>secure_send <span class="op">=</span> with_context(send_email)</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>ctx <span class="op">=</span> RequestContext()</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>ctx.user_id <span class="op">=</span> <span class="dv">42</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Correct usage: type checker verifies all arguments</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>secure_send(ctx, <span class="st">&quot;user@example.com&quot;</span>, <span class="st">&quot;Hello!&quot;</span>)</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Incorrect usage: type checker flags missing &#39;subject&#39; or missing &#39;ctx&#39;</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="co"># secure_send(&quot;user@example.com&quot;, &quot;Hello!&quot;)  # Type Error</span></span></code></pre></div>
+<p>In this scenario:</p>
+<ul>
+<li><code>send_email</code> has the signature
+<code>(recipient: str, subject: str) -&gt; bool</code>.</li>
+<li><code>P</code> captures
+<code>(recipient: str, subject: str)</code>.</li>
+<li><code>with_context</code> returns a function with the signature
+<code>(RequestContext, recipient: str, subject: str) -&gt; bool</code>.</li>
+</ul>
+<h2 id="key-rules-and-limitations">Key Rules and Limitations</h2>
+<ul>
+<li><strong>Positional-Only Placement:</strong> <code>Concatenate</code>
+only prepends positional arguments. It cannot append parameters to the
+end of a <code>ParamSpec</code> or insert keyword-only parameters.</li>
+<li><strong>Placement Restriction:</strong> <code>Concatenate</code>
+cannot exist on its own; it is only valid inside the parameter position
+of <code>typing.Callable</code>.</li>
+<li><strong>Terminal Requirement:</strong> The final item inside
+<code>Concatenate[...]</code> must be a <code>ParamSpec</code> (e.g.,
+<code>Concatenate[int, str, P]</code>). Placing standard types at the
+end will raise a typing error.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

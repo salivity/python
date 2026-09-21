@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Fragmentation in Long-Running Python Processes - python</title>
+    <meta name="description" content="Long-running Python applications often suffer from high memory consumption where the resident set size (RSS) grows continually even when the application is not leaking references. This article explains the architectural mechanisms behind memory fragmenta">
+    <link rel="canonical" href="https://salivity.github.io/python/article/memory-fragmentation-in-long-running-python-processes">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Memory Fragmentation in Long-Running Python Processes - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/memory-fragmentation-in-long-running-python-processes" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Long-running Python applications often suffer from high memory consumption where the resident set size (RSS) grows continually even when the application is not leaking references. This article explains the architectural mechanisms behind memory fragmenta" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="memory-fragmentation-in-long-running-python-processes">Memory
+Fragmentation in Long-Running Python Processes</h1>
+<p>Long-running Python applications often suffer from high memory
+consumption where the resident set size (RSS) grows continually even
+when the application is not leaking references. This article explains
+the architectural mechanisms behind memory fragmentation in CPython,
+focusing on how internal memory managers like PyMalloc operate, why
+memory is rarely returned to the operating system, and the primary
+coding patterns that induce fragmentation.</p>
+<h3 id="pythons-internal-memory-architecture">Python’s Internal Memory
+Architecture</h3>
+<p>To understand fragmentation, one must first look at how CPython
+manages memory through its three-tier abstraction:</p>
+<ul>
+<li><strong>Arenas:</strong> The largest contiguous memory chunks
+requested from the operating system via <code>malloc</code> or
+<code>mmap</code>, typically 256 KB in size.</li>
+<li><strong>Pools:</strong> Each arena is subdivided into 4 KB pools. A
+pool is dedicated to objects of a specific size class (in increments of
+8 or 16 bytes up to 512 bytes).</li>
+<li><strong>Blocks:</strong> Each pool is composed of fixed-size blocks
+matching the pool’s assigned size class.</li>
+</ul>
+<p>Small allocations (512 bytes or fewer) are handled directly by
+Python's internal allocator, <code>pymalloc</code>. Large allocations
+bypass <code>pymalloc</code> and are delegated directly to the
+underlying system allocator (<code>glibc malloc</code> on most Linux
+systems).</p>
+<h3 id="1-the-arena-pinning-problem">1. The Arena Pinning Problem</h3>
+<p>The primary structural cause of fragmentation in Python is arena
+pinning. An arena can only be returned to the operating system if every
+single pool and block within that 256 KB boundary is completely
+empty.</p>
+<p>If a long-running process allocates hundreds of arenas during a
+traffic spike, millions of objects are created. When the spike ends, the
+garbage collector frees the majority of these objects. However, if even
+a single tiny object—such as an 8-byte integer or a small string—remains
+referenced inside a 256 KB arena, the entire arena remains allocated in
+the process's resident memory. Over time, memory resembles a slice of
+Swiss cheese: predominantly free space internally, but completely
+un-reclaimable by the OS.</p>
+<h3 id="2-interleaved-lifecycles-of-heterogeneous-objects">2.
+Interleaved Lifecycles of Heterogeneous Objects</h3>
+<p>Fragmentation accelerates when short-lived and long-lived objects are
+allocated concurrently.</p>
+<p>Consider a web worker handling HTTP requests:</p>
+<ul>
+<li>The worker creates short-lived objects (request bodies, local
+variables, query results).</li>
+<li>Simultaneously, it creates or updates long-lived objects (metrics
+counters, application caches, configuration singletons).</li>
+</ul>
+<p>Because these allocations happen in parallel, short-lived and
+long-lived objects end up residing in the same memory pools and arenas.
+Once the request lifecycle finishes, the short-lived blocks are freed
+for reuse by Python, but the interspersed long-lived objects hold the
+arenas hostage.</p>
+<h3 id="3-system-allocator-glibc-limitations">3. System Allocator
+(<code>glibc</code>) Limitations</h3>
+<p>For objects exceeding 512 bytes (such as large strings, byte buffers,
+NumPy arrays, or large dictionaries), Python uses the system
+<code>malloc</code>.</p>
+<p>The default GNU C Library allocator (<code>glibc malloc</code>)
+manages memory heaps using a combination of <code>brk</code> (for
+adjusting the data segment break point) and <code>mmap</code> (for large
+anonymous allocations). With <code>brk</code>, memory must be released
+sequentially from the top of the heap down. If an allocation at the top
+of the heap remains active, no memory below it can be trimmed back to
+the OS kernel, creating top-of-heap fragmentation at the C library
+level.</p>
+<h3 id="4-over-allocation-in-dynamic-collections">4. Over-Allocation in
+Dynamic Collections</h3>
+<p>Python dictionaries, lists, and sets employ aggressive
+over-allocation strategies to achieve <span
+class="math inline">\(O(1)\)</span> amortized insertion:</p>
+<ul>
+<li>Lists expand by a growth factor when full, allocating more slots
+than needed.</li>
+<li>Dictionaries resize when they reach two-thirds capacity, doubling or
+quadrupling in size.</li>
+</ul>
+<p>When these collections shrink (e.g., items are removed or cleared),
+Python does not automatically shrink the underlying allocated buffer
+proportionally. A dictionary that once held 500,000 items continues to
+hold a large allocated hash table even if it is reduced to only 5 items.
+Unless explicitly reassigned to a new instance, these structures consume
+fragmented, empty space.</p>
+<h3 id="5-cyclic-references-and-garbage-collection-delays">5. Cyclic
+References and Garbage Collection Delays</h3>
+<p>CPython primarily uses reference counting for memory deallocation.
+When an object's reference count drops to zero, its memory block is
+immediately marked as free within its pool.</p>
+<p>However, cyclic references (objects referencing each other) cannot be
+resolved by reference counting alone. They must wait for the cyclic
+Garbage Collector (GC) to run across Generation 0, 1, or 2. During the
+delay between reference isolation and a cyclic GC cycle, cyclic
+structures pin their surrounding memory pools, preventing adjacent
+spaces from consolidating and amplifying fragmentation under steady
+throughput.</p>
+<h3 id="mitigating-memory-fragmentation">Mitigating Memory
+Fragmentation</h3>
+<p>While fragmentation cannot be completely eliminated in dynamic
+languages, specific techniques minimize its impact on long-running
+processes:</p>
+<ul>
+<li><strong>Process Recycling:</strong> Implementing worker recycling
+patterns (such as <code>max_requests</code> in Gunicorn or Celery)
+restarts worker processes after processing a designated quota of tasks,
+flushing fragmented heaps back to the OS.</li>
+<li><strong>Alternative Allocators:</strong> Preloading modern memory
+allocators like <code>jemalloc</code> or <code>mimalloc</code> using
+<code>LD_PRELOAD</code> replaces <code>glibc malloc</code>. These
+allocators use aggressive cache-purging, thread-caching, and multi-arena
+layouts that handle fragmentation significantly better than standard
+glibc.</li>
+<li><strong>Memory Compaction Tools:</strong> In Python 3.8 and newer,
+calling <code>ctypes.CDLL("libc.so.6").malloc_trim(0)</code> manually
+signals the underlying C runtime to release free memory pools back to
+the OS kernel where possible.</li>
+<li><strong>Struct and Slot Usage:</strong> Using <code>__slots__</code>
+on frequently instantiated classes eliminates the dynamic
+<code>__dict__</code> overhead, reducing object size variability and
+stabilizing pool classifications.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

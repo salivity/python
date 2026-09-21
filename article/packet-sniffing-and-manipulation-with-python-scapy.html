@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Packet Sniffing and Manipulation with Python Scapy - python</title>
+    <meta name="description" content="Scapy is a versatile, Python-based network tool that enables security professionals and developers to interact directly with network traffic at granular levels. This article provides a focused breakdown of Scapy's core capabilities, specifically covering">
+    <link rel="canonical" href="https://salivity.github.io/python/article/packet-sniffing-and-manipulation-with-python-scapy">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Packet Sniffing and Manipulation with Python Scapy - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/packet-sniffing-and-manipulation-with-python-scapy" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Scapy is a versatile, Python-based network tool that enables security professionals and developers to interact directly with network traffic at granular levels. This article provides a focused breakdown of Scapy's core capabilities, specifically covering" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="packet-sniffing-and-manipulation-with-python-scapy">Packet
+Sniffing and Manipulation with Python Scapy</h1>
+<p>Scapy is a versatile, Python-based network tool that enables security
+professionals and developers to interact directly with network traffic
+at granular levels. This article provides a focused breakdown of Scapy's
+core capabilities, specifically covering how it captures packets using
+targeted filters, constructs and alters network layers on demand,
+transmits custom traffic, and automates advanced network operations such
+as reconnaissance and protocol fuzzing.</p>
+<h3 id="packet-sniffing-and-filtering">Packet Sniffing and
+Filtering</h3>
+<p>Scapy captures network traffic using its native <code>sniff()</code>
+function, which interfaces directly with the host's network sockets.
+Traffic capture can be tailored using several parameters:</p>
+<ul>
+<li><strong>Berkeley Packet Filters (BPF):</strong> Scapy supports
+standard BPF syntax via the <code>filter</code> argument, allowing users
+to isolate specific traffic (e.g.,
+<code>filter="tcp and port 80"</code>) before Scapy processes it,
+significantly reducing memory consumption.</li>
+<li><strong>Packet Processing Callbacks:</strong> The <code>prn</code>
+argument accepts custom Python functions to process each arriving packet
+in real time. For example, a callback can extract credentials, log
+specific header fields, or trigger alerts.</li>
+<li><strong>Offline PCAP Analysis:</strong> In addition to live
+interfaces, Scapy can sniff and parse stored capture files using
+<code>rdpcap()</code> and write captures using <code>wrpcap()</code>,
+enabling automated post-incident analysis.</li>
+<li><strong>Capture Thresholds:</strong> Sniffing sessions can be
+bounded by packet count (<code>count</code>), timeout limits
+(<code>timeout</code>), or custom stop conditions
+(<code>stop_filter</code>).</li>
+</ul>
+<h3 id="packet-crafting-and-layer-stacking">Packet Crafting and Layer
+Stacking</h3>
+<p>Unlike standard socket libraries that abstract lower layers, Scapy
+provides direct access to virtually every standard networking protocol
+(Ethernet, ARP, IP, TCP, UDP, ICMP, DNS, and more).</p>
+<ul>
+<li><strong>The Slash (<code>/</code>) Operator:</strong> Scapy uses
+Python's division operator to stack protocol layers hierarchically.
+Defining a packet involves chaining layers from low to high:
+<code>Ether() / IP(dst="192.168.1.1") / TCP(dport=443) / "HTTP_PAYLOAD"</code>.</li>
+<li><strong>Automatic Header Resolution:</strong> Undefined fields are
+automatically populated with sensible defaults, such as checksums,
+protocol numbers, and source IP addresses, while allowing users to
+override any field arbitrarily.</li>
+<li><strong>Dissection and Fragmentation:</strong> Scapy automatically
+reassembles or fragments IP packets and dissects raw binary streams into
+readable protocol trees, facilitating deep packet inspection.</li>
+</ul>
+<h3 id="packet-injection-and-transmission">Packet Injection and
+Transmission</h3>
+<p>Scapy categorizes packet transmission by network layer and whether a
+response is expected:</p>
+<ul>
+<li><strong>Layer 3 Transmission:</strong> The <code>send()</code>
+function dispatches packets at the Network layer (IP level), letting the
+operating system handle link-layer addressing. The <code>sr()</code>
+(send and receive) and <code>sr1()</code> (send and return first
+response) functions wait for answers, returning answered and unanswered
+packet pairs.</li>
+<li><strong>Layer 2 Transmission:</strong> The <code>sendp()</code> and
+<code>srp()</code> functions operate at the Data Link layer, requiring
+explicit Ethernet or hardware addressing. This allows raw frame
+injection, VLAN tagging, and low-level spoofing.</li>
+</ul>
+<h3 id="practical-network-techniques">Practical Network Techniques</h3>
+<p>By combining sniffing, crafting, and sending, Scapy facilitates
+several active networking workflows:</p>
+<ul>
+<li><strong>SYN Scanning:</strong> Sending a TCP packet with the
+<code>SYN</code> flag set and monitoring responses (<code>SYN-ACK</code>
+for open ports, <code>RST</code> for closed) enables fast, stealthy port
+scanning without establishing full connections.</li>
+<li><strong>ARP Cache Poisoning:</strong> By crafting unsolicited ARP
+replies (<code>ARP(op=2)</code>), Scapy can overwrite target ARP tables
+to execute on-path (Man-in-the-Middle) inspection.</li>
+<li><strong>Network Mapping and Traceroute:</strong> Scapy includes a
+built-in <code>traceroute()</code> function that sends packets with
+incremental TTL values, mapping hops and visualizing network paths.</li>
+<li><strong>Protocol Fuzzing:</strong> The <code>fuzz()</code> function
+generates randomized or malformed field values inside layered packets
+(e.g., <code>IP()/TCP()/fuzz(DNS())</code>) to test network services and
+firewalls for stability and edge-case handling.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

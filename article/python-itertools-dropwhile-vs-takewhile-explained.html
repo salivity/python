@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python itertools: dropwhile vs takewhile Explained - python</title>
+    <meta name="description" content="Python's itertools module provides two complementary functions for sequential filtering: itertools.dropwhile() and itertools.takewhile(). Both functions evaluate elements in an iterable against a condition (predicate function), but they handle the matchi">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-itertools-dropwhile-vs-takewhile-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python itertools: dropwhile vs takewhile Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-itertools-dropwhile-vs-takewhile-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's itertools module provides two complementary functions for sequential filtering: itertools.dropwhile() and itertools.takewhile(). Both functions evaluate elements in an iterable against a condition (predicate function), but they handle the matchi" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-itertools-dropwhile-vs-takewhile-explained">Python
+itertools: dropwhile vs takewhile Explained</h1>
+<p>Python's <code>itertools</code> module provides two complementary
+functions for sequential filtering: <code>itertools.dropwhile()</code>
+and <code>itertools.takewhile()</code>. Both functions evaluate elements
+in an iterable against a condition (predicate function), but they handle
+the matching elements in opposite ways. While <code>takewhile()</code>
+yields elements as long as the condition remains true and stops at the
+first failure, <code>dropwhile()</code> discards elements until the
+condition becomes false and yields everything that follows. This guide
+explains how each function behaves, how they short-circuit, and how to
+use them effectively.</p>
+<h3 id="how-itertoolstakewhile-works">How
+<code>itertools.takewhile()</code> Works</h3>
+<p>The <code>takewhile(predicate, iterable)</code> function produces
+items from the start of an iterable for as long as the predicate
+function returns <code>True</code>. The moment the predicate returns
+<code>False</code> for an element, the iterator stops completely. Any
+remaining elements in the iterable are ignored, even if they would
+satisfy the predicate later on.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> itertools</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">2</span>, <span class="dv">4</span>, <span class="dv">6</span>, <span class="dv">1</span>]</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>predicate <span class="op">=</span> <span class="kw">lambda</span> x: x <span class="op">&lt;</span> <span class="dv">5</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> <span class="bu">list</span>(itertools.takewhile(predicate, data))</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)  <span class="co"># Output: [1, 3]</span></span></code></pre></div>
+<p>In this example, <code>1</code> and <code>3</code> are less than
+<code>5</code>. When the iterator encounters <code>5</code>, the
+condition fails, and iteration stops immediately. The subsequent numbers
+(<code>2</code>, <code>4</code>, and <code>1</code>), which are also
+less than <code>5</code>, are never evaluated or yielded.</p>
+<h3 id="how-itertoolsdropwhile-works">How
+<code>itertools.dropwhile()</code> Works</h3>
+<p>The <code>itertools.dropwhile(predicate, iterable)</code> function
+does the inverse. It drops (skips) elements from the beginning of the
+iterable as long as the predicate evaluates to <code>True</code>. Once
+the predicate returns <code>False</code> for an item, that item and
+every subsequent item in the iterable are yielded without further
+checks.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> itertools</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">2</span>, <span class="dv">4</span>, <span class="dv">6</span>, <span class="dv">1</span>]</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>predicate <span class="op">=</span> <span class="kw">lambda</span> x: x <span class="op">&lt;</span> <span class="dv">5</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> <span class="bu">list</span>(itertools.dropwhile(predicate, data))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)  <span class="co"># Output: [5, 2, 4, 6, 1]</span></span></code></pre></div>
+<p>Here, <code>1</code> and <code>3</code> satisfy <code>x &lt; 5</code>
+and are dropped. When the function reaches <code>5</code>, the predicate
+returns <code>False</code>. The function then yields <code>5</code> and
+continues yielding all remaining elements (<code>2, 4, 6, 1</code>)
+without testing the condition again.</p>
+<h3 id="key-differences-summary">Key Differences Summary</h3>
+<ul>
+<li><strong>Action during <code>True</code>:</strong>
+<code>takewhile()</code> yields the element; <code>dropwhile()</code>
+discards the element.</li>
+<li><strong>Trigger on first <code>False</code>:</strong>
+<code>takewhile()</code> shuts down and yields nothing further;
+<code>dropwhile()</code> begins yielding elements and continues to the
+end of the iterable.</li>
+<li><strong>Predicate evaluations:</strong> Neither function evaluates
+the entire sequence if a stopping condition occurs early. Once
+<code>takewhile()</code> encounters its first <code>False</code>, it
+finishes. Once <code>dropwhile()</code> encounters its first
+<code>False</code>, it switches to a pass-through state and stops
+calling the predicate altogether.</li>
+</ul>
+<h3 id="contrast-with-standard-filter">Contrast with Standard
+<code>filter()</code></h3>
+<p>Unlike Python's built-in <code>filter()</code> function, which
+evaluates the predicate on every single item regardless of position,
+both <code>takewhile()</code> and <code>dropwhile()</code> are stateful
+stream operations. They depend entirely on the order of elements and the
+exact moment the predicate transitions from <code>True</code> to
+<code>False</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

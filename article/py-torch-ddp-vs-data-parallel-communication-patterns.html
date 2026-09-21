@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyTorch DDP vs DataParallel Communication Patterns - python</title>
+    <meta name="description" content="Distributed training in PyTorch is primarily achieved through two modules: torch.nn.DataParallel (DP) and torch.nn.parallel.DistributedDataParallel (DDP). While both split workloads across multiple GPUs, their underlying communication architectures diffe">
+    <link rel="canonical" href="https://salivity.github.io/python/article/py-torch-ddp-vs-data-parallel-communication-patterns">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PyTorch DDP vs DataParallel Communication Patterns - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/py-torch-ddp-vs-data-parallel-communication-patterns" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Distributed training in PyTorch is primarily achieved through two modules: torch.nn.DataParallel (DP) and torch.nn.parallel.DistributedDataParallel (DDP). While both split workloads across multiple GPUs, their underlying communication architectures diffe" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pytorch-ddp-vs-dataparallel-communication-patterns">PyTorch DDP
+vs DataParallel Communication Patterns</h1>
+<p>Distributed training in PyTorch is primarily achieved through two
+modules: <code>torch.nn.DataParallel</code> (DP) and
+<code>torch.nn.parallel.DistributedDataParallel</code> (DDP). While both
+split workloads across multiple GPUs, their underlying communication
+architectures differ substantially. DataParallel relies on a
+single-process, multi-threaded model constrained by centralized
+parameter scattering and gathering, whereas DDP utilizes an isolated
+multi-process design driven by decentralized, collective communication
+primitives like AllReduce. This article examines the communication
+topologies, synchronization workflows, and gradient handling mechanisms
+that set DDP apart from DP.</p>
+<h3 id="process-architecture-and-threading-models">Process Architecture
+and Threading Models</h3>
+<p>The fundamental difference between DP and DDP lies in how they manage
+system processes and Python's Global Interpreter Lock (GIL):</p>
+<ul>
+<li><strong>DataParallel (Single-Process, Multi-Threaded):</strong> DP
+runs within a single operating system process and spawns multiple
+threads to control individual GPUs. Because Python executes on a single
+interpreter, threads constantly compete for the GIL during execution,
+creating CPU overhead that limits GPU throughput.</li>
+<li><strong>Distributed Data Parallel (Multi-Process):</strong> DDP
+spawns an isolated Python process for each GPU (typically managed via
+<code>torchrun</code>). Each process maintains its own interpreter,
+local model replica, optimizer, and memory space, entirely bypassing GIL
+contention.</li>
+</ul>
+<h3
+id="communication-topology-centralized-vs-decentralized">Communication
+Topology: Centralized vs. Decentralized</h3>
+<p>The flow of tensors between devices defines the efficiency of the
+training loop.</p>
+<h4 id="1-dataparallel-star-hub-topology">1. DataParallel: Star-Hub
+Topology</h4>
+<p>DP utilizes a centralized master-worker communication pattern focused
+around a primary device (typically <code>cuda:0</code>):</p>
+<ol type="1">
+<li><strong>Replication:</strong> At the start of every forward pass,
+the model weights stored on the master GPU are broadcast to all
+secondary GPUs.</li>
+<li><strong>Input Scattering:</strong> The master process takes a global
+mini-batch and slices it, scattering smaller micro-batches to the
+participating GPUs.</li>
+<li><strong>Forward Execution:</strong> Each GPU computes its local
+forward pass.</li>
+<li><strong>Output Gathering:</strong> Forward activations or model
+outputs are gathered back onto the master GPU to calculate the global
+loss.</li>
+<li><strong>Backward Pass:</strong> Loss gradients are scattered back to
+worker GPUs to calculate weight gradients, which are subsequently
+gathered on the primary GPU for reduction and parameter update.</li>
+</ol>
+<p>This star-like communication pattern makes the master GPU a severe
+bandwidth bottleneck. Network and PCIe buses suffer heavy unidirectional
+traffic during the gather and scatter phases, causing non-uniform GPU
+memory usage and idle worker threads.</p>
+<h4 id="2-distributed-data-parallel-peer-to-peer-collective-topology">2.
+Distributed Data Parallel: Peer-to-Peer Collective Topology</h4>
+<p>DDP eliminates the master-worker paradigm in favor of peer-to-peer
+collective operations via backends like NCCL (NVIDIA Collective
+Communications Library):</p>
+<ol type="1">
+<li><strong>Independent Execution:</strong> Because each process
+maintains identical model weights and an identical optimizer state from
+initialization, weight broadcasting is unnecessary at the start of each
+step.</li>
+<li><strong>Distributed Sampling:</strong> Data loading is decentralized
+using a <code>DistributedSampler</code>. Each process loads its own
+subset of data directly into its respective GPU memory without
+scattering from a central location.</li>
+<li><strong>Local Forward and Loss:</strong> Each process evaluates the
+forward pass and computes loss independently without gathering
+activations.</li>
+<li><strong>Collective Reduction:</strong> Communication occurs
+exclusively during gradient synchronization using optimized collective
+primitives such as Ring-AllReduce or Tree-AllReduce.</li>
+</ol>
+<p>In Ring-AllReduce, each GPU communicates solely with its logical
+neighbors in a ring topology. Gradients are divided into chunks and
+passed along the ring, distributing the transmission cost equally across
+all GPUs and eliminating single-device bottlenecks.</p>
+<h3 id="gradient-synchronization-and-computation-overlap">Gradient
+Synchronization and Computation Overlap</h3>
+<p>The temporal execution of communication relative to computation
+drastically separates DDP from DP.</p>
+<ul>
+<li><strong>Blocking Synchronization in DP:</strong> DataParallel
+completes the entire backward pass locally before gathering and reducing
+gradients on the primary device. Computation and communication are
+strictly sequential, leaving interconnects idle during backpropagation
+and GPUs idle during parameter synchronization.</li>
+<li><strong>Asynchronous Overlapping in DDP:</strong> DDP registers
+autograd hooks on all model parameters during initialization. As
+gradients are computed in reverse topological order during the backward
+pass:
+<ul>
+<li>Gradients are organized into contiguous memory buffers called
+<strong>buckets</strong> (default size typically 25MB).</li>
+<li>Once a bucket fills with computed gradients, DDP asynchronously
+triggers an <code>AllReduce</code> operation across all processes for
+that bucket.</li>
+<li>Gradient communication occurs concurrently with the backpropagation
+of preceding layers, effectively hiding communication latency behind
+backward computation.</li>
+</ul></li>
+</ul>
+<h3 id="architectural-comparison">Architectural Comparison</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">DataParallel (DP)</th>
+<th style="text-align: left;">Distributed Data Parallel (DDP)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Process Model</strong></td>
+<td style="text-align: left;">Single process, multiple threads</td>
+<td style="text-align: left;">Multi-process (1 process per GPU)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>GIL Impact</strong></td>
+<td style="text-align: left;">High contention</td>
+<td style="text-align: left;">None</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Communication
+Mechanism</strong></td>
+<td style="text-align: left;">Scatter / Gather / Broadcast</td>
+<td style="text-align: left;">Ring-AllReduce / Tree-AllReduce</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Interconnect
+Topology</strong></td>
+<td style="text-align: left;">Centralized (Master-Worker / Star)</td>
+<td style="text-align: left;">Decentralized (Peer-to-Peer)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Model Broadcast
+Frequency</strong></td>
+<td style="text-align: left;">Every forward step</td>
+<td style="text-align: left;">Initialization only</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Computation Overlap</strong></td>
+<td style="text-align: left;">None (sequential communication)</td>
+<td style="text-align: left;">High (gradient bucketing overlaps with
+backprop)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Scaling Capability</strong></td>
+<td style="text-align: left;">Single node only</td>
+<td style="text-align: left;">Single-node and multi-node clusters</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

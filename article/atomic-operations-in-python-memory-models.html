@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atomic Operations in Python Memory Models - python</title>
+    <meta name="description" content="Atomic operations are fundamental to ensuring data integrity and thread safety in multi-threaded Python programs, dictating how memory changes become visible across concurrently executing threads. Although the Global Interpreter Lock (GIL) in standard CP">
+    <link rel="canonical" href="https://salivity.github.io/python/article/atomic-operations-in-python-memory-models">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Atomic Operations in Python Memory Models - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/atomic-operations-in-python-memory-models" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Atomic operations are fundamental to ensuring data integrity and thread safety in multi-threaded Python programs, dictating how memory changes become visible across concurrently executing threads. Although the Global Interpreter Lock (GIL) in standard CP" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="atomic-operations-in-python-memory-models">Atomic Operations in
+Python Memory Models</h1>
+<p>Atomic operations are fundamental to ensuring data integrity and
+thread safety in multi-threaded Python programs, dictating how memory
+changes become visible across concurrently executing threads. Although
+the Global Interpreter Lock (GIL) in standard CPython serializes
+bytecode execution to prevent simultaneous memory corruption at the
+interpreter level, it does not guarantee high-level atomicity for
+multi-step program logic. Understanding atomic operations clarifies the
+boundaries between safe execution, race conditions, and synchronization
+requirements, which is becoming increasingly vital with the development
+of free-threaded Python (no-GIL) environments.</p>
+<h2 id="the-global-interpreter-lock-vs-program-atomicity">The Global
+Interpreter Lock vs. Program Atomicity</h2>
+<p>In standard CPython, the Global Interpreter Lock ensures that only
+one native thread executes Python bytecode at any given moment. This
+design prevents memory corruption of internal interpreter structures,
+making operations implemented in a single bytecode instruction naturally
+atomic.</p>
+<p>However, thread safety at the interpreter level does not translate to
+thread safety at the application level. A single line of Python code
+often translates into multiple distinct bytecode instructions. For
+example, the increment operation <code>counter += 1</code> translates
+into several bytecode operations:</p>
+<ol type="1">
+<li><code>LOAD_FAST</code> (load the variable onto the stack)</li>
+<li><code>LOAD_CONST</code> (load the value 1)</li>
+<li><code>BINARY_OP</code> (perform the addition)</li>
+<li><code>STORE_FAST</code> (store the result back)</li>
+</ol>
+<p>Because a thread switch can occur between any of these bytecodes via
+GIL preemption, the read-modify-write cycle is not atomic. Without
+explicit synchronization, concurrent threads will overwrite intermediate
+values, leading to classic race conditions.</p>
+<h2 id="what-is-atomic-in-cpython">What is Atomic in CPython?</h2>
+<p>In CPython, an operation is atomic if it executes entirely within a
+single bytecode instruction without calling back into Python code or
+releasing the GIL.</p>
+<ul>
+<li><p><strong>Atomic operations include:</strong></p>
+<ul>
+<li>Reading or setting an attribute on an object:
+<code>x = obj.attr</code> or <code>obj.attr = x</code></li>
+<li>Reading or updating a dictionary key: <code>val = d[key]</code> or
+<code>d[key] = val</code></li>
+<li>Atomic list operations: <code>lst.append(x)</code>,
+<code>lst.pop()</code></li>
+<li>Variable assignment: <code>x = y</code></li>
+</ul></li>
+<li><p><strong>Non-atomic operations include:</strong></p>
+<ul>
+<li>In-place arithmetic: <code>x += 1</code></li>
+<li>Check-then-act sequences:
+<code>if key not in d: d[key] = default</code></li>
+<li>Operations that invoke user-defined methods: custom
+<code>__eq__</code>, <code>__hash__</code>, or properties that can
+switch execution contexts.</li>
+</ul></li>
+</ul>
+<p>Relying on CPython bytecode atomicity is generally considered an
+anti-pattern because bytecode implementations are internal interpreter
+details that can change across Python versions and alternate
+implementations like PyPy.</p>
+<h2 id="memory-models-in-free-threaded-python-pep-703">Memory Models in
+Free-Threaded Python (PEP 703)</h2>
+<p>The role of atomic operations changes significantly with the
+introduction of free-threaded Python (Python 3.13+), which allows
+disabling the GIL. In a no-GIL architecture, native operating system
+threads execute Python bytecode in true parallel fashion across multiple
+CPU cores.</p>
+<p>Without the GIL acting as a global memory barrier:</p>
+<ul>
+<li><strong>Hardware-Level Memory Models:</strong> The execution falls
+back directly onto the hardware memory model (such as x86's TSO or ARM's
+weaker memory model) and C11/C++20 memory standards.</li>
+<li><strong>Explicit Atomic Instructions:</strong> The interpreter core
+utilizes explicit atomic types and CPU-level primitives (such as
+Compare-And-Swap) with defined memory orderings (e.g.,
+<code>acquire</code>, <code>release</code>, <code>relaxed</code>) to
+manage reference counting, object headers, and internal
+collections.</li>
+<li><strong>Increased Need for Application Locks:</strong> Code that
+previously appeared thread-safe by accident due to the GIL will
+encounter immediate data corruption and visibility issues if multiple
+threads mutate shared memory without synchronization.</li>
+</ul>
+<h2 id="achieving-synchronization-and-atomicity">Achieving
+Synchronization and Atomicity</h2>
+<p>To guarantee atomicity and establish consistent memory visibility
+across threads, Python developers must use explicit synchronization
+primitives rather than relying on interpreter-level side effects:</p>
+<ol type="1">
+<li><strong>Mutexes (<code>threading.Lock</code>):</strong> Serializes
+critical sections so that multi-step operations execute atomically.</li>
+<li><strong>Thread-Safe Containers (<code>queue.Queue</code>):</strong>
+Employs internal locking to provide atomic data exchange without
+requiring manual lock management.</li>
+<li><strong>Third-Party Atomic Primitives:</strong> C-extensions or
+external packages like <code>atomics</code> provide direct access to
+hardware-level atomic types for specific high-performance, lock-free
+patterns.</li>
+</ol>
+<p>Atomic operations define the smallest indivisible units of memory
+manipulation. While the GIL historically provided an illusion of safety
+for certain single-bytecode tasks, true multi-threaded correctness
+requires explicit atomic boundaries, which are now mandatory as Python
+evolves toward full parallel execution.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

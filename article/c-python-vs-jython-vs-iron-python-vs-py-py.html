@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPython vs Jython vs IronPython vs PyPy - python</title>
+    <meta name="description" content="Python is a language specification that can be executed by different runtimes, known as implementations. While most developers write code for CPython, the default and most widely used runtime, alternative implementations like Jython, IronPython, and PyPy">
+    <link rel="canonical" href="https://salivity.github.io/python/article/c-python-vs-jython-vs-iron-python-vs-py-py">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="CPython vs Jython vs IronPython vs PyPy - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/c-python-vs-jython-vs-iron-python-vs-py-py" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python is a language specification that can be executed by different runtimes, known as implementations. While most developers write code for CPython, the default and most widely used runtime, alternative implementations like Jython, IronPython, and PyPy" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="cpython-vs-jython-vs-ironpython-vs-pypy">CPython vs Jython vs
+IronPython vs PyPy</h1>
+<p>Python is a language specification that can be executed by different
+runtimes, known as implementations. While most developers write code for
+CPython, the default and most widely used runtime, alternative
+implementations like Jython, IronPython, and PyPy were created to solve
+specific problems regarding platform interoperability and execution
+speed. Understanding the differences between these four major
+implementations helps developers choose the right tool for their target
+environment, integration requirements, and performance demands.</p>
+<h3
+id="understanding-python-specifications-vs-implementations">Understanding
+Python Specifications vs. Implementations</h3>
+<p>Python itself is an abstract definition that outlines the language's
+syntax and behavior. An implementation is the actual software program
+that interprets or compiles Python source code and runs it on a
+computer. Each implementation adheres to the core Python language rules
+but is written in a different programming language and targets a
+different runtime platform.</p>
+<hr />
+<h3 id="cpython-the-standard-reference-implementation">CPython: The
+Standard Reference Implementation</h3>
+<p>CPython is the original and official implementation maintained by the
+Python Software Foundation. It is written in C and serves as the
+benchmark against which all other implementations are measured.</p>
+<ul>
+<li><strong>How it works:</strong> CPython compiles Python source code
+into intermediate bytecode (<code>.pyc</code> files) and then executes
+that bytecode using a C-based virtual machine.</li>
+<li><strong>The Global Interpreter Lock (GIL):</strong> CPython uses a
+GIL to manage memory and thread safety, which prevents multiple native
+threads from executing Python bytecode simultaneously within a single
+process.</li>
+<li><strong>Compatibility:</strong> It has virtually 100% compatibility
+with all Python features and standard libraries. Because it is written
+in C, it provides native, direct compatibility with C-extension
+libraries such as NumPy, SciPy, and Pandas.</li>
+<li><strong>Best used for:</strong> General-purpose scripting, web
+development, data science, and situations requiring maximum
+compatibility with the Python Package Index (PyPI).</li>
+</ul>
+<hr />
+<h3 id="pypy-the-high-performance-alternative">PyPy: The
+High-Performance Alternative</h3>
+<p>PyPy is an alternative implementation focused primarily on execution
+speed. It is written in RPython (Restricted Python), a statically
+typable subset of Python.</p>
+<ul>
+<li><strong>How it works:</strong> PyPy includes a Just-In-Time (JIT)
+compiler. Instead of interpreting bytecode step-by-step like CPython,
+the JIT analyzes running code to identify hot spots and compiles them
+directly into native machine code during execution.</li>
+<li><strong>Performance:</strong> Pure Python code often runs
+significantly faster on PyPy—frequently 4 to 7 times faster than on
+CPython for long-running, CPU-bound tasks.</li>
+<li><strong>Limitations:</strong> PyPy has historically had slower
+execution times with C-extension libraries due to its compatibility
+layer (<code>cpyext</code>), though support has improved over time. It
+also uses more base memory than CPython.</li>
+<li><strong>Best used for:</strong> Long-running processes, CPU-heavy
+algorithms written in pure Python, and server applications where
+execution speed is critical.</li>
+</ul>
+<hr />
+<h3 id="jython-python-on-the-java-virtual-machine">Jython: Python on the
+Java Virtual Machine</h3>
+<p>Jython (originally known as JPython) is an implementation of Python
+written in Java that targets the Java Virtual Machine (JVM).</p>
+<ul>
+<li><strong>How it works:</strong> Jython compiles Python code directly
+into Java bytecode, which is then executed by the JVM.</li>
+<li><strong>Java Integration:</strong> Jython allows completely
+seamless, two-way integration with Java. A developer can import and use
+any Java class directly inside Python code, and vice versa.</li>
+<li><strong>Threading:</strong> Jython uses Java’s native threading
+system and does not have a Global Interpreter Lock, allowing true
+multi-threaded parallelism across CPU cores.</li>
+<li><strong>Limitations:</strong> Jython cannot run C extensions
+directly, meaning modules like NumPy are not natively supported. Its
+development has historically lagged behind CPython release versions
+(primarily focusing on Python 2.7 support, with Python 3 support
+progressing slowly).</li>
+<li><strong>Best used for:</strong> Integrating Python scripts into
+existing enterprise Java applications, leveraging JVM performance
+tuning, and automating Java frameworks.</li>
+</ul>
+<hr />
+<h3 id="ironpython-python-on-the-net-clr">IronPython: Python on the .NET
+CLR</h3>
+<p>IronPython is an implementation of Python designed for Microsoft's
+Common Language Runtime (CLR), written in C#.</p>
+<ul>
+<li><strong>How it works:</strong> IronPython compiles Python code into
+the Common Intermediate Language (CIL), making it an official
+first-class citizen within the .NET ecosystem.</li>
+<li><strong>.NET Integration:</strong> Similar to Jython's relationship
+with Java, IronPython provides bidirectional interoperability with .NET
+languages such as C# and F#. You can instantiate C# objects, inherit
+from .NET classes, and use native Windows GUI frameworks like WPF and
+WinForms directly from Python.</li>
+<li><strong>Threading:</strong> IronPython relies on the CLR's threading
+model and does not use a GIL, enabling multi-core concurrent
+execution.</li>
+<li><strong>Limitations:</strong> It lacks support for native C
+extensions and lags behind modern CPython feature releases, though
+modern versions support Python 3.x.</li>
+<li><strong>Best used for:</strong> Embedding Python as a scripting
+engine inside .NET desktop or server applications, and automating .NET
+systems.</li>
+</ul>
+<hr />
+<h3 id="comparison-summary">Comparison Summary</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Implementation</th>
+<th style="text-align: left;">Written In</th>
+<th style="text-align: left;">Target Platform</th>
+<th style="text-align: left;">Concurrency (GIL)</th>
+<th style="text-align: left;">Primary Strength</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>CPython</strong></td>
+<td style="text-align: left;">C</td>
+<td style="text-align: left;">Native / OS</td>
+<td style="text-align: left;">Yes (has GIL)</td>
+<td style="text-align: left;">Ecosystem compatibility &amp; standard
+libraries</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>PyPy</strong></td>
+<td style="text-align: left;">RPython</td>
+<td style="text-align: left;">Native / OS</td>
+<td style="text-align: left;">Yes (has GIL)</td>
+<td style="text-align: left;">Maximum pure-Python execution speed via
+JIT</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Jython</strong></td>
+<td style="text-align: left;">Java</td>
+<td style="text-align: left;">Java Virtual Machine (JVM)</td>
+<td style="text-align: left;">No GIL</td>
+<td style="text-align: left;">Direct Java library interoperability</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>IronPython</strong></td>
+<td style="text-align: left;">C#</td>
+<td style="text-align: left;">.NET CLR</td>
+<td style="text-align: left;">No GIL</td>
+<td style="text-align: left;">Direct .NET framework and C#
+interoperability</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

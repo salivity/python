@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How the Python asyncio Event Loop Works - python</title>
+    <meta name="description" content="Python’s asyncio module achieves concurrency on a single thread using an event loop that acts as a central coordinator. This loop constantly monitors, schedules, and executes non-blocking operations, delegating time-consuming tasks like network calls o">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-the-python-asyncio-event-loop-works">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How the Python asyncio Event Loop Works - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-the-python-asyncio-event-loop-works" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s asyncio module achieves concurrency on a single thread using an event loop that acts as a central coordinator. This loop constantly monitors, schedules, and executes non-blocking operations, delegating time-consuming tasks like network calls o" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-the-python-asyncio-event-loop-works">How the Python asyncio
+Event Loop Works</h1>
+<p>Python’s <code>asyncio</code> module achieves concurrency on a single
+thread using an event loop that acts as a central coordinator. This loop
+constantly monitors, schedules, and executes non-blocking operations,
+delegating time-consuming tasks like network calls or file reads to the
+underlying operating system. By utilizing cooperative multitasking and
+low-level I/O multiplexing, the event loop yields control between
+different coroutines whenever an operation is waiting for data, allowing
+other ready tasks to execute without the overhead of traditional
+multi-threading.</p>
+<h3 id="the-core-architecture">The Core Architecture</h3>
+<p>At its foundation, the event loop maintains two primary structures: a
+queue of ready-to-run callbacks (the ready queue) and a mechanism to
+track pending I/O events (typically powered by OS-level selectors like
+<code>epoll</code> on Linux or <code>kqueue</code> on macOS).</p>
+<p>When a Python script invokes <code>asyncio.run()</code>, the runtime
+initializes this loop and transforms the top-level coroutine into an
+<code>asyncio.Task</code>. Tasks wrap coroutines, tracking their
+execution state from pending to finished.</p>
+<h3 id="cooperative-multitasking-and-context-switching">Cooperative
+Multitasking and Context Switching</h3>
+<p>Unlike operating system threads, which rely on preemptive
+multitasking where the OS forcefully interrupts threads,
+<code>asyncio</code> relies on cooperative multitasking. A coroutine
+maintains full control of the execution thread until it explicitly
+yields it using the <code>await</code> keyword.</p>
+<p>When a coroutine hits an <code>await</code> statement targeting an
+I/O operation:</p>
+<ol type="1">
+<li>The coroutine suspends its execution.</li>
+<li>It yields control back to the event loop.</li>
+<li>The event loop registers the underlying file descriptor or socket
+with the OS selector.</li>
+<li>The loop then checks the ready queue and immediately executes the
+next scheduled task.</li>
+</ol>
+<p>If a coroutine executes CPU-bound code without an <code>await</code>,
+it will block the entire event loop, preventing all other tasks from
+progressing.</p>
+<h3 id="the-polling-and-execution-cycle">The Polling and Execution
+Cycle</h3>
+<p>The event loop runs a continuous cycle, structured as follows:</p>
+<ol type="1">
+<li><strong>Check Scheduled Callbacks:</strong> The loop executes any
+callbacks whose timers have expired (such as those created via
+<code>asyncio.sleep()</code> or <code>loop.call_later()</code>).</li>
+<li><strong>Execute Ready Tasks:</strong> It pulls tasks from the ready
+queue and advances their coroutines until they either complete or pause
+at an <code>await</code>.</li>
+<li><strong>Poll OS Selectors:</strong> When no tasks remain in the
+ready queue, the loop queries the operating system selector for pending
+I/O events. It blocks here for a brief timeout or until an I/O operation
+completes.</li>
+<li><strong>Schedule Resumed Tasks:</strong> As the operating system
+signals that data has arrived on a monitored socket, the event loop
+marks the associated suspended <code>Task</code> as ready and pushes it
+to the ready queue.</li>
+<li><strong>Repeat:</strong> The cycle restarts, picking up the
+unblocked tasks and resuming execution directly after their respective
+<code>await</code> statements.</li>
+</ol>
+<h3 id="futures-and-tasks-as-coordination-units">Futures and Tasks as
+Coordination Units</h3>
+<p>Coordination between concurrent operations relies heavily on
+<code>Future</code> objects. A <code>Future</code> represents a result
+that has not yet been computed.</p>
+<p>When you wrap a coroutine into a <code>Task</code> (a subclass of
+<code>Future</code>), the event loop registers callbacks on that
+<code>Future</code>. Once the coroutine reaches its return statement or
+encounters an unhandled exception, the loop marks the
+<code>Future</code> as resolved. Any other coroutines awaiting that
+specific task are immediately notified and scheduled back into the ready
+queue to process the result.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

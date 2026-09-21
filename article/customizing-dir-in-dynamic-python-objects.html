@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customizing `__dir__` in Dynamic Python Objects - python</title>
+    <meta name="description" content="Customizing the dir method in Python allows developers to define the exact list of attribute names returned by the built-in dir() function for dynamically constructed objects. In dynamic programming patterns—such as proxy objects, API wrappers, and sch">
+    <link rel="canonical" href="https://salivity.github.io/python/article/customizing-dir-in-dynamic-python-objects">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Customizing `__dir__` in Dynamic Python Objects - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/customizing-dir-in-dynamic-python-objects" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Customizing the dir method in Python allows developers to define the exact list of attribute names returned by the built-in dir() function for dynamically constructed objects. In dynamic programming patterns—such as proxy objects, API wrappers, and sch" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="customizing-__dir__-in-dynamic-python-objects">Customizing
+<code>__dir__</code> in Dynamic Python Objects</h1>
+<p>Customizing the <code>__dir__</code> method in Python allows
+developers to define the exact list of attribute names returned by the
+built-in <code>dir()</code> function for dynamically constructed
+objects. In dynamic programming patterns—such as proxy objects, API
+wrappers, and schema-driven data containers—attributes are often
+resolved at runtime via <code>__getattr__</code>, making them invisible
+to Python's default introspection tools. Implementing a custom
+<code>__dir__</code> method bridges this gap, enabling interactive
+debuggers, modern IDEs, and read-eval-print loops (REPLs) to accurately
+discover, inspect, and autocomplete dynamically generated
+attributes.</p>
+<h3 id="the-limitation-of-default-introspection">The Limitation of
+Default Introspection</h3>
+<p>By default, Python determines an object's available attributes by
+inspecting its instance dictionary (<code>__dict__</code>), its class
+dictionary, and any inherited attributes across its base classes. When
+using dynamic dispatch mechanisms like <code>__getattr__</code>,
+attributes do not physically exist in these namespaces until they are
+requested.</p>
+<p>As a result, calling <code>dir()</code> on an instance of a class
+that dynamically resolves properties returns only the static, explicitly
+declared methods and standard dunder attributes. The dynamic attributes
+remain hidden from runtime inspection, impairing code
+discoverability.</p>
+<h3 id="enabling-ide-autocompletion-and-developer-usability">Enabling
+IDE Autocompletion and Developer Usability</h3>
+<p>The primary function of <code>__dir__</code> customization is
+enhancing the developer experience. Modern developer tooling—including
+VS Code, PyCharm, IPython, and Jupyter Notebooks—relies directly on the
+<code>dir()</code> function to populate tab-completion lists.</p>
+<p>Without an overridden <code>__dir__</code>, users of a dynamic class
+must consult external documentation or inspect source code to know which
+attributes are accessible. By customizing <code>__dir__</code>, a
+library author can dynamically assemble and expose the names of
+attributes derived from external sources, such as JSON schemas, database
+columns, or remote API endpoints.</p>
+<h3 id="implementation-example">Implementation Example</h3>
+<p>To implement a custom <code>__dir__</code>, define a method named
+<code>__dir__</code> on the class that returns an iterable of strings.
+The standard approach merges the object's default attributes with the
+dynamically resolved keys.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> DynamicRecord:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, data: <span class="bu">dict</span>):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._data <span class="op">=</span> data</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__getattr__</span>(<span class="va">self</span>, name: <span class="bu">str</span>):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> name <span class="kw">in</span> <span class="va">self</span>._data:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">self</span>._data[name]</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">AttributeError</span>(<span class="ss">f&quot;&#39;</span><span class="sc">{</span><span class="bu">type</span>(<span class="va">self</span>)<span class="sc">.</span><span class="va">__name__</span><span class="sc">}</span><span class="ss">&#39; object has no attribute &#39;</span><span class="sc">{</span>name<span class="sc">}</span><span class="ss">&#39;&quot;</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__dir__</span>(<span class="va">self</span>):</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Retrieve standard attributes from the base implementation</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        default_attrs <span class="op">=</span> <span class="bu">super</span>().<span class="fu">__dir__</span>()</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Combine default attributes with dynamic keys</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        dynamic_attrs <span class="op">=</span> <span class="bu">list</span>(<span class="va">self</span>._data.keys())</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">sorted</span>(<span class="bu">set</span>(default_attrs <span class="op">+</span> dynamic_attrs))</span></code></pre></div>
+<p>In this implementation, calling
+<code>dir(DynamicRecord({"name": "Alice", "role": "Admin"}))</code>
+returns the standard object attributes alongside <code>"name"</code> and
+<code>"role"</code>, making them immediately available to autocomplete
+engines.</p>
+<h3 id="key-rules-for-customizing-__dir__">Key Rules for Customizing
+<code>__dir__</code></h3>
+<p>When overriding <code>__dir__</code>, adhere to the following
+conventions:</p>
+<ul>
+<li><strong>Return an Iterable of Strings:</strong> Python expects
+<code>__dir__</code> to return a sequence (typically a
+<code>list</code>) where every element is a string. Returning invalid
+types will cause <code>dir()</code> to raise a
+<code>TypeError</code>.</li>
+<li><strong>Include Inherited Attributes:</strong> Always call
+<code>super().__dir__()</code> or incorporate
+<code>self.__dict__.keys()</code> and class attributes to avoid
+accidentally hiding built-in methods, properties, and standard utility
+functions.</li>
+<li><strong>Preserve Idempotency and Speed:</strong> Because interactive
+environments execute <code>dir()</code> repeatedly during active typing
+for tab-completion, avoid heavy computations or blocking network calls
+inside <code>__dir__</code>. If dynamic attributes depend on an external
+source, cache the keys locally upon object initialization.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

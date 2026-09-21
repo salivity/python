@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python memoryview: Slicing Without Copying Memory - python</title>
+    <meta name="description" content="Python's memoryview provides a zero-copy mechanism for accessing and slicing binary data by interfacing directly with the internal Buffer Protocol at the C level. Instead of allocating new memory and copying bytes whenever a slice is created—which is t">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-memoryview-slicing-without-copying-memory">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python memoryview: Slicing Without Copying Memory - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-memoryview-slicing-without-copying-memory" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's memoryview provides a zero-copy mechanism for accessing and slicing binary data by interfacing directly with the internal Buffer Protocol at the C level. Instead of allocating new memory and copying bytes whenever a slice is created—which is t" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-memoryview-slicing-without-copying-memory">Python
+memoryview: Slicing Without Copying Memory</h1>
+<p>Python's <code>memoryview</code> provides a zero-copy mechanism for
+accessing and slicing binary data by interfacing directly with the
+internal Buffer Protocol at the C level. Instead of allocating new
+memory and copying bytes whenever a slice is created—which is the
+default behavior for objects like <code>bytes</code> and
+<code>bytearray</code>—a <code>memoryview</code> creates an
+informational wrapper around existing memory. This article explains the
+underlying mechanics of <code>memoryview</code>, how the Python Buffer
+Protocol facilitates shared data access, and why slicing with it
+achieves an <span class="math inline">\(O(1)\)</span> constant time
+complexity.</p>
+<h2 id="the-cost-of-standard-slicing">The Cost of Standard Slicing</h2>
+<p>When you slice built-in sequences like <code>bytes</code>,
+<code>bytearray</code>, or <code>list</code>, Python creates a brand-new
+object and copies the specified range of elements into newly allocated
+memory:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> <span class="st">b&quot;X&quot;</span> <span class="op">*</span> <span class="dv">100_000_000</span>  <span class="co"># 100 MB</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>chunk <span class="op">=</span> data[:<span class="dv">10_000_000</span>]   <span class="co"># Copies 10 MB into a new bytes object</span></span></code></pre></div>
+<p>In this standard slice, the operation consumes an additional 10 MB of
+RAM and incurs an <span class="math inline">\(O(N)\)</span> time cost
+proportional to the slice size. Repeating this inside a loop—such as
+consuming a stream of data from a network socket or file—quickly causes
+high memory churn and excessive garbage collection overhead.</p>
+<h2 id="the-c-level-buffer-protocol">The C-Level Buffer Protocol</h2>
+<p>To prevent unnecessary copying, Python implements the Buffer Protocol
+(<code>PEP 3118</code>) at the C-API level. This protocol allows Python
+objects to expose their internal raw memory arrays to other objects.</p>
+<p>When a type implements the buffer protocol, it exports a C structure
+called <code>Py_buffer</code>. This structure contains critical metadata
+describing the memory:</p>
+<ul>
+<li><strong><code>buf</code></strong>: A pointer to the starting address
+of the memory block.</li>
+<li><strong><code>len</code></strong>: The total length of the memory
+block in bytes.</li>
+<li><strong><code>itemsize</code></strong>: The size in bytes of each
+element.</li>
+<li><strong><code>readonly</code></strong>: A flag indicating whether
+the memory can be mutated.</li>
+<li><strong><code>format</code></strong>: A string describing the data
+type (similar to the <code>struct</code> module syntax).</li>
+<li><strong><code>shape</code></strong>,
+<strong><code>strides</code></strong>, and
+<strong><code>suboffsets</code></strong>: Metadata defining dimensions
+for multi-dimensional arrays.</li>
+</ul>
+<h2 id="how-memoryview-slices-memory">How <code>memoryview</code> Slices
+Memory</h2>
+<p>A <code>memoryview</code> is a high-level Python object that wraps
+this underlying <code>Py_buffer</code> structure. It does not own the
+memory buffer itself; instead, it retains a reference to the original
+object that allocated the memory to prevent it from being deallocated
+while the view is active.</p>
+<p>When you slice a <code>memoryview</code>, Python performs a shallow
+operation:</p>
+<ol type="1">
+<li><strong>Allocates a New Wrapper</strong>: Python instantiates a new,
+lightweight <code>memoryview</code> object.</li>
+<li><strong>Adjusts the Pointer and Length</strong>: The new object
+copies the <code>Py_buffer</code> metadata from the source view rather
+than the data payload. It recalculates the <code>buf</code> pointer to
+start at the slice's offset and updates the <code>len</code> field to
+match the slice's size.</li>
+<li><strong>Increments the Reference Count</strong>: The underlying
+memory owner's reference count is tracked, ensuring the original memory
+remains allocated.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>large_data <span class="op">=</span> <span class="bu">bytearray</span>(<span class="st">b&quot;X&quot;</span> <span class="op">*</span> <span class="dv">100_000_000</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>mv <span class="op">=</span> <span class="bu">memoryview</span>(large_data)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Creates a new view pointing to the same memory address + offset</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>mv_slice <span class="op">=</span> mv[<span class="dv">10_000</span>:<span class="dv">20_000</span>]</span></code></pre></div>
+<p>In the example above, <code>mv_slice</code> does not duplicate the
+10,000 bytes. Its internal pointer simply starts at
+<code>mv.buf + 10000</code>, and its length is set to
+<code>10000</code>.</p>
+<h2 id="key-performance-advantages">Key Performance Advantages</h2>
+<ul>
+<li><strong><span class="math inline">\(O(1)\)</span> Time and Space
+Complexity</strong>: Slicing a <code>memoryview</code> takes constant
+time, regardless of whether the slice represents 10 bytes or 10
+gigabytes.</li>
+<li><strong>In-Place Mutation</strong>: Slicing a mutable object like
+<code>bytearray</code> via <code>memoryview</code> allows in-place
+modifications to the original data:
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>buf <span class="op">=</span> <span class="bu">bytearray</span>(<span class="st">b&quot;abcdef&quot;</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>view <span class="op">=</span> <span class="bu">memoryview</span>(buf)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>sub_view <span class="op">=</span> view[<span class="dv">2</span>:<span class="dv">4</span>]</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>sub_view[:] <span class="op">=</span> <span class="st">b&quot;ZZ&quot;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(buf)  <span class="co"># Output: bytearray(b&#39;abZZef&#39;)</span></span></code></pre></div></li>
+<li><strong>Optimized I/O</strong>: Many standard library modules (such
+as <code>socket</code> and <code>io</code>) accept buffer-compatible
+objects. Methods like <code>socket.recv_into()</code> or
+<code>file.write()</code> can consume slices of a
+<code>memoryview</code> directly, eliminating intermediate memory copies
+across pipeline stages.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

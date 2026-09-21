@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Descriptors: Using __get__, __set__, and __delete__ - python</title>
+    <meta name="description" content="The Python descriptor protocol provides a standardized way to customize what happens when an object's attribute is accessed, modified, or deleted. By implementing any combination of the get(), set(), and delete() special methods, a class can become a des">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-descriptors-using-get-set-and-delete">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Descriptors: Using __get__, __set__, and __delete__ - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-descriptors-using-get-set-and-delete" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Python descriptor protocol provides a standardized way to customize what happens when an object's attribute is accessed, modified, or deleted. By implementing any combination of the get(), set(), and delete() special methods, a class can become a des" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-descriptors-using-get-set-and-delete">Python Descriptors:
+Using <strong>get</strong>, <strong>set</strong>, and
+<strong>delete</strong></h1>
+<p>The Python descriptor protocol provides a standardized way to
+customize what happens when an object's attribute is accessed, modified,
+or deleted. By implementing any combination of the
+<code>__get__()</code>, <code>__set__()</code>, and
+<code>__delete__()</code> special methods, a class can become a
+descriptor and take control over attribute operations on another class.
+This protocol serves as the foundational mechanism behind core Python
+features such as <code>@property</code>, methods,
+<code>classmethod</code>, and <code>staticmethod</code>, as well as
+Object-Relational Mapping (ORM) field definitions.</p>
+<h3 id="what-is-a-descriptor">What is a Descriptor?</h3>
+<p>A descriptor is an instance of a class that implements at least one
+method of the descriptor protocol:</p>
+<ul>
+<li><code>__get__(self, obj, objtype=None)</code>: Manages read
+access.</li>
+<li><code>__set__(self, obj, value)</code>: Manages write access.</li>
+<li><code>__delete__(self, obj)</code>: Manages deletion.</li>
+</ul>
+<p>To function, a descriptor must always be assigned as a <strong>class
+attribute</strong> on another class, never directly to an instance.</p>
+<hr />
+<h3 id="the-descriptor-methods-explained">The Descriptor Methods
+Explained</h3>
+<h4 id="1-__get__self-obj-objtypenone">1.
+<code>__get__(self, obj, objtype=None)</code></h4>
+<p>Invoked when an attribute is read.</p>
+<ul>
+<li><code>self</code>: The descriptor instance itself.</li>
+<li><code>obj</code>: The instance of the owner class through which the
+attribute was accessed. If accessed directly from the owner class (e.g.,
+<code>OwnerClass.attr</code>), <code>obj</code> is
+<code>None</code>.</li>
+<li><code>objtype</code>: The owner class itself.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> VerboseGet:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__get__</span>(<span class="va">self</span>, obj, objtype<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> obj <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">self</span>  <span class="co"># Accessed from the class level</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f&quot;Accessed from instance: </span><span class="sc">{</span>obj<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Example:</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    attribute <span class="op">=</span> VerboseGet()</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>inst <span class="op">=</span> Example()</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(inst.attribute)       <span class="co"># Accessed from instance: &lt;Example object at ...&gt;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(Example.attribute)    <span class="co"># &lt;VerboseGet object at ...&gt;</span></span></code></pre></div>
+<h4 id="2-__set__self-obj-value">2.
+<code>__set__(self, obj, value)</code></h4>
+<p>Invoked when a value is assigned to the attribute (e.g.,
+<code>obj.attr = value</code>).</p>
+<ul>
+<li><code>self</code>: The descriptor instance.</li>
+<li><code>obj</code>: The instance of the owner class.</li>
+<li><code>value</code>: The value being assigned.</li>
+</ul>
+<p>Defining <code>__set__</code> allows data validation, transformation,
+or restricted access before saving the value into the instance's
+internal <code>__dict__</code>.</p>
+<h4 id="3-__delete__self-obj">3. <code>__delete__(self, obj)</code></h4>
+<p>Invoked when an attribute is deleted using the <code>del</code>
+statement (e.g., <code>del obj.attr</code>).</p>
+<ul>
+<li><code>self</code>: The descriptor instance.</li>
+<li><code>obj</code>: The instance of the owner class from which the
+attribute is being deleted.</li>
+</ul>
+<hr />
+<h3 id="data-vs-non-data-descriptors">Data vs. Non-Data Descriptors</h3>
+<p>Python handles attribute resolution based on whether a descriptor is
+classified as a "data" or "non-data" descriptor:</p>
+<ul>
+<li><strong>Data Descriptors:</strong> Implement <code>__set__()</code>
+or <code>__delete__()</code> (or both). These take precedence over an
+instance's <code>__dict__</code>. Even if an instance has a key with the
+same name in <code>__dict__</code>, Python will route the access through
+the descriptor.</li>
+<li><strong>Non-Data Descriptors:</strong> Implement only
+<code>__get__()</code>. These do not take precedence over an instance's
+<code>__dict__</code>. If an attribute with the same name exists in the
+instance dictionary, it overrides the descriptor. Standard Python
+methods are non-data descriptors.</li>
+</ul>
+<hr />
+<h3 id="practical-implementation-a-validated-field">Practical
+Implementation: A Validated Field</h3>
+<p>Here is an example demonstrating all three methods by creating a
+descriptor that enforces non-negative integer values.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> NonNegativeInteger:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__set_name__</span>(<span class="va">self</span>, owner, name):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Automatically stores the attribute name (e.g., &#39;_price&#39;)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.storage_name <span class="op">=</span> <span class="ss">f&quot;_</span><span class="sc">{</span>name<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__get__</span>(<span class="va">self</span>, obj, objtype<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> obj <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">self</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">getattr</span>(obj, <span class="va">self</span>.storage_name, <span class="dv">0</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__set__</span>(<span class="va">self</span>, obj, value):</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(value, <span class="bu">int</span>) <span class="kw">or</span> value <span class="op">&lt;</span> <span class="dv">0</span>:</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="ss">f&quot;</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>storage_name[<span class="dv">1</span>:]<span class="sc">}</span><span class="ss"> must be a non-negative integer.&quot;</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="bu">setattr</span>(obj, <span class="va">self</span>.storage_name, value)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__delete__</span>(<span class="va">self</span>, obj):</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">hasattr</span>(obj, <span class="va">self</span>.storage_name):</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>            <span class="bu">delattr</span>(obj, <span class="va">self</span>.storage_name)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">AttributeError</span>(<span class="ss">f&quot;</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>storage_name[<span class="dv">1</span>:]<span class="sc">}</span><span class="ss"> not found.&quot;</span>)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Product:</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    price <span class="op">=</span> NonNegativeInteger()</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    quantity <span class="op">=</span> NonNegativeInteger()</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, price, quantity):</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.price <span class="op">=</span> price</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.quantity <span class="op">=</span> quantity</span></code></pre></div>
+<h3 id="usage">Usage:</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>item <span class="op">=</span> Product(price<span class="op">=</span><span class="dv">50</span>, quantity<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(item.price)     <span class="co"># Triggers __get__, prints: 50</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>item.price <span class="op">=</span> <span class="dv">100</span>      <span class="co"># Triggers __set__</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># item.price = -5     # Triggers __set__, raises ValueError</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span> item.price        <span class="co"># Triggers __delete__</span></span></code></pre></div>
+<h3 id="attribute-lookup-order">Attribute Lookup Order</h3>
+<p>When an attribute is accessed via <code>obj.attribute</code>,
+Python’s <code>object.__getattribute__()</code> executes the following
+sequence:</p>
+<ol type="1">
+<li>Checks if the attribute is a <strong>data descriptor</strong> on the
+class.</li>
+<li>If not, checks the instance <code>__dict__</code>.</li>
+<li>If not in the instance <code>__dict__</code>, checks if it is a
+<strong>non-data descriptor</strong> on the class.</li>
+<li>If not a non-data descriptor, retrieves standard class
+attributes.</li>
+<li>If the attribute is nowhere to be found, calls
+<code>__getattr__()</code> if implemented; otherwise, raises
+<code>AttributeError</code>.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphQL APIs in Python: Strawberry vs Graphene - python</title>
+    <meta name="description" content="Python developers building GraphQL APIs primarily rely on two major libraries: Graphene and Strawberry. This article examines how both tools simplify API development, contrasting Graphene’s established class-based paradigm with Strawberry’s modern, t">
+    <link rel="canonical" href="https://salivity.github.io/python/article/graph-ql-ap-is-in-python-strawberry-vs-graphene">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="GraphQL APIs in Python: Strawberry vs Graphene - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/graph-ql-ap-is-in-python-strawberry-vs-graphene" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python developers building GraphQL APIs primarily rely on two major libraries: Graphene and Strawberry. This article examines how both tools simplify API development, contrasting Graphene’s established class-based paradigm with Strawberry’s modern, t" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="graphql-apis-in-python-strawberry-vs-graphene">GraphQL APIs in
+Python: Strawberry vs Graphene</h1>
+<p>Python developers building GraphQL APIs primarily rely on two major
+libraries: Graphene and Strawberry. This article examines how both tools
+simplify API development, contrasting Graphene’s established class-based
+paradigm with Strawberry’s modern, type-hint-driven architecture using
+standard Python dataclasses, helping you choose the right framework for
+your stack.</p>
+<h3 id="the-role-of-frameworks-in-python-graphql-apis">The Role of
+Frameworks in Python GraphQL APIs</h3>
+<p>Building a GraphQL API requires creating a schema, validating
+incoming operations, parsing queries, and mapping fields to backend
+functions known as resolvers. Writing this parsing and validation logic
+manually is complex. Libraries like Graphene and Strawberry eliminate
+this overhead by translating standard Python code directly into
+executable GraphQL schemas while managing validation and execution under
+the hood.</p>
+<h3 id="graphene-the-class-based-standard">Graphene: The Class-Based
+Standard</h3>
+<p>Graphene is one of the earliest and most widely adopted GraphQL
+frameworks for Python. Inspired by the declarative syntax of Django’s
+Object-Relational Mapper (ORM), it relies on an explicit, class-based
+approach.</p>
+<ul>
+<li><strong>Explicit Field Typing:</strong> In Graphene, you define
+types by subclassing <code>graphene.ObjectType</code> and declaring
+fields with dedicated Graphene wrappers, such as
+<code>graphene.String()</code>, <code>graphene.Int()</code>, or
+<code>graphene.List()</code>.</li>
+<li><strong>Dedicated Resolvers:</strong> Fields are resolved using
+explicitly named methods on the class, typically adhering to the
+convention <code>resolve_&lt;field_name&gt;</code>.</li>
+<li><strong>Deep Ecosystem Integration:</strong> Graphene offers mature
+integrations with established Python web frameworks, notably through
+<code>graphene-django</code>, which allows automatic schema generation
+based on existing Django models.</li>
+</ul>
+<p>Graphene provides high stability and seamless compatibility with
+older Python codebases and synchronous web frameworks.</p>
+<h3 id="strawberry-the-type-hint-and-dataclass-approach">Strawberry: The
+Type-Hint and Dataclass Approach</h3>
+<p>Strawberry is a newer, modern alternative designed around Python’s
+built-in type annotations and dataclasses. Instead of relying on custom
+field classes, Strawberry leverages standard Python type hints.</p>
+<ul>
+<li><strong>Dataclass Syntax:</strong> Schemas are defined by applying
+the <code>@strawberry.type</code> decorator to standard Python classes.
+Attributes with standard type hints (e.g., <code>name: str</code>,
+<code>age: int</code>) automatically become GraphQL fields.</li>
+<li><strong>Native Asynchronous Support:</strong> Strawberry was
+designed from the ground up with ASGI and <code>asyncio</code> in mind,
+making it well-suited for high-concurrency applications.</li>
+<li><strong>Modern Framework Synergy:</strong> Strawberry provides
+first-class support for modern ASGI frameworks such as FastAPI,
+Starlette, and Litestar, while also supporting Django and Flask.</li>
+<li><strong>Advanced Features:</strong> It natively supports GraphQL
+features like Apollo Federation, schema directives, and field-level
+permissions out of the box with minimal boilerplate.</li>
+</ul>
+<h3 id="key-differences-in-workflow">Key Differences in Workflow</h3>
+<ol type="1">
+<li><strong>Boilerplate and Readability:</strong> Graphene requires
+importing and defining custom type objects for every field. Strawberry
+uses native Python types (<code>str</code>, <code>int</code>,
+<code>typing.Optional</code>), which reduces boilerplate and integrates
+cleanly with static analysis tools like <code>mypy</code>.</li>
+<li><strong>Execution Model:</strong> While Graphene has support for
+asynchronous resolvers, Strawberry's architecture is fundamentally
+async-first, matching modern API development patterns.</li>
+<li><strong>Tooling and Validation:</strong> Strawberry’s reliance on
+standard dataclasses allows seamless integration with tools like
+Pydantic, simplifying data validation and serialization pipelines.</li>
+</ol>
+<h3 id="summary">Summary</h3>
+<p>Both libraries successfully abstract the complexity of building
+GraphQL APIs. Graphene remains a dependable choice for legacy systems
+and Django-centric monolithic applications. Strawberry represents the
+modern standard for Python GraphQL development, offering a cleaner
+developer experience, reduced boilerplate, and superior performance for
+asynchronous architectures.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

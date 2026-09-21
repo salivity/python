@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python TypeGuard vs TypeIs: Understanding PEP 742 - python</title>
+    <meta name="description" content="Python 3.13 introduced typing.TypeIs via PEP 742 to solve long-standing type-narrowing limitations found in typing.TypeGuard (introduced in PEP 647). While both constructs allow developers to write user-defined type guard functions that inspect objects a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-type-guard-vs-type-is-understanding-pep-742">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python TypeGuard vs TypeIs: Understanding PEP 742 - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-type-guard-vs-type-is-understanding-pep-742" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python 3.13 introduced typing.TypeIs via PEP 742 to solve long-standing type-narrowing limitations found in typing.TypeGuard (introduced in PEP 647). While both constructs allow developers to write user-defined type guard functions that inspect objects a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-typeguard-vs-typeis-understanding-pep-742">Python
+TypeGuard vs TypeIs: Understanding PEP 742</h1>
+<p>Python 3.13 introduced <code>typing.TypeIs</code> via PEP 742 to
+solve long-standing type-narrowing limitations found in
+<code>typing.TypeGuard</code> (introduced in PEP 647). While both
+constructs allow developers to write user-defined type guard functions
+that inspect objects at runtime, they handle conditional branching
+differently. <code>TypeGuard</code> only narrows types in the positive
+(<code>if</code>) branch and permits arbitrary type overrides, whereas
+<code>TypeIs</code> enforces stricter subtyping rules and provides
+symmetric narrowing across both the positive (<code>if</code>) and
+negative (<code>else</code>) branches.</p>
+<h2 id="the-limitations-of-typeguard">The Limitations of TypeGuard</h2>
+<p>Introduced in Python 3.10, <code>TypeGuard</code> allows functions to
+return a boolean indicating whether an argument matches a specific type.
+However, it suffers from two major limitations:</p>
+<ol type="1">
+<li><strong>No Negative Narrowing:</strong> When a
+<code>TypeGuard</code> returns <code>False</code>, type checkers cannot
+infer anything about the type in the <code>else</code> branch. The
+variable retains its original, un-narrowed type.</li>
+<li><strong>Unsafe Type Overrides:</strong> <code>TypeGuard</code> does
+not require the narrowed type to be a subtype of the input type. If a
+function accepts <code>object</code> and asserts
+<code>TypeGuard[int]</code>, the type checker blindly treats the object
+as <code>int</code> in the <code>if</code> block, even if the runtime
+logic is flawed.</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypeGuard</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> is_string(val: <span class="bu">object</span>) <span class="op">-&gt;</span> TypeGuard[<span class="bu">str</span>]:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">isinstance</span>(val, <span class="bu">str</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(val: <span class="bu">str</span> <span class="op">|</span> <span class="bu">int</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> is_string(val):</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        reveal_type(val)  <span class="co"># str</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        reveal_type(val)  <span class="co"># str | int (TypeGuard cannot eliminate str here)</span></span></code></pre></div>
+<p>In the example above, even though <code>val</code> can only be
+<code>int</code> when <code>is_string(val)</code> is <code>False</code>,
+the type checker still sees <code>str | int</code>.</p>
+<h2 id="how-typeis-resolves-these-issues">How TypeIs Resolves These
+Issues</h2>
+<p><code>TypeIs</code> addresses these shortcomings by modeling how
+built-in checks like <code>isinstance()</code> actually work.</p>
+<h3 id="1-symmetric-narrowing-positive-and-negative-branches">1.
+Symmetric Narrowing (Positive and Negative Branches)</h3>
+<p>When a function returning <code>TypeIs[T]</code> yields
+<code>True</code>, the variable is narrowed to <code>T</code>. When it
+yields <code>False</code>, the type checker removes <code>T</code> from
+the candidate union in the <code>else</code> branch.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypeIs</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> is_string(val: <span class="bu">object</span>) <span class="op">-&gt;</span> TypeIs[<span class="bu">str</span>]:</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">isinstance</span>(val, <span class="bu">str</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(val: <span class="bu">str</span> <span class="op">|</span> <span class="bu">int</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> is_string(val):</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        reveal_type(val)  <span class="co"># str</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        reveal_type(val)  <span class="co"># int (str is safely removed from the union)</span></span></code></pre></div>
+<h3 id="2-strict-subtyping-requirement">2. Strict Subtyping
+Requirement</h3>
+<p>Unlike <code>TypeGuard</code>, <code>TypeIs[T]</code> requires
+<code>T</code> to be consistent with the input type of the inspected
+argument. The narrowed type is computed as the intersection of the
+original type and <code>T</code>. If <code>T</code> cannot be a subtype
+or specialization of the input type, static type checkers like Pyright
+or Mypy will emit an error.</p>
+<h2 id="key-differences-summary">Key Differences Summary</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>typing.TypeGuard</code></th>
+<th style="text-align: left;"><code>typing.TypeIs</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>PEP Specification</strong></td>
+<td style="text-align: left;">PEP 647 (Python 3.10)</td>
+<td style="text-align: left;">PEP 742 (Python 3.13)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Positive Narrowing
+(<code>if</code>)</strong></td>
+<td style="text-align: left;">Replaces type with <code>T</code></td>
+<td style="text-align: left;">Narrows via intersection of input and
+<code>T</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Negative Narrowing
+(<code>else</code>)</strong></td>
+<td style="text-align: left;">No narrowing occurs</td>
+<td style="text-align: left;">Eliminates <code>T</code> from the
+union</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Subtyping Constraint</strong></td>
+<td style="text-align: left;">Not required (allows unsafe
+overrides)</td>
+<td style="text-align: left;">Required (must be compatible with input
+type)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="when-to-use-which">When to Use Which</h2>
+<ul>
+<li><strong>Use <code>TypeIs</code></strong> for almost all standard
+type predicates. It behaves intuitively, mirrors
+<code>isinstance()</code>, and provides complete type safety across both
+execution paths.</li>
+<li><strong>Use <code>TypeGuard</code></strong> only when you
+intentionally want asymmetric behavior—such as narrowing a broader type
+into a target type where the negative case cannot guarantee the
+exclusion of that target type, or when intentionally overriding types
+without strict subtyping checks.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

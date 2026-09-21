@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boto3 Client vs Resource: Key Differences - python</title>
+    <meta name="description" content="In the AWS SDK for Python (Boto3), interacting with cloud services is handled through two distinct interfaces: low-level Clients and high-level Resources. While both abstractions communicate with the same underlying AWS service APIs, they differ fundamen">
+    <link rel="canonical" href="https://salivity.github.io/python/article/boto-3-client-vs-resource-key-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Boto3 Client vs Resource: Key Differences - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/boto-3-client-vs-resource-key-differences" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In the AWS SDK for Python (Boto3), interacting with cloud services is handled through two distinct interfaces: low-level Clients and high-level Resources. While both abstractions communicate with the same underlying AWS service APIs, they differ fundamen" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="boto3-client-vs-resource-key-differences">Boto3 Client vs
+Resource: Key Differences</h1>
+<p>In the AWS SDK for Python (Boto3), interacting with cloud services is
+handled through two distinct interfaces: low-level Clients and
+high-level Resources. While both abstractions communicate with the same
+underlying AWS service APIs, they differ fundamentally in their internal
+architecture, data representations, and service coverage. Clients
+provide a direct, one-to-one mapping with raw AWS HTTP endpoints
+returning standard Python dictionaries, whereas Resources present an
+object-oriented, stateful layer that abstracts away network calls into
+Python classes and collections.</p>
+<h3 id="core-architectural-distinction">Core Architectural
+Distinction</h3>
+<p>The fundamental difference between a Client and a Resource lies in
+how they are constructed from the underlying <code>botocore</code>
+engine:</p>
+<ul>
+<li><strong>Clients (Low-Level):</strong> Clients are generated
+dynamically from JSON service definition models found in
+<code>botocore</code>. Every operation exposed by a client corresponds
+strictly to a single API call defined in the official AWS service
+documentation. A Client behaves as an access layer that takes Python
+keyword arguments, serializes them into HTTP requests, sends them to
+AWS, and deserializes the HTTP response into native Python
+dictionaries.</li>
+<li><strong>Resources (High-Level):</strong> Resources are built on top
+of Clients using a secondary resource-definition model. Instead of
+exposing raw network requests, a Resource organizes an AWS service into
+identifiers, attributes, actions, and sub-resources. A Resource wraps
+the low-level client calls, parsing the returned dictionary responses to
+populate object attributes dynamically.</li>
+</ul>
+<h3 id="data-representation-and-return-types">Data Representation and
+Return Types</h3>
+<p>The structural difference becomes most apparent in how both
+interfaces handle input and return data:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> boto3</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Low-Level Client: Returns a raw dictionary</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>s3_client <span class="op">=</span> boto3.client(<span class="st">&#39;s3&#39;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>client_response <span class="op">=</span> s3_client.list_objects_v2(Bucket<span class="op">=</span><span class="st">&#39;my-bucket&#39;</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Access requires dict keys: client_response[&#39;Contents&#39;][0][&#39;Key&#39;]</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># High-Level Resource: Returns Python objects</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>s3_resource <span class="op">=</span> boto3.resource(<span class="st">&#39;s3&#39;</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>bucket <span class="op">=</span> s3_resource.Bucket(<span class="st">&#39;my-bucket&#39;</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Access uses object attributes: [obj.key for obj in bucket.objects.all()]</span></span></code></pre></div>
+<ul>
+<li><strong>Data Models:</strong> Clients are stateless; they do not
+retain data between calls. Resources manage state by storing data inside
+object instances after network calls, allowing you to access metadata
+through standard Python dot-notation (e.g.,
+<code>instance.state['Name']</code> or
+<code>bucket.creation_date</code>).</li>
+<li><strong>Sub-Resources and References:</strong> Resources link
+related AWS services structurally. For example, calling
+<code>bucket.objects</code> from an S3 <code>Bucket</code> resource
+automatically resolves to an <code>ObjectSummary</code> resource without
+requiring you to manually pass parameters like <code>BucketName</code>
+in subsequent requests.</li>
+</ul>
+<h3 id="pagination-vs-collections">Pagination vs. Collections</h3>
+<p>Handling large sets of data requires different mechanisms depending
+on the interface:</p>
+<ul>
+<li><strong>Paginators in Clients:</strong> Clients require you to
+either manually inspect truncation tokens (such as
+<code>NextContinuationToken</code>) or instantiate a distinct
+<code>Paginator</code> object via
+<code>client.get_paginator('operation_name')</code> to iterate through
+pages of raw dictionaries.</li>
+<li><strong>Collections in Resources:</strong> Resources wrap paginators
+into native Python iterables called <code>Collections</code>.
+Collections automatically handle pagination under the hood, allowing
+developers to write idiomatic Python <code>for</code> loops directly
+over the resource instances without tracking tokens.</li>
+</ul>
+<h3 id="service-coverage-and-maintenance">Service Coverage and
+Maintenance</h3>
+<p>AWS does not maintain parity between Clients and Resources:</p>
+<ul>
+<li><strong>Clients:</strong> Provide 100% service coverage. Whenever
+AWS releases a new service or updates an existing API operation, the
+low-level client supports it immediately via automated model
+updates.</li>
+<li><strong>Resources:</strong> Only exist for a select subset of mature
+AWS services (such as S3, EC2, DynamoDB, IAM, and SQS). AWS has
+effectively ceased active development of new Service Resources in Boto3.
+As a result, newer services and newer APIs for legacy services are
+exclusively accessible through the low-level Client interface.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

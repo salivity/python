@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Does sys.getsizeof Measure in Python? - python</title>
+    <meta name="description" content="Python's sys.getsizeof() function returns the memory footprint of an object in bytes, accounting for the object's internal structure and garbage collection overhead. However, it only performs a shallow measurement: it computes the memory directly allocat">
+    <link rel="canonical" href="https://salivity.github.io/python/article/what-does-sys-getsizeof-measure-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="What Does sys.getsizeof Measure in Python? - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/what-does-sys-getsizeof-measure-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's sys.getsizeof() function returns the memory footprint of an object in bytes, accounting for the object's internal structure and garbage collection overhead. However, it only performs a shallow measurement: it computes the memory directly allocat" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="what-does-sysgetsizeof-measure-in-python">What Does
+sys.getsizeof Measure in Python?</h1>
+<p>Python's <code>sys.getsizeof()</code> function returns the memory
+footprint of an object in bytes, accounting for the object's internal
+structure and garbage collection overhead. However, it only performs a
+shallow measurement: it computes the memory directly allocated to the
+object itself, ignoring the memory consumed by any objects it
+references. Understanding this distinction is critical for accurately
+diagnosing memory usage in Python applications.</p>
+<h3 id="direct-memory-vs-referenced-memory">Direct Memory vs. Referenced
+Memory</h3>
+<p>When you pass an object to <code>sys.getsizeof()</code>, it returns
+the storage required for that specific object instance. For primitive
+types—such as integers, floats, and strings—this value represents the
+total memory consumption because the object directly contains its value
+alongside internal metadata like reference counts and type pointers.</p>
+<p>For container types, such as lists, dictionaries, tuples, and sets,
+<code>sys.getsizeof()</code> measures only the container structure
+itself. For example, calling <code>sys.getsizeof()</code> on a list
+calculates the space used by the list header and an internal array of
+memory addresses (pointers). It does not measure the items stored within
+the list. A list containing ten 100-megabyte strings will report
+virtually the same size as a list containing ten small integers, because
+the list only holds pointers to those objects, not the objects
+themselves.</p>
+<h3 id="how-sysgetsizeof-works-internally">How
+<code>sys.getsizeof()</code> Works Internally</h3>
+<p>The function operates by calling the object's internal
+<code>__sizeof__()</code> method and adding any additional
+implementation-specific overhead:</p>
+<ol type="1">
+<li><strong><code>__sizeof__()</code> Implementation:</strong> Each
+built-in type defines a <code>__sizeof__()</code> method that calculates
+its base size plus any variable-length data (such as characters in a
+string or pointer slots in an array).</li>
+<li><strong>Garbage Collector Overhead:</strong> If the object is
+managed by Python's cyclic garbage collector (such as lists, dicts, and
+custom class instances), <code>sys.getsizeof()</code> automatically adds
+the size of the garbage collector header (<code>PyGC_Head</code>) to the
+total.</li>
+</ol>
+<h3 id="behavior-with-custom-classes">Behavior with Custom Classes</h3>
+<p>When applied to instances of user-defined classes,
+<code>sys.getsizeof()</code> measures only the instance object itself.
+By default, user-defined instances store their attributes in an internal
+dictionary (<code>__dict__</code>). The size returned will not include
+the memory consumed by the <code>__dict__</code> object or the values
+stored inside it.</p>
+<p>If a class uses <code>__slots__</code> instead of a dynamic
+dictionary, the attributes are stored directly in the instance layout.
+In this case, <code>sys.getsizeof()</code> reflects the space allocated
+for these fixed attribute pointers, but it still excludes the memory of
+the referenced objects assigned to those attributes.</p>
+<h3 id="measuring-deep-memory-usage">Measuring Deep Memory Usage</h3>
+<p>Because <code>sys.getsizeof()</code> does not recursively traverse
+nested structures, it cannot provide an accurate total footprint for
+complex, nested data structures. To calculate the full ("deep") memory
+usage of an object and everything it references, you must recursively
+traverse the object graph using tools like the <code>asizeof</code>
+module from the third-party <code>Pympler</code> library or custom
+recursive traversal algorithms.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

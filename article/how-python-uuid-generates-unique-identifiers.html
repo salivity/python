@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python uuid Generates Unique Identifiers - python</title>
+    <meta name="description" content="Python's standard uuid module provides tools to generate Universally Unique Identifiers (UUIDs) compliant with RFC 4122. This article explores the underlying mechanisms Python uses to construct these 128-bit identifiers, breaking down the specific algori">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-uuid-generates-unique-identifiers">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python uuid Generates Unique Identifiers - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-uuid-generates-unique-identifiers" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's standard uuid module provides tools to generate Universally Unique Identifiers (UUIDs) compliant with RFC 4122. This article explores the underlying mechanisms Python uses to construct these 128-bit identifiers, breaking down the specific algori" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-uuid-generates-unique-identifiers">How Python uuid
+Generates Unique Identifiers</h1>
+<p>Python's standard <code>uuid</code> module provides tools to generate
+Universally Unique Identifiers (UUIDs) compliant with RFC 4122. This
+article explores the underlying mechanisms Python uses to construct
+these 128-bit identifiers, breaking down the specific algorithms behind
+time-based, cryptographic, and random generation across UUID versions 1,
+3, 4, and 5.</p>
+<h3 id="what-is-a-uuid">What is a UUID?</h3>
+<p>A UUID (Universally Unique Identifier) is a 128-bit integer
+represented as a hexadecimal string split into five groups separated by
+hyphens: <code>8-4-4-4-12</code> (for example,
+<code>123e4567-e89b-12d3-a456-426614174000</code>). Out of the 128 bits,
+4 bits are reserved to indicate the UUID version, and 2 or 3 bits define
+the variant (the internal layout structure).</p>
+<h3 id="how-python-implements-rfc-4122">How Python Implements RFC
+4122</h3>
+<p>Python's built-in <code>uuid</code> module implements the standard
+algorithms defined in RFC 4122. Depending on the function called, Python
+sources data from the system clock, hardware addresses, cryptographic
+hash functions, or the operating system's random number generator.</p>
+<h4 id="1-uuid1-host-id-and-timestamp">1. UUID1: Host ID and
+Timestamp</h4>
+<p>The <code>uuid.uuid1()</code> function generates an identifier based
+on:</p>
+<ul>
+<li><strong>Current Time:</strong> A 60-bit timestamp representing the
+number of 100-nanosecond intervals since October 15, 1582.</li>
+<li><strong>Clock Sequence:</strong> A 14-bit sequence counter that
+increments if the system clock is stepped backward, preventing duplicate
+IDs.</li>
+<li><strong>Node ID:</strong> A 48-bit value derived from the machine's
+MAC address using <code>uuid.getnode()</code>. If a real hardware
+address cannot be retrieved, Python generates a random 48-bit number and
+sets the multicast bit to prevent collisions with real hardware
+addresses.</li>
+</ul>
+<p>Because UUID1 contains the MAC address and creation time, it can
+expose device identity and exact creation timestamps.</p>
+<h4 id="2-uuid4-pseudorandom-generation">2. UUID4: Pseudorandom
+Generation</h4>
+<p>The <code>uuid.uuid4()</code> function is the most commonly used
+generator. It creates an identifier using pseudorandom or
+cryptographically secure random numbers:</p>
+<ul>
+<li>Python pulls 16 random bytes (128 bits) directly from the operating
+system's entropy pool via <code>os.urandom()</code>.</li>
+<li>It overwrites 4 bits to denote Version 4 (<code>0100</code>).</li>
+<li>It sets 2 bits to define the RFC 4122 variant
+(<code>10</code>).</li>
+</ul>
+<p>This leaves 122 bits of pure entropy. The probability of generating a
+duplicate UUID4 is roughly 1 in <span
+class="math inline">\(2^{122}\)</span> (or approximately <span
+class="math inline">\(5.3 \times 10^{36}\)</span>), making accidental
+collisions practically impossible in real-world systems.</p>
+<h4 id="3-uuid3-and-uuid5-namespace-and-hashing">3. UUID3 and UUID5:
+Namespace and Hashing</h4>
+<p>UUID3 and UUID5 generate deterministic identifiers using a namespace
+UUID and a string name. The same namespace and name input will always
+produce the exact same UUID:</p>
+<ul>
+<li><strong><code>uuid.uuid3(namespace, name)</code>:</strong>
+Concatenates the binary representation of the namespace UUID with the
+input string and hashes the result using <strong>MD5</strong>.</li>
+<li><strong><code>uuid.uuid5(namespace, name)</code>:</strong> Follows
+the same process but uses <strong>SHA-1</strong> for hashing.</li>
+</ul>
+<p>After computing the hash, Python truncates the digest to 128 bits,
+sets the version bits (3 or 5), adjusts the variant bits, and formats
+the output. UUID5 is preferred over UUID3 because SHA-1 is more
+collision-resistant than MD5.</p>
+<h3 id="basic-usage-in-python">Basic Usage in Python</h3>
+<p>Generating these identifiers in Python requires no external
+dependencies:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> uuid</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Random UUID (UUID4)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>random_id <span class="op">=</span> uuid.uuid4()</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;UUID4: </span><span class="sc">{</span>random_id<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Host and time-based UUID (UUID1)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>host_id <span class="op">=</span> uuid.uuid1()</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;UUID1: </span><span class="sc">{</span>host_id<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Deterministic namespace UUID (UUID5)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>named_id <span class="op">=</span> uuid.uuid5(uuid.NAMESPACE_DNS, <span class="st">&quot;python.org&quot;</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;UUID5: </span><span class="sc">{</span>named_id<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<h3 id="summary-of-generation-mechanics">Summary of Generation
+Mechanics</h3>
+<ul>
+<li><strong><code>uuid.uuid1()</code></strong> merges physical hardware
+addresses with high-resolution timestamps.</li>
+<li><strong><code>uuid.uuid3()</code> /
+<code>uuid.uuid5()</code></strong> transform inputs deterministically
+using cryptographic hashing (MD5/SHA-1).</li>
+<li><strong><code>uuid.uuid4()</code></strong> reads cryptographically
+secure random bytes from <code>os.urandom()</code>.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python doctest Runs Tests in Docstrings - python</title>
+    <meta name="description" content="Python’s built-in doctest module scans your code's documentation strings (docstrings), extracts snippets that look like interactive Python sessions, executes them, and verifies that the output matches the documented results. By treating documentation e">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-doctest-runs-tests-in-docstrings">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python doctest Runs Tests in Docstrings - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-doctest-runs-tests-in-docstrings" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s built-in doctest module scans your code's documentation strings (docstrings), extracts snippets that look like interactive Python sessions, executes them, and verifies that the output matches the documented results. By treating documentation e" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-doctest-runs-tests-in-docstrings">How Python doctest
+Runs Tests in Docstrings</h1>
+<p>Python’s built-in <code>doctest</code> module scans your code's
+documentation strings (docstrings), extracts snippets that look like
+interactive Python sessions, executes them, and verifies that the output
+matches the documented results. By treating documentation examples as
+automated tests, it ensures that your API reference remains both
+accurate and functional with minimal setup.</p>
+<h2 id="how-doctest-identifies-and-parses-tests">How doctest Identifies
+and Parses Tests</h2>
+<p>The <code>doctest</code> module searches through modules, classes,
+methods, and functions to inspect their docstrings. It looks
+specifically for lines prefixed with the standard Python interactive
+prompt:</p>
+<ul>
+<li><code>&gt;&gt;&gt; </code> denotes the primary prompt containing
+code expressions or statements to evaluate.</li>
+<li><code>... </code> denotes continuation lines for multiline
+statements, loops, or function definitions.</li>
+</ul>
+<p>Any text immediately following a line or block of
+<code>&gt;&gt;&gt; </code> inputs—up to the next prompt, an empty line,
+or the end of the docstring—is treated as the expected output.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> add(a, b):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Return the sum of a and b.</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">    &gt;&gt;&gt; add(2, 3)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">    5</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">    &gt;&gt;&gt; add(-1, 1)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">    0</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">    &quot;&quot;&quot;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">+</span> b</span></code></pre></div>
+<p>In this example, <code>doctest</code> identifies two separate tests:
+<code>add(2, 3)</code> with an expected output of <code>5</code>, and
+<code>add(-1, 1)</code> with an expected output of <code>0</code>.</p>
+<h2 id="the-execution-mechanism">The Execution Mechanism</h2>
+<p>Once <code>doctest</code> parses the code snippets and their expected
+outputs, it runs them through an automated execution pipeline:</p>
+<ol type="1">
+<li><strong>Namespace Isolation:</strong> By default,
+<code>doctest</code> creates a shallow copy of the target module's
+global namespace, ensuring tests can access the functions, classes, and
+imported modules defined in that file.</li>
+<li><strong>Evaluation:</strong> The extracted code is executed
+dynamically using Python's runtime evaluation mechanisms
+(<code>exec()</code> for statements and <code>eval()</code> for
+expressions).</li>
+<li><strong>Stream Interception:</strong> Standard output
+(<code>sys.stdout</code>) is intercepted during execution so that any
+returned values or printed text are captured as raw strings.</li>
+<li><strong>Exception Handling:</strong> If an example expects an error,
+<code>doctest</code> looks for a traceback header
+(<code>Traceback (most recent call last):</code>) followed by the
+exception type and message. It checks whether the raised exception
+matches the documented behavior.</li>
+</ol>
+<h2 id="output-comparison-and-directives">Output Comparison and
+Directives</h2>
+<p><code>doctest</code> performs an exact string comparison between the
+captured output and the expected output in the docstring. A test passes
+only if the actual output matches character-for-character, including
+whitespace and line breaks.</p>
+<p>To handle dynamic or variable outputs, <code>doctest</code> supports
+inline directives that modify comparison rules:</p>
+<ul>
+<li><code>+NORMALIZE_WHITESPACE</code>: Collapses multiple spaces, tabs,
+and newlines into single spaces, making tests resilient to formatting
+variations.</li>
+<li><code>+ELLIPSIS</code>: Allows the use of <code>...</code> inside
+expected output to act as a wildcard matching any substring, which is
+useful for memory addresses, object representations, or timestamps.</li>
+<li><code>+SKIP</code>: Tells <code>doctest</code> to skip running a
+specific test block entirely.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_user():</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">    &gt;&gt;&gt; get_user() # doctest: +ELLIPSIS</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">    &lt;User object at 0x...&gt;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">    &quot;&quot;&quot;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<h2 id="running-doctests">Running doctests</h2>
+<p>You can execute docstring tests directly from the command line
+without modifying your source code:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-m</span> doctest <span class="at">-v</span> script.py</span></code></pre></div>
+<p>The <code>-v</code> (verbose) flag displays every test executed and
+whether it passed or failed. Without the flag, <code>doctest</code> runs
+silently and only prints output if a test fails.</p>
+<p>Alternatively, you can trigger execution within the script itself by
+adding a standard entry point:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&quot;__main__&quot;</span>:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="im">import</span> doctest</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    doctest.testmod()</span></code></pre></div>
+<p>When run as a standalone script, <code>doctest.testmod()</code>
+inspects the current module's docstrings, executes all embedded
+sessions, and reports failures to standard error.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

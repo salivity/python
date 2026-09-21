@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python's help() Reads Object Documentation - python</title>
+    <meta name="description" content="Python's built-in help() function is an interactive wrapper around the standard library's pydoc module, designed to dynamically inspect objects and render human-readable documentation directly in the console at runtime. By introspecting an object's attri">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-s-help-reads-object-documentation">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python's help() Reads Object Documentation - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-s-help-reads-object-documentation" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's built-in help() function is an interactive wrapper around the standard library's pydoc module, designed to dynamically inspect objects and render human-readable documentation directly in the console at runtime. By introspecting an object's attri" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-pythons-help-reads-object-documentation">How Python's help()
+Reads Object Documentation</h1>
+<p>Python's built-in <code>help()</code> function is an interactive
+wrapper around the standard library's <code>pydoc</code> module,
+designed to dynamically inspect objects and render human-readable
+documentation directly in the console at runtime. By introspecting an
+object's attributes, signature, class hierarchy, and docstrings,
+<code>help()</code> constructs a comprehensive reference manual on the
+fly. This article examines the exact runtime mechanics
+<code>help()</code> uses to extract, format, and present metadata from
+arbitrary Python objects.</p>
+<h3 id="the-underlying-engine-pydoc">The Underlying Engine:
+<code>pydoc</code></h3>
+<p>When invoked, <code>help()</code> delegates execution to an instance
+of <code>pydoc.Helper</code>. Instead of parsing raw <code>.py</code>
+source files from disk, <code>pydoc</code> primarily interacts with live
+objects already loaded into memory. It dynamically queries the object
+using standard Python introspection protocols, resolving its type,
+module origin, and structural layout.</p>
+<h3 id="extraction-of-__doc__">Extraction of <code>__doc__</code></h3>
+<p>The most direct interaction occurs with the <code>__doc__</code>
+attribute. When a function, class, or module defines a docstring, the
+Python compiler binds that string literal to the object's
+<code>__doc__</code> attribute. At runtime, <code>pydoc</code> reads
+this attribute:</p>
+<ul>
+<li><strong>Modules:</strong> Reads the module-level
+<code>__doc__</code> string and enumerates public members listed in
+<code>__all__</code> (or all non-underscored attributes if
+<code>__all__</code> is absent).</li>
+<li><strong>Functions:</strong> Reads the function's
+<code>__doc__</code> and combines it with runtime signature
+details.</li>
+<li><strong>Classes:</strong> Reads the class-level
+<code>__doc__</code>, followed by the docstrings of its methods and
+properties.</li>
+</ul>
+<p>If an object lacks a <code>__doc__</code> attribute or it is set to
+<code>None</code>, <code>help()</code> indicates that no documentation
+is found, though it will still display structural information such as
+method signatures.</p>
+<h3 id="signature-resolution-via-introspection">Signature Resolution via
+Introspection</h3>
+<p><code>help()</code> does not rely solely on docstrings to describe
+callables. It leverages the <code>inspect</code> module to parse runtime
+metadata from code objects:</p>
+<ul>
+<li><strong>Parameters and Defaults:</strong> It reads
+<code>__code__.co_varnames</code>, <code>__defaults__</code>, and
+<code>__kwdefaults__</code> to reconstruct argument lists.</li>
+<li><strong>Type Annotations:</strong> It inspects
+<code>__annotations__</code> to display type hints alongside parameters
+and return values.</li>
+<li><strong>Built-in Functions and C Extensions:</strong> For C-based
+built-ins (such as those in the <code>math</code> or <code>sys</code>
+modules), Python inspects the internal <code>__text_signature__</code>
+attribute, often populated by Python's Argument Clinic, to reconstruct
+function headers even when bytecode is unavailable.</li>
+</ul>
+<h3 id="traversing-the-method-resolution-order-mro">Traversing the
+Method Resolution Order (MRO)</h3>
+<p>When analyzing classes, <code>help()</code> inspects the class's
+<code>__mro__</code> (Method Resolution Order) attribute. This allows
+the utility to:</p>
+<ol type="1">
+<li>Differentiate between methods defined directly on the target class
+and those inherited from base classes.</li>
+<li>Group class members into logical sections: methods, static methods,
+class methods, properties, and inherited attributes.</li>
+<li>Fall back to base class docstrings if an overriding method does not
+define its own <code>__doc__</code>.</li>
+</ol>
+<h3 id="descriptors-and-dynamic-attributes">Descriptors and Dynamic
+Attributes</h3>
+<p>Because <code>help()</code> operates on live objects, it must access
+class members carefully without executing unintended code. It accesses
+attributes via <code>inspect.getattr_static()</code> rather than
+standard <code>getattr()</code>. This prevents the evaluation of
+properties, custom descriptors, or <code>__getattr__</code> hooks during
+documentation generation, ensuring that running <code>help()</code> does
+not trigger unintended side effects.</p>
+<h3 id="output-formatting-and-paging">Output Formatting and Paging</h3>
+<p>Once the metadata, docstrings, and signatures are assembled into
+plain text, <code>pydoc</code> passes the string to a pager. In an
+interactive terminal session on Unix-like platforms, it pipes output
+through system pagers such as <code>less</code> or <code>more</code>. In
+non-interactive environments or standard IDE consoles, it writes the
+formatted documentation directly to <code>sys.stdout</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

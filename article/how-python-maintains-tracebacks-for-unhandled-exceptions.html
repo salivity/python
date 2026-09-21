@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Maintains Tracebacks for Unhandled Exceptions - python</title>
+    <meta name="description" content="When an unhandled exception occurs in Python, the interpreter prints a detailed traceback showing the exact call sequence that caused the failure. Python maintains this information by inspecting the runtime call stack as the exception propagates, dynamic">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-maintains-tracebacks-for-unhandled-exceptions">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Maintains Tracebacks for Unhandled Exceptions - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-maintains-tracebacks-for-unhandled-exceptions" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When an unhandled exception occurs in Python, the interpreter prints a detailed traceback showing the exact call sequence that caused the failure. Python maintains this information by inspecting the runtime call stack as the exception propagates, dynamic" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-maintains-tracebacks-for-unhandled-exceptions">How
+Python Maintains Tracebacks for Unhandled Exceptions</h1>
+<p>When an unhandled exception occurs in Python, the interpreter prints
+a detailed traceback showing the exact call sequence that caused the
+failure. Python maintains this information by inspecting the runtime
+call stack as the exception propagates, dynamically linking execution
+frames into a specialized traceback object, attaching that object
+directly to the exception instance, and passing it to a default handler
+that prints the error to the standard error stream.</p>
+<h3 id="frame-objects-and-execution-state">Frame Objects and Execution
+State</h3>
+<p>At runtime, Python represents each function call using an internal
+structure called a frame object (<code>PyFrameObject</code> in CPython).
+Every time a function is invoked, a new frame is pushed onto Python's
+execution stack. A frame object stores critical execution context,
+including:</p>
+<ul>
+<li>The code object containing bytecode instructions.</li>
+<li>The current instruction pointer (<code>f_lasti</code>), which
+indicates the exact bytecode instruction being executed.</li>
+<li>Local and global variable namespaces.</li>
+<li>A reference to the calling frame (<code>f_back</code>), forming the
+call stack hierarchy.</li>
+</ul>
+<h3 id="traceback-construction-during-unwinding">Traceback Construction
+During Unwinding</h3>
+<p>When an exception is raised via the <code>raise</code> statement or
+by an internal runtime error, Python begins stack unwinding. As the
+runtime searches up the call stack for an enclosing
+<code>try...except</code> block, it constructs a traceback object
+(<code>PyTracebackObject</code>).</p>
+<p>Traceback objects are organized as a singly linked list. Each node in
+the list captures a snapshot of a specific frame at the moment the
+exception passed through it. Specifically, a traceback node records:</p>
+<ul>
+<li><code>tb_frame</code>: A reference to the execution frame.</li>
+<li><code>tb_lineno</code>: The source code line number corresponding to
+the current instruction pointer.</li>
+<li><code>tb_lasti</code>: The index of the last bytecode instruction
+executed within that frame.</li>
+<li><code>tb_next</code>: A pointer to the next traceback node higher up
+the call chain.</li>
+</ul>
+<p>As the exception propagates upward through callers that do not handle
+it, Python prepends or appends new traceback nodes to maintain the
+sequential history of the call chain from the root frame down to the
+origin of the error.</p>
+<h3 id="attachment-to-the-exception-instance">Attachment to the
+Exception Instance</h3>
+<p>Modern Python versions (Python 3+) store the traceback directly on
+the exception instance itself via the <code>__traceback__</code>
+attribute. When an exception is raised, Python automatically updates
+this attribute with the newly assembled traceback chain.</p>
+<p>If an exception is caught and re-raised, or if another exception is
+raised while handling the first, Python preserves the original traceback
+by setting the <code>__context__</code> or <code>__cause__</code>
+attributes on the new exception, allowing chains of tracebacks to
+persist across multiple distinct error events.</p>
+<h3 id="unhandled-exceptions-and-sysexcepthook">Unhandled Exceptions and
+<code>sys.excepthook</code></h3>
+<p>If the exception reaches the top of the call stack without being
+caught by any <code>except</code> block, it becomes an unhandled
+exception. Python handles this final state through
+<code>sys.excepthook</code>:</p>
+<ol type="1">
+<li>The interpreter extracts the exception type, the exception value
+(the instance), and the associated traceback object from
+<code>instance.__traceback__</code>.</li>
+<li>These three components are passed to
+<code>sys.excepthook(type, value, traceback)</code>.</li>
+<li>The default implementation of <code>sys.excepthook</code> traverses
+the linked list of traceback nodes from oldest to newest. For each node,
+it reads the associated code object, resolves the file name and line
+number, retrieves the corresponding source code line from disk or memory
+caches, and formats the output.</li>
+<li>The formatted string is written to <code>sys.stderr</code>, and the
+interpreter process exits with a non-zero status code.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

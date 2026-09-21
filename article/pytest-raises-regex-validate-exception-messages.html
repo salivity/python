@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pytest Raises Regex: Validate Exception Messages - python</title>
+    <meta name="description" content="Testing for raised exceptions is a fundamental part of writing resilient Python code, and verifying the exact error text ensures that failures occur for the intended reasons. This article explains how the pytest.raises context manager uses regular expres">
+    <link rel="canonical" href="https://salivity.github.io/python/article/pytest-raises-regex-validate-exception-messages">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pytest Raises Regex: Validate Exception Messages - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/pytest-raises-regex-validate-exception-messages" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Testing for raised exceptions is a fundamental part of writing resilient Python code, and verifying the exact error text ensures that failures occur for the intended reasons. This article explains how the pytest.raises context manager uses regular expres" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pytest-raises-regex-validate-exception-messages">Pytest Raises
+Regex: Validate Exception Messages</h1>
+<p>Testing for raised exceptions is a fundamental part of writing
+resilient Python code, and verifying the exact error text ensures that
+failures occur for the intended reasons. This article explains how the
+<code>pytest.raises</code> context manager uses regular expressions via
+its <code>match</code> parameter to capture and validate exception
+messages, how to escape special characters, and how to apply regex
+patterns to test dynamic error strings effectively.</p>
+<h2 id="the-match-parameter">The <code>match</code> Parameter</h2>
+<p>The <code>pytest.raises</code> context manager accepts a
+<code>match</code> parameter that tests the string representation of an
+exception against a regular expression. Under the hood, pytest evaluates
+the pattern using Python's <code>re.search()</code> function, meaning
+the regex only needs to match a portion of the exception message rather
+than the entire string.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pytest</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> divide(a, b):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> b <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">&quot;Cannot divide by zero.&quot;</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">/</span> b</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_divide_by_zero():</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> pytest.raises(<span class="pp">ValueError</span>, match<span class="op">=</span><span class="vs">r&quot;divide by zero&quot;</span>):</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        divide(<span class="dv">10</span>, <span class="dv">0</span>)</span></code></pre></div>
+<p>If the function raises the expected <code>ValueError</code> and the
+message contains <code>"divide by zero"</code>, the test passes. If the
+message does not match, pytest fails the test and outputs both the
+pattern and the actual exception message.</p>
+<h2 id="matching-dynamic-and-formatted-messages">Matching Dynamic and
+Formatted Messages</h2>
+<p>When an exception message includes dynamic data, such as IDs,
+variable names, or timestamps, you can leverage standard regular
+expression syntax to validate the output format without hardcoding
+changing values.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process_user(user_id):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> user_id <span class="op">&lt;</span> <span class="dv">0</span>:</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="ss">f&quot;Invalid user ID: </span><span class="sc">{</span>user_id<span class="sc">}</span><span class="ss">. Must be positive.&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_process_user_invalid():</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Matches &quot;Invalid user ID: &lt;digits&gt;. Must be positive.&quot;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> pytest.raises(<span class="pp">ValueError</span>, match<span class="op">=</span><span class="vs">r&quot;Invalid user ID: -</span><span class="dv">\d</span><span class="op">+</span><span class="ch">\.</span><span class="vs"> Must be positive</span><span class="ch">\.</span><span class="vs">&quot;</span>):</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        process_user(<span class="op">-</span><span class="dv">42</span>)</span></code></pre></div>
+<p>Useful regex constructs for exception testing include:</p>
+<ul>
+<li><code>^</code> and <code>$</code>: Anchor the match to the start and
+end of the string to enforce an exact full-string match.</li>
+<li><code>\d+</code>: Match one or more numeric digits.</li>
+<li><code>.*</code>: Match any sequence of characters between known
+substrings.</li>
+<li><code>(?i)</code>: Enable case-insensitive matching at the start of
+the pattern.</li>
+</ul>
+<h2 id="escaping-special-regex-characters">Escaping Special Regex
+Characters</h2>
+<p>Because <code>match</code> interprets strings as regular expressions,
+literal characters that carry syntactic meaning in regex—such as
+parentheses, brackets, question marks, and periods—must be escaped.</p>
+<p>Failing to escape these characters can lead to regex compilation
+errors or false test failures:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_input(data):</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">&quot;Invalid input [code: 400] (fatal)&quot;</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_parse_input_manual_escape():</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Escaping brackets and parentheses manually</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> pytest.raises(<span class="pp">ValueError</span>, match<span class="op">=</span><span class="vs">r&quot;Invalid input </span><span class="ch">\[</span><span class="vs">code: 400</span><span class="ch">\]</span><span class="vs"> </span><span class="ch">\(</span><span class="vs">fatal</span><span class="ch">\)</span><span class="vs">&quot;</span>):</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        parse_input(<span class="st">&quot;bad_data&quot;</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_parse_input_auto_escape():</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Using re.escape for exact literal matching</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    expected_message <span class="op">=</span> <span class="st">&quot;Invalid input [code: 400] (fatal)&quot;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> pytest.raises(<span class="pp">ValueError</span>, match<span class="op">=</span>re.escape(expected_message)):</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        parse_input(<span class="st">&quot;bad_data&quot;</span>)</span></code></pre></div>
+<p>Using <code>re.escape()</code> is the safest approach when you want
+to assert the entire string as a literal without regular expression
+evaluation.</p>
+<h2 id="inspecting-exceptions-via-exceptioninfo">Inspecting Exceptions
+via <code>ExceptionInfo</code></h2>
+<p>While the <code>match</code> parameter is the preferred, idiomatic
+way to test error strings, pytest also provides access to the underlying
+exception object using the <code>as</code> clause. This allows for
+manual regex checks using the standard <code>re</code> module if complex
+multi-step assertions are required.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_manual_regex_inspection():</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> pytest.raises(<span class="pp">ValueError</span>) <span class="im">as</span> exc_info:</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">&quot;Error code: ERR_1042 occurred.&quot;</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    exception_message <span class="op">=</span> <span class="bu">str</span>(exc_info.value)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> re.search(<span class="vs">r&quot;ERR_</span><span class="dv">\d</span><span class="op">+</span><span class="vs">&quot;</span>, exception_message) <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span></span></code></pre></div>
+<p>Accessing <code>exc_info.value</code> converts the error directly to
+its string representation, allowing standard assertions on custom
+exception attributes in addition to regex matching.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

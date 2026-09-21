@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python fractions.Fraction Preserves Exact Division - python</title>
+    <meta name="description" content="Python's fractions.Fraction class preserves exact rational calculations during division by representing numbers as pairs of arbitrary-precision integers rather than binary floating-point values. When dividing fractions, the class performs symbolic arithm">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-fractions-fraction-preserves-exact-division">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python fractions.Fraction Preserves Exact Division - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-fractions-fraction-preserves-exact-division" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's fractions.Fraction class preserves exact rational calculations during division by representing numbers as pairs of arbitrary-precision integers rather than binary floating-point values. When dividing fractions, the class performs symbolic arithm" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-fractionsfraction-preserves-exact-division">How
+Python fractions.Fraction Preserves Exact Division</h1>
+<p>Python's <code>fractions.Fraction</code> class preserves exact
+rational calculations during division by representing numbers as pairs
+of arbitrary-precision integers rather than binary floating-point
+values. When dividing fractions, the class performs symbolic arithmetic
+using cross-multiplication and automatically simplifies the result via
+the greatest common divisor (GCD). This prevents rounding errors,
+precision loss, and representation inaccuracies inherent to standard
+IEEE 754 floating-point operations.</p>
+<h3 id="the-limitation-of-standard-floating-point-division">The
+Limitation of Standard Floating-Point Division</h3>
+<p>Standard Python division using the <code>/</code> operator converts
+numbers into standard 64-bit binary floating-point numbers
+(<code>float</code>). Many decimal fractions, such as <span
+class="math inline">\(1/3\)</span> or even <span
+class="math inline">\(1/10\)</span>, cannot be represented exactly in
+binary floating-point format:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> <span class="dv">3</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)  <span class="co"># Output: 0.3333333333333333</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result <span class="op">*</span> <span class="dv">3</span> <span class="op">==</span> <span class="dv">1</span>)  <span class="co"># Output: True, but often fails in complex arithmetic</span></span></code></pre></div>
+<p>As calculations accumulate, these small rounding errors compound and
+lead to drift in accuracy.</p>
+<h3
+id="internal-representation-storing-integers-not-approximations">Internal
+Representation: Storing Integers, Not Approximations</h3>
+<p>The <code>fractions.Fraction</code> class avoids approximation by
+storing two distinct attributes:</p>
+<ul>
+<li><code>_numerator</code> (an exact Python <code>int</code>)</li>
+<li><code>_denominator</code> (an exact Python <code>int</code>,
+guaranteed to be greater than zero)</li>
+</ul>
+<p>Because Python's standard <code>int</code> type supports arbitrary
+precision (limited only by available system memory), the numerator and
+denominator can grow to whatever size is necessary to preserve
+mathematical truth without truncation.</p>
+<h3 id="the-mathematical-mechanics-of-division">The Mathematical
+Mechanics of Division</h3>
+<p>Division between two rational numbers is defined mathematically
+as:</p>
+<p><span class="math display">\[\frac{a}{b} \div \frac{c}{d} = \frac{a
+\times d}{b \times c}\]</span></p>
+<p>Under the hood, when the <code>/</code> operator is used between two
+<code>Fraction</code> instances, Python executes the
+<code>__truediv__</code> special method:</p>
+<ol type="1">
+<li><strong>Cross-Multiplication:</strong> The class multiplies the
+numerator of the dividend by the denominator of the divisor to get the
+intermediate numerator (<span class="math inline">\(a \times
+d\)</span>). Next, it multiplies the denominator of the dividend by the
+numerator of the divisor to get the intermediate denominator (<span
+class="math inline">\(b \times c\)</span>).</li>
+<li><strong>Integer Preservation:</strong> These multiplications are
+pure integer operations. No conversion to <code>float</code> occurs at
+any stage.</li>
+<li><strong>Sign Normalization:</strong> If the resulting denominator is
+negative, the signs of both numerator and denominator are flipped so
+that the denominator remains strictly positive.</li>
+</ol>
+<h3 id="reduction-via-the-greatest-common-divisor-gcd">Reduction via the
+Greatest Common Divisor (GCD)</h3>
+<p>After calculating the intermediate numerator and denominator,
+<code>Fraction</code> normalizes the result into its simplest
+irreducible form:</p>
+<ol type="1">
+<li>Python computes the greatest common divisor using
+<code>math.gcd(numerator, denominator)</code>.</li>
+<li>Both the numerator and denominator are divided by the GCD using
+exact integer division (<code>//</code>).</li>
+</ol>
+<p>This reduction step keeps the integers as small as possible while
+retaining the exact value.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fractions <span class="im">import</span> Fraction</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> Fraction(<span class="dv">3</span>, <span class="dv">4</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> Fraction(<span class="dv">9</span>, <span class="dv">8</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># (3/4) / (9/8) = (3 * 8) / (4 * 9) = 24 / 36 = 2 / 3</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> a <span class="op">/</span> b</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)  <span class="co"># Output: 2/3</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result.numerator)  <span class="co"># Output: 2</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result.denominator)  <span class="co"># Output: 3</span></span></code></pre></div>
+<h3 id="type-interoperability">Type Interoperability</h3>
+<p>When dividing an integer by a <code>Fraction</code>, or vice versa,
+Python utilizes reflection methods (<code>__rtruediv__</code>). The
+integer is automatically treated as a fraction with a denominator of
+<code>1</code>, ensuring that mixed-type division between integers and
+fractions remains strictly within the domain of exact rational
+arithmetic without falling back to floating-point approximations.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

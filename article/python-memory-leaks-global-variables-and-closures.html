@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Memory Leaks: Global Variables and Closures - python</title>
+    <meta name="description" content="Python manages memory through a dual mechanism consisting of reference counting and a generational cyclic garbage collector. While reference counting immediately frees objects whose reference counts reach zero, it cannot independently resolve uncollected">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-memory-leaks-global-variables-and-closures">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Memory Leaks: Global Variables and Closures - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-memory-leaks-global-variables-and-closures" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python manages memory through a dual mechanism consisting of reference counting and a generational cyclic garbage collector. While reference counting immediately frees objects whose reference counts reach zero, it cannot independently resolve uncollected" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-memory-leaks-global-variables-and-closures">Python Memory
+Leaks: Global Variables and Closures</h1>
+<p>Python manages memory through a dual mechanism consisting of
+reference counting and a generational cyclic garbage collector. While
+reference counting immediately frees objects whose reference counts
+reach zero, it cannot independently resolve uncollected references
+retained in the global scope or cycles created by closures. This article
+examines how the CPython runtime addresses memory retention caused by
+lingering global variables and circular closures, detailing the
+mechanics of cyclic garbage collection, the limitations of automatic
+cleanup, and techniques developers must use to prevent memory bloat.</p>
+<h2 id="how-pythons-memory-management-operates">How Python's Memory
+Management Operates</h2>
+<p>CPython utilizes two complementary systems to manage application
+memory:</p>
+<ol type="1">
+<li><strong>Reference Counting:</strong> Every Python object maintains a
+counter (<code>ob_refcnt</code>) tracking how many references point to
+it. The moment an object’s reference count falls to zero, CPython
+immediately deallocates its memory.</li>
+<li><strong>Generational Cyclic Garbage Collector (GC):</strong> Because
+reference counting cannot identify or collect reference cycles, Python
+incorporates a background collector divided into three generations
+(Generation 0, 1, and 2). Objects that survive collection passes are
+promoted to older generations, which are inspected less frequently.</li>
+</ol>
+<h2 id="lingering-global-variables-the-limits-of-automation">Lingering
+Global Variables: The Limits of Automation</h2>
+<p>Python does not automatically clean up lingering global variables
+because the interpreter treats them as actively required for the
+lifetime of the running module.</p>
+<h3 id="why-global-variables-leak">Why Global Variables Leak</h3>
+<p>Global variables reside in the module's <code>__dict__</code>
+namespace (accessible via <code>globals()</code>). As long as the module
+remains loaded in memory, the module dictionary maintains an active
+reference to every variable within it. Consequently, their reference
+count never drops to zero, shielding them from both reference counting
+deallocation and cyclic GC passes.</p>
+<p>Common causes include:</p>
+<ul>
+<li>Module-level caches implemented as raw dictionaries or lists that
+grow indefinitely.</li>
+<li>Large datasets loaded globally inside scripts intended to run as
+long-lived daemon processes or web workers.</li>
+</ul>
+<h3 id="handling-and-remediation">Handling and Remediation</h3>
+<p>Because Python's internal memory management considers global
+variables intentionally retained, resolution requires explicit developer
+action:</p>
+<ul>
+<li><strong>Explicit Deletion:</strong> Use the <code>del</code>
+statement to remove the variable from the namespace, or reassign it to
+<code>None</code> to decrement the reference count of the underlying
+object.</li>
+<li><strong>Scoping:</strong> Encapsulate operations within functions or
+classes so that local variables fall out of scope naturally when the
+execution frame is popped off the stack.</li>
+<li><strong>Bounded Caching:</strong> Replace open-ended global
+containers with <code>functools.lru_cache</code> or custom eviction
+structures to ensure objects are released once capacity thresholds are
+met.</li>
+</ul>
+<h2
+id="circular-closures-the-role-of-the-cyclic-garbage-collector">Circular
+Closures: The Role of the Cyclic Garbage Collector</h2>
+<p>Closures occur when an inner function retains access to variables
+from an enclosing scope. A circular closure happens when an enclosed
+function retains a reference to an object, and that object in turn
+retains a reference to the enclosed function.</p>
+<h3 id="how-circular-closures-form">How Circular Closures Form</h3>
+<p>Consider an object instance that defines an event handler or callback
+using a closure. If the closure captures <code>self</code> (or an object
+holding <code>self</code>), and <code>self</code> stores the closure
+function as an attribute, a circular reference is established:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Handler:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.callback <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> setup(<span class="va">self</span>):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Closure capturing &#39;self&#39;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">def</span> on_event():</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">self</span>.process()</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.callback <span class="op">=</span> on_event</span></code></pre></div>
+<p>In this scenario, <code>self</code> references <code>on_event</code>,
+and <code>on_event.__closure__</code> contains a cell referencing
+<code>self</code>. Even if all external references to the
+<code>Handler</code> instance are discarded, the reference counts for
+both the instance and the closure remain at least <code>1</code>.</p>
+<h3 id="how-python-collects-closure-cycles">How Python Collects Closure
+Cycles</h3>
+<p>The cyclic garbage collector specifically targets these unreachable
+reference islands through a multi-step detection algorithm:</p>
+<ol type="1">
+<li><strong>Trial Deletion:</strong> The GC identifies all container
+objects (objects capable of holding references, such as functions,
+tuples, dictionaries, and user-defined instances). It copies their
+reference counts into an internal field (<code>gc_refs</code>).</li>
+<li><strong>Cycle Isolation:</strong> The GC iterates through these
+objects and decrements <code>gc_refs</code> for every other object they
+reference. If an object's <code>gc_refs</code> drops to zero after
+accounting for internal references, it is marked as part of an isolated
+cycle unreachable from the application's root scope.</li>
+<li><strong>Deallocation:</strong> The GC breaks the cycle by unlinking
+the references and deallocates the objects, executing finalizers where
+present.</li>
+</ol>
+<p>Since Python 3.4 (PEP 442), objects with <code>__del__</code> methods
+caught in reference cycles can be safely collected. Python breaks cycles
+safely without stranding objects in <code>gc.garbage</code>.</p>
+<h2 id="best-practices-to-prevent-leaks">Best Practices to Prevent
+Leaks</h2>
+<p>To maintain predictable memory footprints and reduce GC overhead:</p>
+<ul>
+<li><strong>Use Weak References:</strong> Utilize Python's
+<code>weakref</code> module (such as <code>weakref.ref</code> or
+<code>weakref.WeakMethod</code>) when binding callbacks or maintaining
+caches. Weak references do not increment <code>ob_refcnt</code>,
+preventing cycles from forming.</li>
+<li><strong>Monitor the GC:</strong> Profile application memory using
+the standard <code>tracemalloc</code> library to locate allocation
+origins, and inspect <code>gc.get_objects()</code> to identify
+unexpected container retention in long-running processes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pytest Fixture Scopes and Autouse Explained - python</title>
+    <meta name="description" content="Pytest fixtures are foundational tools for managing test setup and teardown code in Python. This article outlines the five available fixture scope levels—function, class, module, package, and session—which determine how frequently a fixture is create">
+    <link rel="canonical" href="https://salivity.github.io/python/article/pytest-fixture-scopes-and-autouse-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pytest Fixture Scopes and Autouse Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/pytest-fixture-scopes-and-autouse-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Pytest fixtures are foundational tools for managing test setup and teardown code in Python. This article outlines the five available fixture scope levels—function, class, module, package, and session—which determine how frequently a fixture is create" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pytest-fixture-scopes-and-autouse-explained">Pytest Fixture
+Scopes and Autouse Explained</h1>
+<p>Pytest fixtures are foundational tools for managing test setup and
+teardown code in Python. This article outlines the five available
+fixture scope levels—function, class, module, package, and session—which
+determine how frequently a fixture is created and destroyed. It also
+explains the behavior of the <code>autouse=True</code> parameter, which
+forces fixtures to execute automatically without explicit invocation in
+test signatures.</p>
+<h2 id="pytest-fixture-scope-levels">Pytest Fixture Scope Levels</h2>
+<p>When defining a fixture with <code>@pytest.fixture(scope=...)</code>,
+the <code>scope</code> parameter determines the fixture's lifecycle and
+caching mechanism. Pytest offers five scope levels:</p>
+<h3 id="1-function-default">1. <code>function</code> (Default)</h3>
+<ul>
+<li><strong>Lifecycle:</strong> Created once per test function or
+method.</li>
+<li><strong>Teardown:</strong> Executes immediately after each
+individual test finishes.</li>
+<li><strong>Use Case:</strong> Providing isolated, mutable state (e.g.,
+a fresh dictionary, a unique database record) that must not leak across
+tests.</li>
+</ul>
+<h3 id="2-class">2. <code>class</code></h3>
+<ul>
+<li><strong>Lifecycle:</strong> Created once per test class.</li>
+<li><strong>Teardown:</strong> Executes after the last test method in
+the class completes.</li>
+<li><strong>Use Case:</strong> Sharing an expensive setup across
+multiple methods grouped inside a single <code>Test...</code>
+class.</li>
+</ul>
+<h3 id="3-module">3. <code>module</code></h3>
+<ul>
+<li><strong>Lifecycle:</strong> Created once per Python module (i.e.,
+test file).</li>
+<li><strong>Teardown:</strong> Executes after all tests in the file have
+finished.</li>
+<li><strong>Use Case:</strong> Establishing resources shared across an
+entire test file, such as a local mock server or a read-only
+configuration loader.</li>
+</ul>
+<h3 id="4-package">4. <code>package</code></h3>
+<ul>
+<li><strong>Lifecycle:</strong> Created once per package (a directory
+containing an <code>__init__.py</code> and test modules).</li>
+<li><strong>Teardown:</strong> Executes after all test files within that
+directory finish.</li>
+<li><strong>Use Case:</strong> Setting up shared external services or
+heavy dependencies used exclusively by tests within a sub-package.</li>
+</ul>
+<h3 id="5-session">5. <code>session</code></h3>
+<ul>
+<li><strong>Lifecycle:</strong> Created once across the entire test
+suite run.</li>
+<li><strong>Teardown:</strong> Executes after all tests in the session
+conclude.</li>
+<li><strong>Use Case:</strong> Extremely heavy operations, such as
+spinning up a Docker container, establishing a live database connection
+pool, or running data migrations.</li>
+</ul>
+<hr />
+<h2 id="how-autousetrue-alters-execution">How <code>autouse=True</code>
+Alters Execution</h2>
+<p>Normally, a pytest fixture only executes if a test function or
+another fixture explicitly requests it as an argument, or if it is
+invoked via <code>@pytest.mark.usefixtures</code>.</p>
+<p>Adding <code>autouse=True</code> alters this behavior entirely:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="at">@pytest.fixture</span>(scope<span class="op">=</span><span class="st">&quot;module&quot;</span>, autouse<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> setup_environment():</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Setup code runs automatically</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">yield</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Teardown code runs automatically</span></span></code></pre></div>
+<h3 id="1-automatic-invocation-without-arguments">1. Automatic
+Invocation Without Arguments</h3>
+<p>When <code>autouse=True</code> is enabled, pytest executes the
+fixture automatically for every test within its defined context, even if
+no test explicitly references it. You do not need to pass the fixture
+name into the test function's parameter list.</p>
+<h3 id="2-execution-behavior-across-scopes">2. Execution Behavior Across
+Scopes</h3>
+<p>The invocation frequency depends on the combined
+<code>scope</code>:</p>
+<ul>
+<li><strong><code>scope="function", autouse=True</code>:</strong> Runs
+before and after <strong>every</strong> test in the module or directory
+where the fixture is visible.</li>
+<li><strong><code>scope="module", autouse=True</code>:</strong> Runs
+once at the start of the module and tears down at the end, without any
+explicit request by tests in that file.</li>
+<li><strong><code>scope="session", autouse=True</code>:</strong> Runs
+once when the test session begins and tears down when the session
+ends.</li>
+</ul>
+<h3 id="3-primary-use-cases">3. Primary Use Cases</h3>
+<ul>
+<li><strong>Global Configuration:</strong> Patching environment
+variables or setting up logging hooks for all tests.</li>
+<li><strong>State Reset:</strong> Clearing database tables, caches, or
+mocking global singletons before each test runs.</li>
+<li><strong>Performance Monitoring:</strong> Timing test runs or
+verifying resource cleanup across the entire suite.</li>
+</ul>
+<h3 id="4-key-considerations">4. Key Considerations</h3>
+<p>Because <code>autouse=True</code> fixtures run implicitly, their
+return values are not automatically available to test functions. If a
+test requires access to the fixture's yielded data, the fixture name
+must still be explicitly passed as a parameter to the test
+signature.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

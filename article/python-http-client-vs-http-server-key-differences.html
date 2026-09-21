@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python http.client vs http.server: Key Differences - python</title>
+    <meta name="description" content="Python’s standard library includes the http package, which provides distinct modules for network communication using the Hypertext Transfer Protocol: http.client and http.server. While both modules handle HTTP traffic, they sit on opposite ends of the">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-http-client-vs-http-server-key-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python http.client vs http.server: Key Differences - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-http-client-vs-http-server-key-differences" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s standard library includes the http package, which provides distinct modules for network communication using the Hypertext Transfer Protocol: http.client and http.server. While both modules handle HTTP traffic, they sit on opposite ends of the" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-httpclient-vs-httpserver-key-differences">Python
+http.client vs http.server: Key Differences</h1>
+<p>Python’s standard library includes the <code>http</code> package,
+which provides distinct modules for network communication using the
+Hypertext Transfer Protocol: <code>http.client</code> and
+<code>http.server</code>. While both modules handle HTTP traffic, they
+sit on opposite ends of the client-server model. This article explores
+the primary differences between <code>http.client</code> and
+<code>http.server</code>, explaining their roles, primary classes, and
+typical use cases.</p>
+<h3 id="core-roles-in-network-architecture">Core Roles in Network
+Architecture</h3>
+<p>The fundamental difference lies in which side of a connection each
+module controls:</p>
+<ul>
+<li><strong><code>http.client</code> (The Consumer):</strong> Implements
+the client side of HTTP and HTTPS protocols. It is designed to create
+requests, send them over a network to a remote host, and parse the
+incoming responses.</li>
+<li><strong><code>http.server</code> (The Provider):</strong> Implements
+the server side. It binds to a specific network interface and port,
+listens for incoming connections from clients, routes requests, and
+sends back responses.</li>
+</ul>
+<h3 id="understanding-httpclient">Understanding
+<code>http.client</code></h3>
+<p>The <code>http.client</code> module is a low-level interface for
+issuing requests to web servers. It does not handle high-level
+conveniences such as automatic redirect following, session persistence,
+or cookie management out of the box, acting instead as a direct
+mechanism to send headers, payloads, and methods across a socket.</p>
+<p>Key components include:</p>
+<ul>
+<li><strong><code>HTTPConnection</code> and
+<code>HTTPSConnection</code>:</strong> Classes used to establish
+connections to remote web servers over standard and secure sockets.</li>
+<li><strong><code>HTTPResponse</code>:</strong> An instance returned
+after sending a request, used to read status codes, headers, and
+response bodies.</li>
+</ul>
+<p>In modern Python development, <code>http.client</code> is rarely used
+directly for production application code. Higher-level libraries—such as
+Python’s built-in <code>urllib.request</code> or third-party packages
+like <code>requests</code> and <code>httpx</code>—are built on top of or
+replace this interface to provide simpler APIs.</p>
+<h3 id="understanding-httpserver">Understanding
+<code>http.server</code></h3>
+<p>The <code>http.server</code> module provides basic classes for
+building web servers. It combines network socket handling via Python's
+<code>socketserver</code> framework with HTTP message parsing.</p>
+<p>Key components include:</p>
+<ul>
+<li><strong><code>HTTPServer</code>:</strong> Sets up the socket
+listener and accepts incoming connections.</li>
+<li><strong><code>BaseHTTPRequestHandler</code>:</strong> Parses the
+incoming request components (method, path, headers) and provides methods
+to be overridden (such as <code>do_GET()</code> or
+<code>do_POST()</code>) to define server behavior.</li>
+<li><strong><code>SimpleHTTPRequestHandler</code>:</strong> A subclass
+that maps directory structures to HTTP requests, making it simple to
+serve static files from the local filesystem.</li>
+</ul>
+<p>A widely used feature of this module is its command-line interface,
+which allows users to spin up an instant local file server:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-m</span> http.server 8000</span></code></pre></div>
+<p><code>http.server</code> is intended for local testing, prototyping,
+and development environments. Python's documentation explicitly advises
+against using it in production environments because it lacks robust
+security checks and performance optimizations found in production-grade
+servers.</p>
+<h3 id="summary-of-differences">Summary of Differences</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>http.client</code></th>
+<th style="text-align: left;"><code>http.server</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Primary Function</strong></td>
+<td style="text-align: left;">Sends HTTP requests and reads
+responses</td>
+<td style="text-align: left;">Listens for HTTP requests and returns
+responses</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Network Role</strong></td>
+<td style="text-align: left;">Client (initiates connection)</td>
+<td style="text-align: left;">Server (accepts connection)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Key Classes</strong></td>
+<td style="text-align: left;"><code>HTTPConnection</code>,
+<code>HTTPSConnection</code></td>
+<td style="text-align: left;"><code>HTTPServer</code>,
+<code>SimpleHTTPRequestHandler</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Built-in CLI</strong></td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes
+(<code>python -m http.server</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Typical Usage</strong></td>
+<td style="text-align: left;">Automated scripts, base layer for API
+consumers</td>
+<td style="text-align: left;">Local testing, static file sharing, basic
+mocking</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Requests vs Urllib: Simplifying HTTP Requests - python</title>
+    <meta name="description" content="While Python includes the built-in urllib package for handling HTTP operations, the third-party requests library significantly simplifies HTTP request dispatching through a human-centric API. This article examines the core differences between the two, de">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-requests-vs-urllib-simplifying-http-requests">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Requests vs Urllib: Simplifying HTTP Requests - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-requests-vs-urllib-simplifying-http-requests" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="While Python includes the built-in urllib package for handling HTTP operations, the third-party requests library significantly simplifies HTTP request dispatching through a human-centric API. This article examines the core differences between the two, de" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-requests-vs-urllib-simplifying-http-requests">Python
+Requests vs Urllib: Simplifying HTTP Requests</h1>
+<p>While Python includes the built-in <code>urllib</code> package for
+handling HTTP operations, the third-party <code>requests</code> library
+significantly simplifies HTTP request dispatching through a
+human-centric API. This article examines the core differences between
+the two, demonstrating how <code>requests</code> eliminates verbose
+boilerplate code for handling query parameters, submitting JSON
+payloads, managing sessions, and processing server responses.</p>
+<h3 id="simplified-syntax-and-url-encoding">Simplified Syntax and URL
+Encoding</h3>
+<p>In <code>urllib</code>, constructing a basic GET request with query
+parameters requires manual encoding and string concatenation. Developers
+must import <code>urllib.parse</code> to encode dictionaries into query
+strings and append them to the target URL before passing it to
+<code>urllib.request.urlopen()</code>.</p>
+<p>The <code>requests</code> library automates this entire process.
+Passing a dictionary to the <code>params</code> argument in
+<code>requests.get()</code> automatically formats and encodes the query
+string:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Using urllib</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> urllib.parse</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> urllib.request</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>params <span class="op">=</span> urllib.parse.urlencode({<span class="st">&quot;query&quot;</span>: <span class="st">&quot;python&quot;</span>, <span class="st">&quot;page&quot;</span>: <span class="dv">1</span>})</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="ss">f&quot;https://httpbin.org/get?</span><span class="sc">{</span>params<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> urllib.request.urlopen(url) <span class="im">as</span> response:</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    html <span class="op">=</span> response.read()</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Using requests</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> requests.get(</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;https://httpbin.org/get&quot;</span>, params<span class="op">=</span>{<span class="st">&quot;query&quot;</span>: <span class="st">&quot;python&quot;</span>, <span class="st">&quot;page&quot;</span>: <span class="dv">1</span>}</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<h3 id="native-json-serialization-and-parsing">Native JSON Serialization
+and Parsing</h3>
+<p>Modern web APIs rely heavily on JSON, an area where the standard
+library requires multi-step manual handling. To dispatch a JSON payload
+using <code>urllib</code>, the developer must import the
+<code>json</code> module, serialize the dictionary, encode the resulting
+string to raw bytes, and manually define the
+<code>Content-Type: application/json</code> header. Parsing the response
+requires reading raw bytes, decoding them to UTF-8, and deserializing
+them with <code>json.loads()</code>.</p>
+<p>The <code>requests</code> library abstracts these steps entirely.
+Supplying a dictionary to the <code>json</code> keyword argument
+automatically serializes the data and sets the proper headers. Decoding
+JSON responses is achieved via the built-in <code>.json()</code>
+method:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Using urllib</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> urllib.request</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> json.dumps({<span class="st">&quot;name&quot;</span>: <span class="st">&quot;Alice&quot;</span>}).encode(<span class="st">&quot;utf-8&quot;</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>req <span class="op">=</span> urllib.request.Request(</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;https://httpbin.org/post&quot;</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    headers<span class="op">=</span>{<span class="st">&quot;Content-Type&quot;</span>: <span class="st">&quot;application/json&quot;</span>},</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    method<span class="op">=</span><span class="st">&quot;POST&quot;</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> urllib.request.urlopen(req) <span class="im">as</span> response:</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> json.loads(response.read().decode(<span class="st">&quot;utf-8&quot;</span>))</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Using requests</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> requests.post(<span class="st">&quot;https://httpbin.org/post&quot;</span>, json<span class="op">=</span>{<span class="st">&quot;name&quot;</span>: <span class="st">&quot;Alice&quot;</span>})</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> response.json()</span></code></pre></div>
+<h3 id="intuitive-response-handling-and-error-flow">Intuitive Response
+Handling and Error Flow</h3>
+<p><code>urllib</code> raises an <code>HTTPError</code> exception for
+any non-200 HTTP status code, such as <code>404 Not Found</code> or
+<code>500 Internal Server Error</code>. This forces developers to wrap
+standard HTTP dispatch calls in <code>try/except</code> blocks merely to
+read the body or status code of an unsuccessful response.</p>
+<p>By contrast, <code>requests</code> treats all valid HTTP responses
+consistently. The response object exposes properties like
+<code>status_code</code>, <code>text</code>, <code>content</code>, and
+the boolean <code>ok</code> (which returns <code>True</code> for codes
+under 400). If an exception is desired for bad statuses, calling
+<code>response.raise_for_status()</code> provides that behavior
+explicitly.</p>
+<h3 id="session-management-and-persistent-state">Session Management and
+Persistent State</h3>
+<p>Maintaining state across requests—such as cookies and connection
+reuse—is complex in <code>urllib</code>. It requires configuring custom
+handler objects, registering a cookie jar, and creating a custom opener
+with <code>urllib.request.build_opener()</code>.</p>
+<p><code>requests</code> simplifies connection pooling and state
+persistence through the <code>Session</code> object. A session
+automatically persists cookies across requests, reuses underlying TCP
+connections via <code>urllib3</code>, and retains shared headers:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Persistent session with requests</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> requests.Session() <span class="im">as</span> session:</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    session.headers.update({<span class="st">&quot;Authorization&quot;</span>: <span class="st">&quot;Bearer token123&quot;</span>})</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    session.get(<span class="st">&quot;https://httpbin.org/cookies/set/sessioncookie/12345&quot;</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> session.get(<span class="st">&quot;https://httpbin.org/cookies&quot;</span>)</span></code></pre></div>
+<h3 id="built-in-authentication-handling">Built-in Authentication
+Handling</h3>
+<p>Handling HTTP Basic Authentication in <code>urllib</code> demands
+instantiating an <code>HTTPPasswordMgrWithDefaultRealm</code>, creating
+an <code>HTTPBasicAuthHandler</code>, and building a specialized opener.
+With <code>requests</code>, standard authentication types are passed as
+simple tuples directly into the request via the <code>auth</code>
+parameter (<code>auth=('username', 'password')</code>), removing the
+need for custom handler plumbing.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

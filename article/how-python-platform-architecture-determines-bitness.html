@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python platform.architecture Determines Bitness - python</title>
+    <meta name="description" content="Python's platform.architecture() function determines the bit architecture and linkage format of an executable—defaulting to the running Python interpreter—by inspecting the binary file directly or falling back to pointer size calculations. Instead of">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-platform-architecture-determines-bitness">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python platform.architecture Determines Bitness - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-platform-architecture-determines-bitness" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's platform.architecture() function determines the bit architecture and linkage format of an executable—defaulting to the running Python interpreter—by inspecting the binary file directly or falling back to pointer size calculations. Instead of" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-platformarchitecture-determines-bitness">How Python
+platform.architecture Determines Bitness</h1>
+<p>Python's <code>platform.architecture()</code> function determines the
+bit architecture and linkage format of an executable—defaulting to the
+running Python interpreter—by inspecting the binary file directly or
+falling back to pointer size calculations. Instead of querying the host
+operating system kernel, it analyzes the executable file on disk using
+system tools to extract binary format details and returns a tuple
+containing the architecture string (such as <code>'64bit'</code> or
+<code>'32bit'</code>) and the linkage format (such as <code>'ELF'</code>
+or <code>'PE'</code>).</p>
+<h3 id="executable-inspection">Executable Inspection</h3>
+<p>When called without arguments, <code>platform.architecture()</code>
+defaults its target to <code>sys.executable</code>, which points to the
+path of the running Python binary. The function relies on the underlying
+system's binary analysis utilities rather than high-level OS APIs.</p>
+<p>On Unix-like platforms (such as Linux and macOS), the function
+typically spawns the system's <code>file</code> command via a subprocess
+or pipe to analyze the binary header of the target executable. The
+<code>file</code> utility inspects the magic numbers and header fields
+of the file format (such as ELF on Linux or Mach-O on macOS) and
+produces a text description. The <code>platform</code> module parses
+this output using regular expressions to search for bitness indicators
+(such as <code>32-bit</code> or <code>64-bit</code>) and executable
+format identifiers.</p>
+<p>On Windows systems, it inspects the Portable Executable (PE) headers
+of the file directly or infers information based on the executable's
+structure to detect whether it is a PE32 or PE32+ binary.</p>
+<h3 id="determining-the-linkage-format">Determining the Linkage
+Format</h3>
+<p>The second element returned in the tuple represents the linkage type
+of the binary. This value is derived directly from the file header
+format discovered during the executable inspection:</p>
+<ul>
+<li><strong>ELF (Executable and Linkable Format):</strong> Common on
+Linux, BSD, and modern Unix systems.</li>
+<li><strong>PE (Portable Executable):</strong> The standard executable
+format used across Microsoft Windows.</li>
+<li><strong>Mach-O:</strong> The standard binary architecture format on
+macOS.</li>
+</ul>
+<p>If the file inspection command fails, is unavailable, or does not
+recognize the binary format, the linkage value is returned as an empty
+string or an empty placeholder.</p>
+<h3 id="the-fallback-mechanism">The Fallback Mechanism</h3>
+<p>If the target executable does not exist on disk, cannot be read, or
+the <code>file</code> command fails to yield usable information,
+<code>platform.architecture()</code> falls back to Python's internal
+runtime state.</p>
+<p>In this scenario, it determines bitness by inspecting
+<code>sys.maxsize</code>:</p>
+<ul>
+<li>If <code>sys.maxsize &gt; 2**32</code>, the runtime environment is
+treated as <code>64bit</code>.</li>
+<li>If <code>sys.maxsize &lt;= 2**32</code>, the runtime environment is
+treated as <code>32bit</code>.</li>
+</ul>
+<p>When this fallback path is triggered, the linkage information cannot
+be confirmed from the file header, so the linkage string remains
+empty.</p>
+<h3 id="process-bitness-vs-os-bitness">Process Bitness vs. OS
+Bitness</h3>
+<p>Because <code>platform.architecture()</code> targets the Python
+binary itself, it reflects the bitness of the current Python process,
+not necessarily the bitness of the underlying operating system. For
+example, running a 32-bit Python interpreter on a 64-bit operating
+system will return <code>('32bit', ...)</code> because the executable
+itself is compiled as a 32-bit binary.</p>
+<p>Additionally, on platforms that support universal or
+multi-architecture binaries (such as macOS with universal binaries
+containing both x86_64 and ARM64 slices), static file inspection can be
+ambiguous or misleading. For this reason, the official Python
+documentation recommends using <code>sys.maxsize</code> directly when
+developers solely need to verify whether the running interpreter
+operates in a 32-bit or 64-bit address space.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

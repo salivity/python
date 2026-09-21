@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python WSGI Connects Web Servers and Frameworks - python</title>
+    <meta name="description" content="The Web Server Gateway Interface (WSGI) is the standardized specification that enables Python web servers to communicate seamlessly with web applications and frameworks. Formalized in PEP 333 and updated in PEP 3333, WSGI decouples server architecture fr">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-wsgi-connects-web-servers-and-frameworks">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python WSGI Connects Web Servers and Frameworks - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-wsgi-connects-web-servers-and-frameworks" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Web Server Gateway Interface (WSGI) is the standardized specification that enables Python web servers to communicate seamlessly with web applications and frameworks. Formalized in PEP 333 and updated in PEP 3333, WSGI decouples server architecture fr" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-wsgi-connects-web-servers-and-frameworks">How Python
+WSGI Connects Web Servers and Frameworks</h1>
+<p>The Web Server Gateway Interface (WSGI) is the standardized
+specification that enables Python web servers to communicate seamlessly
+with web applications and frameworks. Formalized in PEP 333 and updated
+in PEP 3333, WSGI decouples server architecture from application logic
+by defining a universal calling convention. This article explains how
+the WSGI specification divides responsibilities between the server and
+the framework, how data is exchanged through standard arguments, and how
+middleware fits into the execution pipeline.</p>
+<h3 id="the-purpose-of-wsgi">The Purpose of WSGI</h3>
+<p>Before WSGI, Python web frameworks like Django, Flask (or its
+predecessors), and Zope required custom adapters or modules (such as
+<code>mod_python</code>) to work with specific web servers like Apache
+or Nginx. This tightly coupled applications to particular deployment
+environments.</p>
+<p>WSGI resolved this fragmentation by establishing a common interface.
+Under WSGI, any web server capable of running WSGI can execute any
+application or framework that adheres to the WSGI standard.</p>
+<h3 id="the-two-sides-of-wsgi">The Two Sides of WSGI</h3>
+<p>The WSGI standard splits the web architecture into two primary
+components: the <strong>server (or gateway)</strong> and the
+<strong>application (or framework)</strong>.</p>
+<h4 id="1-the-servergateway-side">1. The Server/Gateway Side</h4>
+<p>The server side is responsible for receiving HTTP requests from
+clients, parsing them, and invoking the application. When a request
+arrives, the server performs the following steps:</p>
+<ul>
+<li><strong>Constructs the Environment (<code>environ</code>):</strong>
+The server packages request metadata—such as the HTTP method, request
+URI, headers, query parameters, and standard CGI variables—into a
+standard Python dictionary named <code>environ</code>. It also includes
+WSGI-specific keys, such as <code>wsgi.input</code> (an input stream for
+reading the request body) and <code>wsgi.errors</code> (an output stream
+for error logging).</li>
+<li><strong>Provides a Callback (<code>start_response</code>):</strong>
+The server provides a callable function named
+<code>start_response</code>, which accepts an HTTP status string (e.g.,
+<code>"200 OK"</code>) and a list of
+<code>(header_name, header_value)</code> tuples.</li>
+<li><strong>Invokes the Application:</strong> The server calls the
+application object, passing <code>environ</code> and
+<code>start_response</code> as positional arguments:
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>response_body <span class="op">=</span> application(environ, start_response)</span></code></pre></div></li>
+<li><strong>Transmits the Response:</strong> The server iterates over
+the returned <code>response_body</code> (which must yield byte strings)
+and streams the HTTP response back to the client.</li>
+</ul>
+<h4 id="2-the-applicationframework-side">2. The Application/Framework
+Side</h4>
+<p>The framework side must provide a single callable object—such as a
+function, a method, or a class instance implementing
+<code>__call__</code>. This callable must:</p>
+<ul>
+<li><strong>Accept Two Arguments:</strong> It must take exactly two
+positional parameters: <code>environ</code> and
+<code>start_response</code>.</li>
+<li><strong>Process the Request:</strong> It reads the incoming request
+details from the <code>environ</code> dictionary and handles application
+logic, routing, and database access.</li>
+<li><strong>Set Response Headers:</strong> Before returning the response
+body, the application must invoke
+<code>start_response(status, response_headers)</code>.</li>
+<li><strong>Return an Iterable:</strong> The callable must return an
+iterable (typically a list of bytes or a generator) that represents the
+HTTP response body.</li>
+</ul>
+<p>A minimal, compliant WSGI application looks like this:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> simple_app(environ, start_response):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    status <span class="op">=</span> <span class="st">&quot;200 OK&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    headers <span class="op">=</span> [(<span class="st">&quot;Content-Type&quot;</span>, <span class="st">&quot;text/plain; charset=utf-8&quot;</span>)]</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    start_response(status, headers)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> [<span class="st">b&quot;Hello, World!&quot;</span>]</span></code></pre></div>
+<h3 id="the-role-of-wsgi-middleware">The Role of WSGI Middleware</h3>
+<p>WSGI also allows for components known as <strong>middleware</strong>,
+which sit between the server and the application. A middleware component
+acts as an application to the server and as a server to the
+application.</p>
+<p>Because it implements both sides of the interface, middleware can
+intercept and alter the flow of data in several ways:</p>
+<ul>
+<li><strong>Request Preprocessing:</strong> Modifying the
+<code>environ</code> dictionary before passing it to the downstream
+application (e.g., handling URL rewriting or injecting authentication
+tokens).</li>
+<li><strong>Response Postprocessing:</strong> Intercepting the
+<code>start_response</code> call or altering the returned iterable to
+modify status codes, add headers, or compress the response body (e.g.,
+Gzip compression).</li>
+<li><strong>Routing and Dispatching:</strong> Directing requests to
+different applications based on the request path or host name.</li>
+</ul>
+<p>Through this simple functional contract based on standard Python
+dictionaries, callables, and iterables, WSGI provides an efficient,
+modular foundation that powers the majority of synchronous Python web
+deployments today.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

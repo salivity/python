@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyObject Internal Layout in CPython - python</title>
+    <meta name="description" content="In CPython, the standard C implementation of Python, every entity is an object represented in memory by a C structure. At the foundation of this object model lies PyObject, the base structure from which all Python objects derive. This article breaks down">
+    <link rel="canonical" href="https://salivity.github.io/python/article/py-object-internal-layout-in-c-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PyObject Internal Layout in CPython - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/py-object-internal-layout-in-c-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In CPython, the standard C implementation of Python, every entity is an object represented in memory by a C structure. At the foundation of this object model lies PyObject, the base structure from which all Python objects derive. This article breaks down" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pyobject-internal-layout-in-cpython">PyObject Internal Layout in
+CPython</h1>
+<p>In CPython, the standard C implementation of Python, every entity is
+an object represented in memory by a C structure. At the foundation of
+this object model lies <code>PyObject</code>, the base structure from
+which all Python objects derive. This article breaks down the internal
+memory layout of <code>PyObject</code>, details its core
+fields—including reference counts and type pointers—explains how
+variable-length objects extend it via <code>PyVarObject</code>, and
+demonstrates how C-level inheritance functions in the Python
+runtime.</p>
+<h2 id="the-c-definition-of-pyobject">The C Definition of
+<code>PyObject</code></h2>
+<p>In CPython source code (specifically <code>Include/object.h</code>),
+<code>PyObject</code> is defined conceptually through a macro named
+<code>PyObject_HEAD</code>. When expanded in a standard release build,
+the structure is essentially:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">typedef</span> <span class="kw">struct</span> _object <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    _PyObject_HEAD_EXTRA</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    Py_ssize_t ob_refcnt<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">struct</span> _typeobject <span class="op">*</span>ob_type<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> PyObject<span class="op">;</span></span></code></pre></div>
+<p>On modern 64-bit systems, this base structure occupies exactly 16
+bytes of memory (excluding debug overhead).</p>
+<hr />
+<h2 id="field-breakdown">Field Breakdown</h2>
+<h3 id="1-_pyobject_head_extra">1.
+<code>_PyObject_HEAD_EXTRA</code></h3>
+<p>This macro is used exclusively for tracking active objects when
+Python is compiled with the <code>Py_TRACE_REFS</code> build
+configuration (used primarily for debugging memory leaks).</p>
+<ul>
+<li><strong>Release builds:</strong> Expands to nothing and consumes 0
+bytes.</li>
+<li><strong>Debug builds:</strong> Expands to two pointers
+(<code>struct _object *_ob_next; struct _object *_ob_prev;</code>) used
+to maintain a doubly linked list of all live objects on the heap.</li>
+</ul>
+<h3 id="2-ob_refcnt-reference-count">2. <code>ob_refcnt</code>
+(Reference Count)</h3>
+<ul>
+<li><strong>Type:</strong> <code>Py_ssize_t</code> (signed 64-bit
+integer on 64-bit systems, signed 32-bit integer on 32-bit
+systems).</li>
+<li><strong>Role:</strong> Tracks how many references point to this
+object across the runtime. When <code>ob_refcnt</code> reaches zero, the
+memory deallocator associated with the object is triggered.</li>
+<li><strong>Modern CPython Note:</strong> In Python 3.12 and later,
+CPython introduced "immortal objects" (PEP 683). Immortal objects (like
+<code>None</code>, <code>True</code>, <code>False</code>, and small
+integers) use specific bit representations in <code>ob_refcnt</code> so
+that reference count modification operations can be skipped, improving
+cache efficiency and multi-core scalability.</li>
+</ul>
+<h3 id="3-ob_type-type-pointer">3. <code>ob_type</code> (Type
+Pointer)</h3>
+<ul>
+<li><strong>Type:</strong> <code>struct _typeobject *</code> (8-byte
+pointer on 64-bit systems).</li>
+<li><strong>Role:</strong> Points to the type descriptor object (an
+instance of <code>PyTypeObject</code>) representing the object's Python
+type (such as <code>int</code>, <code>str</code>, or a user-defined
+class).</li>
+<li>The type object contains function pointers for handling operations
+such as allocation, deallocation, arithmetic operations, and string
+representation.</li>
+</ul>
+<hr />
+<h2 id="the-memory-layout">The Memory Layout</h2>
+<p>On a standard 64-bit architecture without debug flags, the linear
+memory layout of a <code>PyObject</code> is aligned as follows:</p>
+<pre><code>Offset (bytes)   Field        Size (bytes)   Description
++---------------+------------+--------------+----------------------------------+
+|  0x00 - 0x07  | ob_refcnt  | 8            | Reference count                  |
++---------------+------------+--------------+----------------------------------+
+|  0x08 - 0x0F  | ob_type    | 8            | Pointer to the type object       |
++---------------+------------+--------------+----------------------------------+
+Total Size: 16 bytes</code></pre>
+<hr />
+<h2 id="variable-length-objects-pyvarobject">Variable-Length Objects:
+<code>PyVarObject</code></h2>
+<p>Objects with variable lengths—such as tuples, lists, strings, and
+dictionaries—cannot store all necessary metadata in the fixed 16-byte
+<code>PyObject</code> structure. They use an extended base structure
+called <code>PyVarObject</code>.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">typedef</span> <span class="kw">struct</span> <span class="op">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    PyObject ob_base<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    Py_ssize_t ob_size<span class="op">;</span> <span class="co">/* Number of items in variable part */</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> PyVarObject<span class="op">;</span></span></code></pre></div>
+<p><code>PyVarObject</code> prepends the <code>PyObject</code> layout
+and appends an <code>ob_size</code> field:</p>
+<ul>
+<li><strong><code>ob_size</code> (8 bytes on 64-bit):</strong> Holds the
+number of elements currently stored in the object. For a
+<code>tuple</code>, this represents the tuple length. For a
+<code>PyLongObject</code> (Python integer), it represents the number of
+internal digits and holds the sign of the integer.</li>
+</ul>
+<pre><code>Offset (bytes)   Field        Size (bytes)   Description
++---------------+------------+--------------+----------------------------------+
+|  0x00 - 0x07  | ob_refcnt  | 8            | Reference count (from PyObject)  |
++---------------+------------+--------------+----------------------------------+
+|  0x08 - 0x0F  | ob_type    | 8            | Type pointer (from PyObject)     |
++---------------+------------+--------------+----------------------------------+
+|  0x10 - 0x17  | ob_size    | 8            | Item count                       |
++---------------+------------+--------------+----------------------------------+
+Total Base Size: 24 bytes</code></pre>
+<hr />
+<h2 id="structural-subtyping-in-c">Structural Subtyping in C</h2>
+<p>C does not support object-oriented inheritance natively. CPython
+achieves polymorphism and subtyping by enforcing strict memory alignment
+rules:</p>
+<ol type="1">
+<li>Any specific object structure must declare <code>PyObject</code> (or
+<code>PyVarObject</code>) as its very first member.</li>
+<li>The C standard guarantees that a pointer to a struct can be safely
+cast to a pointer to its first member without an offset change.</li>
+</ol>
+<p>For example, a Python float is defined as:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">typedef</span> <span class="kw">struct</span> <span class="op">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    PyObject ob_base<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> ob_fval<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> PyFloatObject<span class="op">;</span></span></code></pre></div>
+<p>Because <code>ob_base</code> is the first member, the memory address
+of <code>PyFloatObject</code> is identical to the memory address of its
+internal <code>PyObject</code>:</p>
+<pre><code>Pointer Address ---&gt; [ ob_refcnt (8B) ]
+                     [ ob_type   (8B) ]
+                     [ ob_fval   (8B) ]</code></pre>
+<p>This layout allows the CPython runtime to cast any pointer of type
+<code>PyFloatObject*</code>, <code>PyListObject*</code>, or custom
+extension type directly to <code>PyObject*</code> to access metadata,
+manipulate reference counts, and inspect types uniformly.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

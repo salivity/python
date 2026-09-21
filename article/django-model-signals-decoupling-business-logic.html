@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Django Model Signals: Decoupling Business Logic - python</title>
+    <meta name="description" content="This article explores how Django’s built-in signal framework, specifically postsave and predelete, enables developers to build a decoupled application architecture in Python. By leveraging an event-driven publisher-subscriber pattern, signals allow sec">
+    <link rel="canonical" href="https://salivity.github.io/python/article/django-model-signals-decoupling-business-logic">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Django Model Signals: Decoupling Business Logic - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/django-model-signals-decoupling-business-logic" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how Django’s built-in signal framework, specifically postsave and predelete, enables developers to build a decoupled application architecture in Python. By leveraging an event-driven publisher-subscriber pattern, signals allow sec" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="django-model-signals-decoupling-business-logic">Django Model
+Signals: Decoupling Business Logic</h1>
+<p>This article explores how Django’s built-in signal framework,
+specifically <code>post_save</code> and <code>pre_delete</code>, enables
+developers to build a decoupled application architecture in Python. By
+leveraging an event-driven publisher-subscriber pattern, signals allow
+secondary business actions—such as creating profiles, dispatching
+emails, or cleaning up external assets—to execute automatically without
+tightly binding these operations to primary model definitions or view
+layers.</p>
+<h2 id="the-publisher-subscriber-pattern-in-django">The
+Publisher-Subscriber Pattern in Django</h2>
+<p>Django signals implement the observer (or publisher-subscriber)
+pattern. In this architecture:</p>
+<ul>
+<li><strong>Sender:</strong> The model that encounters a state change
+(such as being saved or deleted).</li>
+<li><strong>Signal:</strong> The event dispatcher provided by Django
+(<code>post_save</code>, <code>pre_delete</code>, <code>pre_save</code>,
+<code>post_delete</code>).</li>
+<li><strong>Receiver:</strong> A Python function designed to run
+automatically when the specific event is broadcast.</li>
+</ul>
+<p>By using signals, the sender does not need to know which receivers
+are listening, nor does it care what actions those receivers perform.
+This separation enforces the Single Responsibility Principle (SRP).</p>
+<h2 id="enabling-decoupled-logic-with-post_save">Enabling Decoupled
+Logic with <code>post_save</code></h2>
+<p>The <code>post_save</code> signal fires immediately after a model
+instance completes its <code>save()</code> method. A standard use case
+is initiating auxiliary records whenever a primary entity is
+created.</p>
+<p>Without signals, a developer might override the
+<code>User.save()</code> method or manually call profile creation logic
+within a form or view:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Tightly coupled approach inside a view or form</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>user <span class="op">=</span> form.save()</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>UserProfile.objects.create(user<span class="op">=</span>user)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>send_welcome_email(user.email)</span></code></pre></div>
+<p>With signals, this side effect is extracted entirely out of the view
+and model definition:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.db.models.signals <span class="im">import</span> post_save</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.dispatch <span class="im">import</span> receiver</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.contrib.auth.models <span class="im">import</span> User</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> .models <span class="im">import</span> UserProfile</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="at">@receiver</span>(post_save, sender<span class="op">=</span>User)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> manage_user_profile(sender, instance, created, <span class="op">**</span>kwargs):</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> created:</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        UserProfile.objects.create(user<span class="op">=</span>instance)</span></code></pre></div>
+<p>The <code>created</code> flag specifies whether the record was
+inserted or updated, allowing logic to selectively execute only for
+newly created objects.</p>
+<h2 id="handling-pre-emptive-operations-with-pre_delete">Handling
+Pre-Emptive Operations with <code>pre_delete</code></h2>
+<p>The <code>pre_delete</code> signal executes right before an instance
+is deleted from the database. This hook is vital for cleanup tasks where
+the model's metadata or foreign key relationships are required before
+the database record disappears.</p>
+<p>A classic example is deleting files stored on the filesystem or in an
+object store (such as Amazon S3) when the associated model instance is
+removed:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.db.models.signals <span class="im">import</span> pre_delete</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.dispatch <span class="im">import</span> receiver</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> .models <span class="im">import</span> Document</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="at">@receiver</span>(pre_delete, sender<span class="op">=</span>Document)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> delete_associated_file(sender, instance, <span class="op">**</span>kwargs):</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> instance.<span class="bu">file</span>:</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        instance.<span class="bu">file</span>.delete(save<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
+<p>Because <code>pre_delete</code> executes prior to database deletion,
+the file path and any related model data remain fully accessible to the
+receiver.</p>
+<h2 id="key-architectural-advantages">Key Architectural Advantages</h2>
+<ol type="1">
+<li><strong>Separation of Concerns:</strong> Core model methods remain
+focused strictly on validating and storing their own data, rather than
+coordinating external notifications or supplementary tables.</li>
+<li><strong>Reusability across Entry Points:</strong> Whether a model is
+modified via the Django Admin, a REST API, management commands, or
+background Celery tasks, signal receivers trigger uniformly without
+requiring redundant code in every interface.</li>
+<li><strong>Pluggable Architecture:</strong> Receivers can be connected,
+disconnected, or moved to dedicated third-party apps without modifying
+the underlying sender model.</li>
+</ol>
+<h2 id="implementation-best-practices">Implementation Best
+Practices</h2>
+<p>To ensure signals remain maintainable and do not introduce unintended
+side effects:</p>
+<ul>
+<li><strong>Register in <code>AppConfig.ready()</code>:</strong> Keep
+signal definitions in a dedicated <code>signals.py</code> file and
+import them inside the application's <code>apps.py</code>
+<code>ready()</code> method to avoid import-time side effects.</li>
+<li><strong>Combine with Database Transactions:</strong> For tasks
+involving external APIs or asynchronous job queues (e.g., Celery), use
+<code>transaction.on_commit()</code> inside your signal handler to
+prevent operations from running if the database transaction rolls
+back.</li>
+<li><strong>Avoid Cascading Signals:</strong> Chaining signals (where a
+receiver triggers another signal) can lead to hard-to-debug loops and
+unpredictable performance degradation.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

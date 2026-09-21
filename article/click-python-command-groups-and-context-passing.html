@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Click Python: Command Groups and Context Passing - python</title>
+    <meta name="description" content="The Python click library relies on command grouping and context-passing mechanisms to help developers build modular, scalable, and hierarchical command-line interfaces (CLIs). Command groups allow related subcommands to be organized under a common parent">
+    <link rel="canonical" href="https://salivity.github.io/python/article/click-python-command-groups-and-context-passing">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Click Python: Command Groups and Context Passing - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/click-python-command-groups-and-context-passing" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Python click library relies on command grouping and context-passing mechanisms to help developers build modular, scalable, and hierarchical command-line interfaces (CLIs). Command groups allow related subcommands to be organized under a common parent" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="click-python-command-groups-and-context-passing">Click Python:
+Command Groups and Context Passing</h1>
+<p>The Python <code>click</code> library relies on command grouping and
+context-passing mechanisms to help developers build modular, scalable,
+and hierarchical command-line interfaces (CLIs). Command groups allow
+related subcommands to be organized under a common parent command, while
+the context object provides a clean, thread-safe pipeline for sharing
+global configurations, runtime state, and dependencies across those
+commands without relying on global variables.</p>
+<h2 id="command-grouping-with-clickgroup">Command Grouping with
+<code>@click.group()</code></h2>
+<p>Command grouping allows developers to construct nested, multi-command
+CLI tools similar to tools like <code>git</code> (e.g.,
+<code>git commit</code>, <code>git push</code>) or <code>docker</code>
+(e.g., <code>docker container run</code>).</p>
+<p>Instead of registering individual, disconnected scripts, the
+<code>@click.group()</code> decorator defines a root or intermediate
+command that bundles multiple subcommands together.</p>
+<p>Key purposes of command grouping include:</p>
+<ul>
+<li><strong>Logical Organization:</strong> It categorizes functionality
+into structured sub-trees, making large applications intuitive to
+navigate for end users.</li>
+<li><strong>Shared Options:</strong> Groups can accept global flags
+(such as <code>--verbose</code>, <code>--config</code>, or
+<code>--dry-run</code>) before the subcommand is invoked.</li>
+<li><strong>Lazy Loading:</strong> Subcommands are only parsed and
+evaluated when invoked, improving startup performance for large
+applications.</li>
+</ul>
+<h2 id="context-passing-with-clickcontext">Context Passing with
+<code>click.Context</code></h2>
+<p>The <code>click.Context</code> object is an internal state machine
+that tracks the execution of a CLI command, including parsed parameters,
+parent commands, and runtime state. The context-passing
+mechanism—typically accessed via <code>@click.pass_context</code> or
+<code>@click.pass_obj</code>—allows data initialized at the group level
+to cascade down to child commands.</p>
+<p>The context mechanism serves several specific purposes:</p>
+<ul>
+<li><strong>State Sharing via <code>ctx.obj</code>:</strong> When a
+parent group accepts options like a configuration file path or API
+credentials, it can instantiate an object (such as a dictionary,
+configuration class, or database connection) and assign it to
+<code>ctx.obj</code>. Any nested subcommand can access this object
+directly.</li>
+<li><strong>Elimination of Global State:</strong> Passing data through
+the context avoids module-level mutable variables, making the codebase
+easier to test, maintain, and run concurrently.</li>
+<li><strong>Access to Invocation Metadata:</strong> Commands can inspect
+<code>ctx.invoked_subcommand</code> to alter behavior depending on which
+child command is about to run, or check default values and parent
+parameters dynamically.</li>
+</ul>
+<h2 id="how-groups-and-context-work-together">How Groups and Context
+Work Together</h2>
+<p>In practice, command groups and context passing operate as a cohesive
+pipeline:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> click</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">@click.group</span>()</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">@click.option</span>(<span class="st">&#39;--debug/--no-debug&#39;</span>, default<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">@click.pass_context</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cli(ctx, debug):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Initialize shared state in ctx.obj</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    ctx.ensure_object(<span class="bu">dict</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    ctx.obj[<span class="st">&#39;DEBUG&#39;</span>] <span class="op">=</span> debug</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="at">@cli.command</span>()</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="at">@click.pass_context</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run(ctx):</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Access parent state safely</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> ctx.obj[<span class="st">&#39;DEBUG&#39;</span>]:</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        click.echo(<span class="st">&quot;Debug mode is active.&quot;</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    click.echo(<span class="st">&quot;Executing command...&quot;</span>)</span></code></pre></div>
+<p>By coupling command grouping with context passing, Click enforces
+clean separation of concerns: the parent command handles environment
+setup and configuration, while subcommands focus purely on their
+specific execution logic.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

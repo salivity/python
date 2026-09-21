@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyVarObject in CPython: The ob_size Field Explained - python</title>
+    <meta name="description" content="In CPython, memory management and object representation rely on fundamental C structures defined in the Python C API. While fixed-size data structures derive from the baseline PyObject, variable-length entities—such as lists, tuples, and integers—are">
+    <link rel="canonical" href="https://salivity.github.io/python/article/py-var-object-in-c-python-the-ob-size-field-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PyVarObject in CPython: The ob_size Field Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/py-var-object-in-c-python-the-ob-size-field-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In CPython, memory management and object representation rely on fundamental C structures defined in the Python C API. While fixed-size data structures derive from the baseline PyObject, variable-length entities—such as lists, tuples, and integers—are" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pyvarobject-in-cpython-the-ob_size-field-explained">PyVarObject
+in CPython: The ob_size Field Explained</h1>
+<p>In CPython, memory management and object representation rely on
+fundamental C structures defined in the Python C API. While fixed-size
+data structures derive from the baseline <code>PyObject</code>,
+variable-length entities—such as lists, tuples, and integers—are built
+upon <code>PyVarObject</code>. This article explains the internal
+composition of <code>PyVarObject</code> and focuses on
+<code>ob_size</code>, the specific field it introduces to manage dynamic
+sequence lengths and memory allocation efficiently.</p>
+<h3 id="the-foundation-pyobject-vs-pyvarobject">The Foundation: PyObject
+vs. PyVarObject</h3>
+<p>Every object in CPython shares a common foundation defined by the
+<code>PyObject</code> structure. For fixed-size objects (such as
+floats), this structure contains only two members, combined under the
+<code>PyObject_HEAD</code> macro:</p>
+<ul>
+<li><code>ob_refcnt</code>: A <code>Py_ssize_t</code> integer tracking
+the reference count for garbage collection.</li>
+<li><code>ob_type</code>: A pointer to the object's type object
+(<code>struct _typeobject *</code>).</li>
+</ul>
+<p>Variable-length objects require awareness of their item count. To
+handle this, CPython defines <code>PyVarObject</code>, which
+incorporates <code>PyObject_VAR_HEAD</code>. This macro includes all
+fields from <code>PyObject</code> and appends a single new member:
+<code>ob_size</code>.</p>
+<h3 id="the-additional-field-ob_size">The Additional Field: ob_size</h3>
+<p>The additional field introduced by <code>PyVarObject</code> is:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Py_ssize_t ob_size<span class="op">;</span></span></code></pre></div>
+<p><code>ob_size</code> is a signed, system-dependent integer type
+(<code>Py_ssize_t</code>, typically a 64-bit signed integer on modern
+64-bit systems). Its primary function is to store the number of items or
+units contained within a variable-length object.</p>
+<h3 id="purpose-and-behavior-of-ob_size">Purpose and Behavior of
+ob_size</h3>
+<ol type="1">
+<li><strong>O(1) Length Retrieval:</strong> Because <code>ob_size</code>
+stores the length directly in the object header, Python's built-in
+<code>len()</code> function runs in <span
+class="math inline">\(O(1)\)</span> constant time for built-in container
+types. The interpreter reads this field directly rather than iterating
+over the contents.</li>
+<li><strong>Access via Macros:</strong> The CPython C API exposes the
+<code>Py_SIZE(ob)</code> macro to read and set the <code>ob_size</code>
+field safely.</li>
+<li><strong>Signed Semantics:</strong> Because <code>ob_size</code> is
+signed, CPython can use negative values in specific internal
+implementations. For example, in <code>PyLongObject</code> (Python's
+arbitrary-precision integer), the absolute value of <code>ob_size</code>
+indicates the number of digits stored, while the sign of
+<code>ob_size</code> denotes whether the integer itself is positive or
+negative. A value of zero represents the integer <code>0</code>.</li>
+</ol>
+<h3 id="common-types-utilizing-pyvarobject">Common Types Utilizing
+PyVarObject</h3>
+<p>Several core Python types use <code>PyVarObject</code> as their
+underlying structure:</p>
+<ul>
+<li><strong><code>PyTupleObject</code></strong>: Immutable sequence
+whose <code>ob_size</code> indicates the exact number of elements
+stored.</li>
+<li><strong><code>PyListObject</code></strong>: Dynamic array where
+<code>ob_size</code> represents the number of active items visible to
+Python, distinct from the total allocated memory capacity
+(<code>allocated</code>).</li>
+<li><strong><code>PyBytesObject</code></strong>: Fixed byte sequence
+where <code>ob_size</code> specifies the exact byte count.</li>
+<li><strong><code>PyLongObject</code></strong>: Arbitrary-precision
+integer where <code>ob_size</code> tracks the number of internal digit
+chunks and sign.</li>
+</ul>
+<p>By introducing <code>ob_size</code>, <code>PyVarObject</code> gives
+CPython a standardized, highly performant mechanism to handle
+dynamic-length entities across the interpreter.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

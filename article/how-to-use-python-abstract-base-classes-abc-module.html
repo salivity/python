@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use Python Abstract Base Classes (abc Module) - python</title>
+    <meta name="description" content="Abstract Base Classes (ABCs) in Python establish a formal contract for class interfaces, ensuring that derived classes implement specific methods and properties before they can be instantiated. By using Python's built-in abc module, developers can define">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-use-python-abstract-base-classes-abc-module">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use Python Abstract Base Classes (abc Module) - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-use-python-abstract-base-classes-abc-module" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Abstract Base Classes (ABCs) in Python establish a formal contract for class interfaces, ensuring that derived classes implement specific methods and properties before they can be instantiated. By using Python's built-in abc module, developers can define" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-use-python-abstract-base-classes-abc-module">How to Use
+Python Abstract Base Classes (abc Module)</h1>
+<p>Abstract Base Classes (ABCs) in Python establish a formal contract
+for class interfaces, ensuring that derived classes implement specific
+methods and properties before they can be instantiated. By using
+Python's built-in <code>abc</code> module, developers can define
+blueprint classes with the <code>ABC</code> class and mark mandatory
+interfaces using the <code>@abstractmethod</code> decorator. This
+article explains how Python defines these classes, enforces their
+implementation at instantiation time via metaclasses, and allows dynamic
+type verification with virtual subclasses.</p>
+<h3 id="defining-an-abstract-base-class">Defining an Abstract Base
+Class</h3>
+<p>To create an Abstract Base Class, inherit from the <code>ABC</code>
+class provided by the <code>abc</code> module. The <code>ABC</code>
+class is a helper class that sets its metaclass to <code>ABCMeta</code>.
+Methods that subclasses must implement are decorated with
+<code>@abstractmethod</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> abc <span class="im">import</span> ABC, abstractmethod</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Database(ABC):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">@abstractmethod</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="ex">connect</span>(<span class="va">self</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;Connect to the database.&quot;&quot;&quot;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">@abstractmethod</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> execute(<span class="va">self</span>, query: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;Execute a query.&quot;&quot;&quot;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span></code></pre></div>
+<p>An abstract method can still contain functional logic. Subclasses can
+invoke this base implementation using <code>super()</code>, even though
+they are still required to override the method.</p>
+<h3 id="how-python-enforces-the-contract">How Python Enforces the
+Contract</h3>
+<p>Python enforces the abstract contract at runtime during class
+instantiation, not at definition time. The enforcement relies on the
+<code>ABCMeta</code> metaclass, which inspects the class during creation
+and tracks all abstract methods in a special internal attribute named
+<code>__abstractmethods__</code>.</p>
+<p>When a class is instantiated:</p>
+<ol type="1">
+<li>Python checks the <code>__abstractmethods__</code> attribute of the
+class.</li>
+<li>If this set is non-empty, Python prevents instantiation and
+immediately raises a <code>TypeError</code>.</li>
+<li>A subclass only clears this set when it provides concrete overrides
+for every method decorated with <code>@abstractmethod</code>.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> PostgresDatabase(Database):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="ex">connect</span>(<span class="va">self</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Connected to PostgreSQL.&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Attempting instantiation without defining execute()</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>db <span class="op">=</span> PostgresDatabase()</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Raises: TypeError: Can&#39;t instantiate abstract class PostgresDatabase with abstract method execute</span></span></code></pre></div>
+<p>To instantiate <code>PostgresDatabase</code> successfully, all
+abstract members must be defined:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> PostgresDatabase(Database):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="ex">connect</span>(<span class="va">self</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Connected to PostgreSQL.&quot;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> execute(<span class="va">self</span>, query: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Executing: </span><span class="sc">{</span>query<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Instantiation succeeds</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>db <span class="op">=</span> PostgresDatabase()</span></code></pre></div>
+<h3 id="abstract-properties-class-methods-and-static-methods">Abstract
+Properties, Class Methods, and Static Methods</h3>
+<p>The <code>abc</code> module integrates with other decorators. When
+combining <code>@abstractmethod</code> with <code>@property</code>,
+<code>@classmethod</code>, or <code>@staticmethod</code>,
+<code>@abstractmethod</code> should be applied as the innermost
+decorator.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> FileHandler(ABC):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">@property</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@abstractmethod</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> file_extension(<span class="va">self</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;Return the target file extension.&quot;&quot;&quot;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">@classmethod</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">@abstractmethod</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> create_handler(cls, file_name: <span class="bu">str</span>):</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;Factory method to create an instance.&quot;&quot;&quot;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span></code></pre></div>
+<h3 id="virtual-subclasses-and-register">Virtual Subclasses and
+<code>register()</code></h3>
+<p>Python ABCs also allow structural subtyping (duck typing) alongside
+nominal subtyping. You can register an unrelated class as a "virtual
+subclass" using the <code>register</code> method or decorator.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="at">@Database.register</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CustomStorage:</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="ex">connect</span>(<span class="va">self</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> execute(<span class="va">self</span>, query: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Type checks recognize CustomStorage as a subclass</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">issubclass</span>(CustomStorage, Database))  <span class="co"># True</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">isinstance</span>(CustomStorage(), Database))  <span class="co"># True</span></span></code></pre></div>
+<p>Virtual subclasses pass <code>isinstance()</code> and
+<code>issubclass()</code> checks, but Python does not check them for
+method completeness upon instantiation.</p>
+<p>Alternatively, an ABC can define the <code>__subclasshook__</code>
+method to customize <code>issubclass()</code> behavior dynamically based
+on whether certain method names exist on the target class.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

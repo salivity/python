@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parsing robots.txt with Python urllib.robotparser - python</title>
+    <meta name="description" content="The urllib.robotparser module in Python provides a standard framework for reading, parsing, and evaluating robots.txt files to ensure web crawlers respect website scraping policies. By using its core class, RobotFileParser, developers can automatically f">
+    <link rel="canonical" href="https://salivity.github.io/python/article/parsing-robots-txt-with-python-urllib-robotparser">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Parsing robots.txt with Python urllib.robotparser - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/parsing-robots-txt-with-python-urllib-robotparser" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The urllib.robotparser module in Python provides a standard framework for reading, parsing, and evaluating robots.txt files to ensure web crawlers respect website scraping policies. By using its core class, RobotFileParser, developers can automatically f" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="parsing-robotstxt-with-python-urllibrobotparser">Parsing
+robots.txt with Python urllib.robotparser</h1>
+<p>The <code>urllib.robotparser</code> module in Python provides a
+standard framework for reading, parsing, and evaluating
+<code>robots.txt</code> files to ensure web crawlers respect website
+scraping policies. By using its core class,
+<code>RobotFileParser</code>, developers can automatically fetch a
+site's directives, interpret access restrictions for specific user
+agents, and determine whether a target URL is safe to crawl before
+sending request payloads.</p>
+<h3 id="how-robotfileparser-works">How <code>RobotFileParser</code>
+Works</h3>
+<p>The parsing workflow within <code>urllib.robotparser</code> consists
+of three primary phases: fetching the file, parsing its contents into
+structured rules, and evaluating access permissions.</p>
+<h4 id="1-fetching-and-reading-the-file">1. Fetching and Reading the
+File</h4>
+<p>To begin parsing, the <code>RobotFileParser</code> instance must be
+associated with the location of a target <code>robots.txt</code> file.
+This is handled using the <code>set_url()</code> method. When the
+<code>read()</code> method is executed, the module uses
+<code>urllib.request</code> to issue an HTTP GET request to retrieve the
+document:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> urllib.robotparser</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>rp <span class="op">=</span> urllib.robotparser.RobotFileParser()</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>rp.set_url(<span class="st">&quot;https://www.example.com/robots.txt&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>rp.read()</span></code></pre></div>
+<p>If you already have the contents of a <code>robots.txt</code> file as
+an iterable of strings (such as when reading from a local cache or a
+custom HTTP client), you can bypass network retrieval by using
+<code>rp.parse(lines)</code> instead of <code>rp.read()</code>.</p>
+<h4 id="2-parsing-directives">2. Parsing Directives</h4>
+<p>During the parsing phase, <code>urllib.robotparser</code> reads the
+file line-by-line, stripping whitespace and discarding comments (lines
+beginning with <code>#</code>). It processes standard directives by
+grouping them into user-agent-specific blocks:</p>
+<ul>
+<li><strong>User-agent:</strong> Identifies which crawler the subsequent
+rules apply to. The parser checks for exact matches to your crawler's
+name or falls back to the wildcard (<code>*</code>) directive if no
+specific entry exists.</li>
+<li><strong>Disallow:</strong> Marks URL paths that the specified
+user-agent must not access.</li>
+<li><strong>Allow:</strong> Explicitly permits access to subpaths within
+an otherwise disallowed path.</li>
+<li><strong>Crawl-delay:</strong> Indicates the number of seconds a
+crawler should wait between successive requests.</li>
+<li><strong>Request-rate:</strong> Defines the request frequency limits
+(e.g., requests per number of seconds).</li>
+</ul>
+<p>The parser stores these directives internally as rule objects,
+associating each set of <code>Allow</code> and <code>Disallow</code>
+path patterns with their corresponding user-agent definitions.</p>
+<h4 id="3-checking-url-permissions">3. Checking URL Permissions</h4>
+<p>Once the directives are parsed into memory, the crawler queries
+whether a specific URL can be crawled using the
+<code>can_fetch(useragent, url)</code> method.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>user_agent <span class="op">=</span> <span class="st">&quot;MyCustomBot&quot;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>target_url <span class="op">=</span> <span class="st">&quot;https://www.example.com/data/page.html&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> rp.can_fetch(user_agent, target_url):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Access allowed: Proceeding with fetch.&quot;</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Access denied: Skipping URL.&quot;</span>)</span></code></pre></div>
+<p>The <code>can_fetch</code> method operates using specific path
+comparison rules:</p>
+<ul>
+<li>It first looks for a <code>User-agent</code> block matching the
+query string. If no match is found, it falls back to the <code>*</code>
+block.</li>
+<li>It compares the target URL's path component against the
+<code>Allow</code> and <code>Disallow</code> entries sequentially.</li>
+<li>The most specific rule (usually the longest matching path) takes
+precedence. If an <code>Allow</code> and <code>Disallow</code> rule have
+identical lengths, the <code>Allow</code> rule typically overrides the
+<code>Disallow</code> rule.</li>
+<li>If a path does not match any specified rule, access is granted by
+default.</li>
+</ul>
+<h3 id="handling-network-errors-and-edge-cases">Handling Network Errors
+and Edge Cases</h3>
+<p>The parser applies default behaviors when encountering network
+failures:</p>
+<ul>
+<li><strong>HTTP 401 or 403:</strong> If the server returns a forbidden
+or unauthorized status code for <code>robots.txt</code>, the parser
+assumes all access is restricted (<code>can_fetch</code> returns
+<code>False</code>).</li>
+<li><strong>HTTP 404:</strong> If the <code>robots.txt</code> file does
+not exist, the parser assumes there are no access limitations
+(<code>can_fetch</code> returns <code>True</code>).</li>
+<li><strong>HTTP 5xx:</strong> Server-side errors typically prevent the
+file from being read, leading the parser to treat access as fully
+restricted until the server recovers.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

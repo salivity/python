@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Negative Index Slicing Works - python</title>
+    <meta name="description" content="In Python, negative index values provide a concise way to reference and extract elements from sequences like lists, strings, and tuples relative to the end of the data structure. This article explains the internal offset mechanism Python uses to convert">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-negative-index-slicing-works">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Negative Index Slicing Works - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-negative-index-slicing-works" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, negative index values provide a concise way to reference and extract elements from sequences like lists, strings, and tuples relative to the end of the data structure. This article explains the internal offset mechanism Python uses to convert" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-negative-index-slicing-works">How Python Negative
+Index Slicing Works</h1>
+<p>In Python, negative index values provide a concise way to reference
+and extract elements from sequences like lists, strings, and tuples
+relative to the end of the data structure. This article explains the
+internal offset mechanism Python uses to convert negative indices into
+positive sequence positions, demonstrates how the standard
+<code>[start:stop:step]</code> slicing syntax operates with negative
+values, and covers the behavior of negative step directions.</p>
+<h2 id="the-index-resolution-mechanism">The Index Resolution
+Mechanism</h2>
+<p>Python sequences are zero-indexed, meaning the first item is at index
+<code>0</code> and the final item is at index
+<code>len(sequence) - 1</code>. When you provide a negative index,
+Python interprets it as an offset from the end of the sequence by adding
+the sequence's total length to the negative value:</p>
+<p><span class="math display">\[\text{effective\_index} =
+\text{len(sequence)} + \text{negative\_index}\]</span></p>
+<p>For example, in a list of five elements:</p>
+<ul>
+<li>Index <code>-1</code> becomes <code>5 + (-1) = 4</code> (the last
+element).</li>
+<li>Index <code>-2</code> becomes <code>5 + (-2) = 3</code> (the
+second-to-last element).</li>
+<li>Index <code>-5</code> becomes <code>5 + (-5) = 0</code> (the first
+element).</li>
+</ul>
+<h2 id="basic-negative-slicing-start-and-stop">Basic Negative Slicing:
+<code>start</code> and <code>stop</code></h2>
+<p>The slice syntax accepts three parameters:
+<code>sequence[start:stop:step]</code>. When <code>start</code> or
+<code>stop</code> are negative, Python calculates their equivalent
+non-negative positions before extracting elements. The slice includes
+the element at the resolved <code>start</code> index and excludes the
+element at the resolved <code>stop</code> index (half-open interval
+<code>[start, stop)</code>).</p>
+<p>Consider the list
+<code>letters = ['a', 'b', 'c', 'd', 'e']</code>:</p>
+<ul>
+<li><strong>Extract the last three elements:</strong><br />
+<code>letters[-3:]</code> converts to <code>letters[2:]</code>,
+returning <code>['c', 'd', 'e']</code>.</li>
+<li><strong>Exclude the last two elements:</strong><br />
+<code>letters[:-2]</code> converts to <code>letters[:3]</code>,
+returning <code>['a', 'b', 'c']</code>.</li>
+<li><strong>Slice between negative bounds:</strong><br />
+<code>letters[-4:-1]</code> converts to <code>letters[1:4]</code>,
+returning <code>['b', 'c', 'd']</code>.</li>
+</ul>
+<p>If the computed <code>start</code> position is greater than or equal
+to the computed <code>stop</code> position while using a positive step,
+Python returns an empty sequence rather than raising an error:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>letters[<span class="op">-</span><span class="dv">1</span>:<span class="op">-</span><span class="dv">3</span>]  <span class="co"># Equivalent to letters[4:2] with step +1 -&gt; []</span></span></code></pre></div>
+<h2 id="reversing-direction-with-a-negative-step">Reversing Direction
+with a Negative <code>step</code></h2>
+<p>The <code>step</code> parameter controls both the increment size and
+the direction of traversal. A positive step moves left-to-right, whereas
+a negative step moves right-to-left.</p>
+<p>When <code>step</code> is negative:</p>
+<ol type="1">
+<li>Slicing starts at the higher index and proceeds downward.</li>
+<li>The default <code>start</code> becomes <code>-1</code> (the last
+element).</li>
+<li>The default <code>stop</code> becomes the position conceptually
+before index <code>0</code>, ensuring the first element is
+included.</li>
+</ol>
+<p>Common patterns with negative steps include:</p>
+<ul>
+<li><strong>Complete reversal:</strong><br />
+<code>letters[::-1]</code> traverses from index <code>-1</code> down to
+the beginning, returning <code>['e', 'd', 'c', 'b', 'a']</code>.</li>
+<li><strong>Reverse with explicit bounds:</strong><br />
+<code>letters[-1:-4:-1]</code> begins at index <code>4</code> ('e') and
+steps backward until index <code>1</code> ('b', excluded), returning
+<code>['e', 'd', 'c']</code>.</li>
+<li><strong>Every other element in reverse:</strong><br />
+<code>letters[::-2]</code> returns <code>['e', 'c', 'a']</code>.</li>
+</ul>
+<h2 id="out-of-bounds-handling">Out-of-Bounds Handling</h2>
+<p>Unlike direct indexing (e.g., <code>letters[-10]</code>), which
+raises an <code>IndexError</code>, slicing handles out-of-bounds
+negative values gracefully by clamping them to the nearest valid
+boundary:</p>
+<ul>
+<li>A negative <code>start</code> or <code>stop</code> value less than
+<code>-len(sequence)</code> is clamped to index <code>0</code>.</li>
+<li>A negative value greater than <code>len(sequence)</code> in reverse
+operations is bounded to the logical end of the collection.</li>
+</ul>
+<p>For instance, <code>letters[-10:3]</code> clamps <code>-10</code> to
+<code>0</code>, effectively executing <code>letters[0:3]</code> and
+yielding <code>['a', 'b', 'c']</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

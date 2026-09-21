@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Role of py.typed Marker Files in Python - python</title>
+    <meta name="description" content="The py.typed marker file is a packaging standard introduced in PEP 561 that explicitly signals to static type checkers that a library supports inline type hints. Without this marker, static analysis tools such as Mypy, Pyright, and IDE type inspection en">
+    <link rel="canonical" href="https://salivity.github.io/python/article/the-role-of-py-typed-marker-files-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="The Role of py.typed Marker Files in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/the-role-of-py-typed-marker-files-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The py.typed marker file is a packaging standard introduced in PEP 561 that explicitly signals to static type checkers that a library supports inline type hints. Without this marker, static analysis tools such as Mypy, Pyright, and IDE type inspection en" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="the-role-of-pytyped-marker-files-in-python">The Role of py.typed
+Marker Files in Python</h1>
+<p>The <code>py.typed</code> marker file is a packaging standard
+introduced in PEP 561 that explicitly signals to static type checkers
+that a library supports inline type hints. Without this marker, static
+analysis tools such as Mypy, Pyright, and IDE type inspection engines
+treat installed third-party packages as untyped by default, ignoring any
+existing type annotations. This article explains why the
+<code>py.typed</code> file exists, how type checkers interact with it,
+and how to properly include it in modern Python package
+distributions.</p>
+<h2 id="the-problem-pytyped-solves">The Problem <code>py.typed</code>
+Solves</h2>
+<p>Before PEP 561 was adopted, type checkers could not reliably
+determine whether a package's inline type hints were complete,
+maintained, and intended for public use, or merely experimental and
+partial. Analyzing incomplete type hints often produced false-positive
+errors for end users.</p>
+<p>To prevent this, static type checkers adopted a conservative default
+behavior: any imported third-party library without an explicit signal is
+treated as untyped, falling back to <code>Any</code> types or raising
+"missing type stubs" warnings. The <code>py.typed</code> marker file
+provides an explicit, opt-in contract between package authors and
+consumer tooling.</p>
+<h2 id="how-the-marker-works">How the Marker Works</h2>
+<p>A <code>py.typed</code> file is typically an empty file placed
+directly inside a Python package's directory alongside its
+<code>__init__.py</code> file.</p>
+<p>When an end-user runs a type checker on code that imports your
+package, the tool performs the following checks:</p>
+<ol type="1">
+<li><strong>Locates the Package:</strong> The type checker finds the
+installed package in the Python environment.</li>
+<li><strong>Checks for <code>py.typed</code>:</strong> It looks for a
+file named <code>py.typed</code> at the root of the package.</li>
+<li><strong>Parses Annotations:</strong> If the file is present, the
+type checker parses the inline type hints within the package’s
+<code>.py</code> files (or any bundled <code>.pyi</code> stub files) and
+verifies the user's code against them.</li>
+<li><strong>Fallback Behavior:</strong> If the file is missing, the type
+checker ignores the package's internal annotations and looks for
+external stubs (such as typeshed) or treats the package imports as
+dynamic.</li>
+</ol>
+<h2 id="how-to-include-pytyped-in-a-distribution">How to Include
+<code>py.typed</code> in a Distribution</h2>
+<p>Creating the file is not enough; the build backend must also be
+instructed to include the file in the built wheel and source
+distribution (<code>sdist</code>).</p>
+<h3 id="1-create-the-file">1. Create the File</h3>
+<p>Inside your package directory, create an empty file named
+<code>py.typed</code>:</p>
+<pre class="text"><code>my_package/
+├── my_package/
+│   ├── __init__.py
+│   ├── core.py
+│   └── py.typed
+├── pyproject.toml
+└── README.md</code></pre>
+<h3 id="2-configure-your-build-system">2. Configure Your Build
+System</h3>
+<p>Ensure your packaging configuration treats <code>py.typed</code> as
+package data:</p>
+<ul>
+<li><strong>Hatchling:</strong> Automatically includes
+<code>py.typed</code> files by default.</li>
+<li><strong>Flit:</strong> Automatically includes files inside the
+module directory.</li>
+<li><strong>Poetry:</strong> Often includes package files automatically,
+but can be made explicit in <code>pyproject.toml</code>:
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode toml"><code class="sourceCode toml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[tool.poetry]</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">packages</span> <span class="op">=</span> <span class="op">[{ </span><span class="dt">include</span><span class="op"> =</span> <span class="st">&quot;my_package&quot;</span><span class="op"> }]</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="dt">include</span> <span class="op">=</span> <span class="op">[</span><span class="st">&quot;my_package/py.typed&quot;</span><span class="op">]</span></span></code></pre></div></li>
+<li><strong>Setuptools:</strong> Requires explicit inclusion via
+<code>pyproject.toml</code> or <code>setup.cfg</code>:
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode toml"><code class="sourceCode toml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[tool.setuptools.package-data]</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">my_package</span> <span class="op">=</span> <span class="op">[</span><span class="st">&quot;py.typed&quot;</span><span class="op">]</span></span></code></pre></div></li>
+</ul>
+<h2 id="rules-for-subpackages-and-namespace-packages">Rules for
+Subpackages and Namespace Packages</h2>
+<ul>
+<li><strong>Standard Packages:</strong> A single <code>py.typed</code>
+file in the top-level package directory covers all submodules and
+subpackages within that directory.</li>
+<li><strong>Namespace Packages:</strong> If your project uses PEP 420
+namespace packages (packages split across multiple directories without
+an <code>__init__.py</code>), a separate <code>py.typed</code> file must
+be placed in each subpackage directory distributed by your project.</li>
+</ul>
+<h2 id="verification">Verification</h2>
+<p>To verify that your package is correctly configured:</p>
+<ol type="1">
+<li>Build your distribution wheel using a tool like <code>build</code>
+(<code>python -m build</code>).</li>
+<li>Inspect the contents of the generated <code>.whl</code> file (which
+is a standard zip archive) and confirm that
+<code>my_package/py.typed</code> is present.</li>
+<li>Install the wheel into a clean virtual environment and run
+<code>mypy</code> or <code>pyright</code> against consumer code that
+imports the package to ensure types are resolved without warnings.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

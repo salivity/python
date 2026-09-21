@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python time.time vs monotonic vs perf_counter - python</title>
+    <meta name="description" content="Python's time module provides multiple functions for measuring time, each tailored to specific operational needs. While time.time() measures real-world wall-clock time, time.monotonic() provides a steady, non-decreasing clock ideal for long-running inter">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-time-time-vs-monotonic-vs-perf-counter">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python time.time vs monotonic vs perf_counter - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-time-time-vs-monotonic-vs-perf-counter" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's time module provides multiple functions for measuring time, each tailored to specific operational needs. While time.time() measures real-world wall-clock time, time.monotonic() provides a steady, non-decreasing clock ideal for long-running inter" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-timetime-vs-monotonic-vs-perf_counter">Python time.time
+vs monotonic vs perf_counter</h1>
+<p>Python's <code>time</code> module provides multiple functions for
+measuring time, each tailored to specific operational needs. While
+<code>time.time()</code> measures real-world wall-clock time,
+<code>time.monotonic()</code> provides a steady, non-decreasing clock
+ideal for long-running intervals, and <code>time.perf_counter()</code>
+delivers the highest-resolution clock available for accurate performance
+benchmarking. Choosing the correct function prevents bugs caused by
+system clock adjustments, daylight saving changes, or inadequate
+measurement resolution.</p>
+<h3 id="timetime-the-wall-clock-time"><code>time.time()</code>: The
+Wall-Clock Time</h3>
+<p><code>time.time()</code> returns the current Unix timestamp—the
+number of seconds that have elapsed since January 1, 1970, 00:00:00
+(UTC).</p>
+<ul>
+<li><strong>Clock Source:</strong> It relies on the operating system's
+system clock (wall-clock time).</li>
+<li><strong>Behavior:</strong> Because it reflects the actual system
+time, it can move backwards or jump forwards. This happens if a user
+manually changes the system clock or if a Network Time Protocol (NTP)
+service synchronizes the time.</li>
+<li><strong>Best Used For:</strong>
+<ul>
+<li>Logging timestamps.</li>
+<li>Storing creation and modification dates in databases.</li>
+<li>Converting time to human-readable date formats.</li>
+</ul></li>
+<li><strong>Do Not Use For:</strong> Measuring elapsed time or code
+execution speed, as an NTP adjustment during the measurement can produce
+incorrect or negative durations.</li>
+</ul>
+<h3
+id="timemonotonic-the-unchanging-timeline"><code>time.monotonic()</code>:
+The Unchanging Timeline</h3>
+<p><code>time.monotonic()</code> returns a floating-point value
+representing seconds from an arbitrary reference point, such as system
+boot time.</p>
+<ul>
+<li><strong>Clock Source:</strong> It uses an internal monotonic
+hardware clock provided by the operating system.</li>
+<li><strong>Behavior:</strong> By definition, a monotonic clock can
+never go backward, and it does not jump if the system clock is updated.
+While the frequency can be adjusted slightly by NTP to correct drift
+(slewing), it will never produce a negative delta between two
+consecutive reads.</li>
+<li><strong>Best Used For:</strong>
+<ul>
+<li>Measuring long-running intervals and durations.</li>
+<li>Implementing timeouts, retry loops, and rate limiters.</li>
+<li>Scheduling periodic tasks.</li>
+</ul></li>
+<li><strong>Do Not Use For:</strong> Determining the current date, time
+of day, or synchronizing with external real-world events, because its
+reference point has no real-world calendar meaning.</li>
+</ul>
+<h3
+id="timeperf_counter-high-resolution-benchmarking"><code>time.perf_counter()</code>:
+High-Resolution Benchmarking</h3>
+<p><code>time.perf_counter()</code> provides the highest available
+resolution clock on the host platform, designed specifically for
+measuring short execution times.</p>
+<ul>
+<li><strong>Clock Source:</strong> It accesses high-resolution hardware
+timers (such as the TSC on x86 architectures or Windows
+QueryPerformanceCounter).</li>
+<li><strong>Behavior:</strong> Like <code>time.monotonic()</code>, it is
+monotonic and cannot go backwards. However, it is optimized to provide
+the finest possible granularity and lowest call overhead, making it
+significantly more sensitive to tiny fractions of a second. It includes
+time elapsed during system sleep.</li>
+<li><strong>Best Used For:</strong>
+<ul>
+<li>Benchmarking algorithms and functions.</li>
+<li>Profiling execution speed in micro-benchmarks.</li>
+<li>Measuring extremely short intervals where nanosecond or microsecond
+precision is necessary.</li>
+</ul></li>
+<li><strong>Do Not Use For:</strong> Long-term scheduling across days,
+calendar timestamps, or when minimal resource overhead over extended
+periods is preferred over precision.</li>
+</ul>
+<h3 id="summary-comparison">Summary Comparison</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Function</th>
+<th style="text-align: left;">Primary Purpose</th>
+<th style="text-align: left;">Can Move Backwards?</th>
+<th style="text-align: left;">Best Scenario</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>time.time()</code></td>
+<td style="text-align: left;">Wall-clock time</td>
+<td style="text-align: left;">Yes (NTP/manual changes)</td>
+<td style="text-align: left;">Timestamps, logging, display</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>time.monotonic()</code></td>
+<td style="text-align: left;">Elapsed time</td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Timeouts, rate limits, loops</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>time.perf_counter()</code></td>
+<td style="text-align: left;">Precision timing</td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Benchmarking, profiling code</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

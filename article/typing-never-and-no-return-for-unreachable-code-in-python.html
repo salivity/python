@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>typing.Never and NoReturn for Unreachable Code in Python - python</title>
+    <meta name="description" content="Python's typing system provides specialized constructs to represent computations that do not terminate normally or values that can never exist. This article explains how typing.NoReturn and typing.Never function, the difference between them, and how stat">
+    <link rel="canonical" href="https://salivity.github.io/python/article/typing-never-and-no-return-for-unreachable-code-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="typing.Never and NoReturn for Unreachable Code in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/typing-never-and-no-return-for-unreachable-code-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's typing system provides specialized constructs to represent computations that do not terminate normally or values that can never exist. This article explains how typing.NoReturn and typing.Never function, the difference between them, and how stat" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1
+id="typingnever-and-noreturn-for-unreachable-code-in-python">typing.Never
+and NoReturn for Unreachable Code in Python</h1>
+<p>Python's typing system provides specialized constructs to represent
+computations that do not terminate normally or values that can never
+exist. This article explains how <code>typing.NoReturn</code> and
+<code>typing.Never</code> function, the difference between them, and how
+static type checkers use them to detect dead code and enforce exhaustive
+pattern matching.</p>
+<h2 id="understanding-the-concepts-bottom-types-in-python">Understanding
+the Concepts: Bottom Types in Python</h2>
+<p>In type theory, a "bottom type" is a type that has no values. If a
+variable has a bottom type, it indicates a logical impossibility during
+runtime.</p>
+<p>Python implements this concept primarily through two annotations:</p>
+<ul>
+<li><strong><code>typing.NoReturn</code></strong>: Introduced in Python
+3.5 (PEP 484) to annotate functions that never return to their caller,
+such as functions that always raise an exception or terminate the
+process.</li>
+<li><strong><code>typing.Never</code></strong>: Introduced in Python
+3.11 (PEP 654) to provide an explicit, general-purpose bottom type.
+While <code>NoReturn</code> was historically restricted to function
+return annotations, <code>Never</code> can be used anywhere a bottom
+type is conceptually needed.</li>
+</ul>
+<p>To modern static type checkers like Mypy and Pyright,
+<code>Never</code> and <code>NoReturn</code> are treated as
+equivalent.</p>
+<h2 id="indicating-functions-that-never-return">Indicating Functions
+That Never Return</h2>
+<p>When a function always raises an exception or halts program
+execution, it will never yield control back to the call site. Annotating
+such a function with <code>NoReturn</code> or <code>Never</code> informs
+the type checker that any code directly following the call is
+unreachable.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> NoReturn</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> terminate_execution(message: <span class="bu">str</span>) <span class="op">-&gt;</span> NoReturn:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Fatal error: </span><span class="sc">{</span>message<span class="sc">}</span><span class="ss">&quot;</span>, <span class="bu">file</span><span class="op">=</span>sys.stderr)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    sys.exit(<span class="dv">1</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process_data(data: <span class="bu">dict</span> <span class="op">|</span> <span class="va">None</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> data <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        terminate_execution(<span class="st">&quot;Data cannot be None.&quot;</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># The type checker knows `data` cannot be None here.</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># It also knows this line is unreachable if data was None.</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(data.keys())</span></code></pre></div>
+<p>Because <code>terminate_execution</code> is typed with
+<code>NoReturn</code>, the static type checker automatically narrows
+<code>data</code> from <code>dict | None</code> to <code>dict</code> on
+the subsequent lines.</p>
+<h2 id="exhaustive-type-narrowing-and-dead-code-detection">Exhaustive
+Type Narrowing and Dead Code Detection</h2>
+<p>The most powerful use of <code>typing.Never</code> is verifying that
+conditional branching covers every possible case in a <code>Union</code>
+or <code>Enum</code>. Through type narrowing (using
+<code>if/elif/else</code> or <code>match/case</code>), the type checker
+eliminates possibilities branch by branch.</p>
+<p>If all possibilities are handled, the type of the variable in the
+final fallback branch is narrowed to <code>Never</code>. If a new case
+is added to the data structure in the future, the variable in the
+fallback branch will no longer be <code>Never</code>, causing the type
+checker to flag an error.</p>
+<p>Python 3.11 introduced <code>typing.assert_never</code> to
+standardize this pattern:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> Literal, assert_never</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>Status <span class="op">=</span> Literal[<span class="st">&quot;pending&quot;</span>, <span class="st">&quot;approved&quot;</span>, <span class="st">&quot;rejected&quot;</span>]</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> handle_status(status: Status) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> status <span class="op">==</span> <span class="st">&quot;pending&quot;</span>:</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&quot;Waiting for review.&quot;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> status <span class="op">==</span> <span class="st">&quot;approved&quot;</span>:</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&quot;Request granted.&quot;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> status <span class="op">==</span> <span class="st">&quot;rejected&quot;</span>:</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&quot;Request denied.&quot;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="co"># If all cases are handled, `status` has type `Never`.</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="co"># If a new status is added to `Status` and not handled above,</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        <span class="co"># the type checker flags a type mismatch error here.</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        assert_never(status)</span></code></pre></div>
+<p>At runtime, if unexpected data reaches <code>assert_never</code>, it
+raises an <code>AssertionError</code>. Statically, it guarantees that
+dead code paths remain truly unreachable.</p>
+<h2 id="key-differences-and-best-practices">Key Differences and Best
+Practices</h2>
+<ul>
+<li><strong>Use <code>typing.NoReturn</code> for function
+returns</strong>: If a function ends the program or unconditionally
+raises an exception, annotate its return type with <code>NoReturn</code>
+(or <code>Never</code>).</li>
+<li><strong>Use <code>typing.Never</code> for values and
+exhaustiveness</strong>: When annotating variables, function parameters
+(such as custom assertion functions), or type arguments that should
+never occur, use <code>Never</code>.</li>
+<li><strong>Rely on <code>assert_never</code></strong>: Instead of
+manually raising exceptions in unhandled branches, use
+<code>assert_never()</code> to turn runtime omissions into
+compile-time/type-check errors.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

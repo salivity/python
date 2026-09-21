@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Call C Code in Python with CFFI - python</title>
+    <meta name="description" content="This article explores how the C Foreign Function Interface (cffi) enables Python applications to interact with external C libraries. It covers the core architecture of cffi, the distinctions between ABI and API access modes, how data types are marshaled">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-call-c-code-in-python-with-cffi">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Call C Code in Python with CFFI - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-call-c-code-in-python-with-cffi" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how the C Foreign Function Interface (cffi) enables Python applications to interact with external C libraries. It covers the core architecture of cffi, the distinctions between ABI and API access modes, how data types are marshaled" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-call-c-code-in-python-with-cffi">How to Call C Code in
+Python with CFFI</h1>
+<p>This article explores how the C Foreign Function Interface
+(<code>cffi</code>) enables Python applications to interact with
+external C libraries. It covers the core architecture of
+<code>cffi</code>, the distinctions between ABI and API access modes,
+how data types are marshaled across language boundaries, and the
+trade-offs between in-line and out-of-line execution models. By parsing
+standard C declarations directly, <code>cffi</code> provides an
+efficient, portable, and maintainable bridge between Python and native C
+code.</p>
+<h2 id="the-foundation-direct-c-declarations">The Foundation: Direct C
+Declarations</h2>
+<p>Traditional approaches to interfacing C with Python—such as
+<code>ctypes</code> or writing manual CPython extension modules—require
+either extensive manual struct recreation in pure Python or
+boilerplate-heavy C code using the Python C API.</p>
+<p><code>cffi</code> simplifies this by using an internal C parser.
+Developers pass standard C header code (types, function prototypes,
+struct definitions, and macros) directly to the interface via
+<code>ffi.cdef()</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> cffi <span class="im">import</span> FFI</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>ffi <span class="op">=</span> FFI()</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>ffi.cdef(<span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="st">    int printf(const char *format, ...);</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="st">    double sin(double x);</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;&quot;&quot;</span>)</span></code></pre></div>
+<p><code>cffi</code> parses this snippet, creates corresponding internal
+representations, and automatically generates wrappers to marshal inputs
+and outputs between Python and C without requiring custom
+boilerplate.</p>
+<h2 id="operating-modes-abi-vs-api">Operating Modes: ABI vs. API</h2>
+<p><code>cffi</code> operates across two primary dimensions: how it
+accesses the library (ABI vs. API) and when it builds the bindings
+(in-line vs. out-of-line).</p>
+<h3 id="abi-mode-application-binary-interface">ABI Mode (Application
+Binary Interface)</h3>
+<p>In ABI mode, <code>cffi</code> interacts directly with shared
+libraries (<code>.so</code>, <code>.dll</code>, or <code>.dylib</code>)
+at the binary level using dynamic loading tools like
+<code>dlopen</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>C <span class="op">=</span> ffi.dlopen(<span class="st">&quot;m&quot;</span>)  <span class="co"># Load standard C math library</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> C.sin(<span class="fl">3.14159</span> <span class="op">/</span> <span class="dv">2</span>)</span></code></pre></div>
+<ul>
+<li><strong>Pros:</strong> Does not require a C compiler on the host
+system at runtime or installation.</li>
+<li><strong>Cons:</strong> Struct layout, macro expansions, and
+<code>typedef</code> sizing must match the target platform exactly. Any
+mismatch in header assumptions leads to undefined behavior or
+segmentation faults.</li>
+</ul>
+<h3 id="api-mode-application-programming-interface">API Mode
+(Application Programming Interface)</h3>
+<p>In API mode, <code>cffi</code> uses a C compiler to verify
+definitions and generate a native C extension module. You define both
+the declarations (<code>cdef</code>) and the C source code needed to
+compile against the target library (<code>set_source</code>).</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>ffi.set_source(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;_math_example&quot;</span>,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;&quot;&quot;#include &lt;math.h&gt;&quot;&quot;&quot;</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    libraries<span class="op">=</span>[<span class="st">&quot;m&quot;</span>]</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<ul>
+<li><strong>Pros:</strong> Highly reliable. The host C compiler
+evaluates actual struct sizes, alignments, and preprocessor macros,
+eliminating errors caused by platform-specific ABI variations.</li>
+<li><strong>Cons:</strong> Requires a functional C build environment
+during package installation.</li>
+</ul>
+<h2 id="execution-models-in-line-vs-out-of-line">Execution Models:
+In-line vs. Out-of-line</h2>
+<h3 id="in-line-execution">In-line Execution</h3>
+<p>In-line mode parses the definitions and compiles the code every time
+the Python script is imported or executed. While convenient for rapid
+prototyping and short development scripts, it introduces startup latency
+and requires compiler access each time the program runs (when using API
+mode).</p>
+<h3 id="out-of-line-execution">Out-of-line Execution</h3>
+<p>Out-of-line mode compiles the bindings once during the project's
+build process into a standalone <code>.so</code> or <code>.pyd</code>
+module. The resulting module can be imported like any standard Python
+module:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> _math_example <span class="im">import</span> ffi, lib</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> lib.sin(<span class="fl">1.57</span>)</span></code></pre></div>
+<p>This model is the recommended standard for production systems and
+packaging (such as building Python wheels), as end users do not need a C
+compiler if pre-built wheels are distributed.</p>
+<h2 id="data-marshalling-and-memory-management">Data Marshalling and
+Memory Management</h2>
+<p><code>cffi</code> bridges the gap between managed Python objects and
+raw C memory through dedicated conversion utilities:</p>
+<ul>
+<li><strong>Type Allocation:</strong>
+<code>ffi.new("type", value)</code> allocates C objects in memory. By
+default, <code>cffi</code> manages this memory through Python’s garbage
+collector, freeing the C memory once the wrapper object goes out of
+scope.</li>
+<li><strong>Pointers and Arrays:</strong> Direct access to native arrays
+and nested structs is handled using standard Python indexing and
+slicing.</li>
+<li><strong>Casting and Buffers:</strong> <code>ffi.cast()</code> allows
+reinterpreting memory addresses, and <code>ffi.buffer()</code> exposes
+raw C memory blocks as standard Python buffer objects, avoiding
+unnecessary memory copies when passing large datasets.</li>
+</ul>
+<h2 id="performance-and-pypy-integration">Performance and PyPy
+Integration</h2>
+<p>While <code>ctypes</code> relies heavily on dynamic dispatch overhead
+within CPython, <code>cffi</code> generates compact C wrappers in API
+mode that compile into native machine code.</p>
+<p>Furthermore, <code>cffi</code> was designed in tandem with the PyPy
+JIT compiler. Under PyPy, calls made through <code>cffi</code> can often
+be inlined directly into native assembly, effectively eliminating the
+foreign function call overhead that typically penalizes cross-language
+boundaries. Under standard CPython, out-of-line API mode performs
+comparably to hand-crafted C extensions while maintaining a safer and
+more readable codebase.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

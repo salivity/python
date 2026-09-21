@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Happens When You Delete Large Python Objects? - python</title>
+    <meta name="description" content="When large objects are deleted in Python, the memory they occupied is freed from the application level but is not always returned to the operating system immediately. Python utilizes reference counting and an internal memory management system called PyMa">
+    <link rel="canonical" href="https://salivity.github.io/python/article/what-happens-when-you-delete-large-python-objects">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="What Happens When You Delete Large Python Objects? - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/what-happens-when-you-delete-large-python-objects" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When large objects are deleted in Python, the memory they occupied is freed from the application level but is not always returned to the operating system immediately. Python utilizes reference counting and an internal memory management system called PyMa" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="what-happens-when-you-delete-large-python-objects">What Happens
+When You Delete Large Python Objects?</h1>
+<p>When large objects are deleted in Python, the memory they occupied is
+freed from the application level but is not always returned to the
+operating system immediately. Python utilizes reference counting and an
+internal memory management system called PyMalloc, working alongside the
+C runtime allocator. While deleting a large object flags its memory as
+available for future Python operations, external monitoring tools may
+still show high process memory usage due to heap fragmentation and
+allocator retention policies.</p>
+<h2 id="reference-counting-and-object-destruction">Reference Counting
+and Object Destruction</h2>
+<p>Python primarily manages memory through reference counting. When you
+use the <code>del</code> keyword or an object falls out of scope, Python
+decrements that object's reference counter:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>large_list <span class="op">=</span> [i <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">10_000_000</span>)]</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span> large_list</span></code></pre></div>
+<p>The <code>del</code> statement does not directly wipe memory; it
+destroys the name binding and reduces the reference count by one. If the
+count reaches zero, Python immediately invokes the object's deallocator
+function to free the underlying resources. For objects with circular
+references, Python's cyclical garbage collector periodically detects and
+clears them during background collection cycles.</p>
+<h2 id="pymalloc-vs-the-system-allocator">PyMalloc vs. The System
+Allocator</h2>
+<p>Python distinguishes between small and large memory allocations to
+optimize performance:</p>
+<ul>
+<li><strong>Small Allocations (≤ 512 bytes):</strong> Managed directly
+by PyMalloc. PyMalloc groups memory into blocks, pools (4 KB), and
+arenas (256 KB). When a small object is destroyed, its block is returned
+to its pool. A 256 KB arena is only returned to the operating system if
+every single pool inside that arena becomes completely vacant.</li>
+<li><strong>Large Allocations (&gt; 512 bytes):</strong> Bypasses
+PyMalloc entirely. Python routes requests for large objects—such as
+large byte strings, long lists, or data structures like NumPy
+arrays—directly to standard system-level allocators like the C standard
+library's <code>malloc()</code> or <code>mmap()</code>.</li>
+</ul>
+<h2 id="why-the-operating-system-does-not-reclaim-the-memory">Why the
+Operating System Does Not Reclaim the Memory</h2>
+<p>Even after a large object is cleared and its memory is passed back
+via <code>free()</code>, your system's activity monitor might show that
+Python is still using the same amount of RAM. This occurs for several
+reasons:</p>
+<ol type="1">
+<li><strong>Allocator Caching:</strong> The underlying C library
+allocator (such as <code>glibc</code> on Linux) often holds onto freed
+virtual memory rather than returning it to the kernel. It assumes the
+application will request large chunks of memory again soon, saving the
+performance overhead of repeated system calls.</li>
+<li><strong>Heap Fragmentation:</strong> Memory allocated on the process
+heap via <code>brk()</code> can only shrink from the top down. If a
+single small, long-lived object sits at the highest address of the heap,
+none of the freed memory below it can be unmapped back to the operating
+system.</li>
+<li><strong>Memory Mapping Boundaries:</strong> Memory allocated via
+<code>mmap()</code> (common for extremely large, contiguous buffers) can
+typically be returned directly to the kernel via <code>munmap()</code>.
+However, if the object was split or allocated via traditional heap
+expansion, it remains locked in the process space.</li>
+</ol>
+<h2 id="forcing-memory-reclamation">Forcing Memory Reclamation</h2>
+<p>If reclaiming memory is critical to your application's architecture,
+standard <code>del</code> commands may need to be paired with more
+aggressive cleanup strategies:</p>
+<ul>
+<li><strong>Triggering Garbage Collection:</strong> Running
+<code>gc.collect()</code> clears objects caught in cyclic references
+that reference counting missed.</li>
+<li><strong>C Library Trimming:</strong> On Linux systems running
+<code>glibc</code>, you can force the allocator to release unused
+dynamic memory using <code>ctypes</code>:
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ctypes</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>ctypes.CDLL(<span class="st">&quot;libc.so.6&quot;</span>).malloc_trim(<span class="dv">0</span>)</span></code></pre></div></li>
+<li><strong>Process Isolation:</strong> The most reliable way to
+guarantee that all memory from a large computation is returned to the
+operating system is to run that task in a separate process using the
+<code>multiprocessing</code> module. When the child process terminates,
+the operating system unconditionally reclaims all associated memory
+pages.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

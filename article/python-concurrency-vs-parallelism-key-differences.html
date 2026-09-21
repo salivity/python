@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Concurrency vs Parallelism: Key Differences - python</title>
+    <meta name="description" content="Understanding the difference between concurrency and parallelism is essential for writing efficient Python applications. Concurrency is about dealing with multiple tasks at once by interleaving their execution, typically to prevent I/O operations from bl">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-concurrency-vs-parallelism-key-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Concurrency vs Parallelism: Key Differences - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-concurrency-vs-parallelism-key-differences" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Understanding the difference between concurrency and parallelism is essential for writing efficient Python applications. Concurrency is about dealing with multiple tasks at once by interleaving their execution, typically to prevent I/O operations from bl" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-concurrency-vs-parallelism-key-differences">Python
+Concurrency vs Parallelism: Key Differences</h1>
+<p>Understanding the difference between concurrency and parallelism is
+essential for writing efficient Python applications. Concurrency is
+about <em>dealing</em> with multiple tasks at once by interleaving their
+execution, typically to prevent I/O operations from blocking the
+application. Parallelism is about <em>executing</em> multiple tasks
+simultaneously across multiple CPU cores. This guide breaks down how
+both paradigms work in Python, the role of the Global Interpreter Lock
+(GIL), and how to choose the right approach for your specific
+workload.</p>
+<h2 id="defining-concurrency-vs-parallelism">Defining Concurrency vs.
+Parallelism</h2>
+<ul>
+<li><strong>Concurrency:</strong> The composition of independently
+executing processes. A concurrent system manages multiple tasks by
+switching between them rapidly. Even on a single-core processor, a
+program can be concurrent by making progress on Task B while Task A
+waits for a network response.</li>
+<li><strong>Parallelism:</strong> The simultaneous execution of multiple
+computational tasks. Parallelism requires hardware with multiple
+processing units (such as multi-core CPUs) so that two or more
+operations physically execute at the exact same instant in time.</li>
+</ul>
+<p>In short: <strong>Concurrency is about program structure; parallelism
+is about program execution.</strong></p>
+<h2 id="the-python-factor-the-global-interpreter-lock-gil">The Python
+Factor: The Global Interpreter Lock (GIL)</h2>
+<p>In standard Python (CPython), concurrency and parallelism are heavily
+shaped by the Global Interpreter Lock (GIL). The GIL is a mutex that
+prevents multiple native threads from executing Python bytecodes at the
+same time.</p>
+<p>Because of the GIL:</p>
+<ul>
+<li>Standard Python threads cannot achieve true CPU parallelism on
+multi-core systems.</li>
+<li>Threading and asynchronous code excel at I/O-bound operations where
+the GIL is released during wait states.</li>
+<li>True parallelism requires bypassing the GIL entirely by using
+multiple processes.</li>
+</ul>
+<h2 id="concurrency-in-python-io-bound-workloads">Concurrency in Python
+(I/O-Bound Workloads)</h2>
+<p>Concurrency is the ideal solution for I/O-bound applications, such as
+web scrapers, API clients, and database-heavy services, where the
+program spends most of its time waiting for external responses.</p>
+<p>Python offers two primary ways to implement concurrency:</p>
+<h3 id="1-multithreading-threading-module">1. Multithreading
+(<code>threading</code> module)</h3>
+<p>Threads share the same memory space. When a thread initiates a
+blocking I/O operation (like downloading a file), it releases the GIL,
+allowing another thread to run.</p>
+<ul>
+<li><strong>Best for:</strong> Existing blocking codebases, downloading
+multiple URLs, file reads/writes.</li>
+<li><strong>Trade-off:</strong> Preemptive multitasking can introduce
+race conditions, requiring locks and semaphores to maintain thread
+safety.</li>
+</ul>
+<h3 id="2-asynchronous-programming-asyncio-module">2. Asynchronous
+Programming (<code>asyncio</code> module)</h3>
+<p>Asyncio provides single-threaded, cooperative multitasking using an
+event loop, <code>async</code>, and <code>await</code> keywords.</p>
+<ul>
+<li><strong>Best for:</strong> High-concurrency network servers,
+WebSockets, microservices handling thousands of simultaneous
+connections.</li>
+<li><strong>Trade-off:</strong> Requires an asynchronous ecosystem
+(async-compatible libraries); a single CPU-heavy blocking call will
+stall the entire event loop.</li>
+</ul>
+<h2 id="parallelism-in-python-cpu-bound-workloads">Parallelism in Python
+(CPU-Bound Workloads)</h2>
+<p>Parallelism is required for CPU-bound tasks, such as data analysis,
+image rendering, machine learning inference, and cryptographic
+calculations, where execution time depends strictly on processor
+speed.</p>
+<p>To achieve true parallelism, Python uses:</p>
+<h3 id="the-multiprocessing-module">The <code>multiprocessing</code>
+Module</h3>
+<p>Instead of spawning threads, Python spawns separate OS processes,
+each with its own Python interpreter, memory space, and GIL.</p>
+<ul>
+<li><strong>Best for:</strong> Heavy computations, matrix math, data
+transformations, batch processing.</li>
+<li><strong>Trade-off:</strong> Higher memory overhead than threads.
+Inter-process communication (IPC) requires data serialization
+(pickling), which adds execution overhead.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing <span class="im">import</span> Pool</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> square(n):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> n <span class="op">*</span> n</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> Pool() <span class="im">as</span> p:</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        results <span class="op">=</span> p.<span class="bu">map</span>(square, [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">5</span>])</span></code></pre></div>
+<h2 id="summary-comparison">Summary Comparison</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Concurrency (<code>threading</code> /
+<code>asyncio</code>)</th>
+<th style="text-align: left;">Parallelism
+(<code>multiprocessing</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Primary Goal</strong></td>
+<td style="text-align: left;">Minimize idle wait time</td>
+<td style="text-align: left;">Maximize CPU throughput</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Ideal Workload</strong></td>
+<td style="text-align: left;">I/O-bound (network, disk, DB)</td>
+<td style="text-align: left;">CPU-bound (math, rendering, parsing)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Hardware Need</strong></td>
+<td style="text-align: left;">Works on a single core</td>
+<td style="text-align: left;">Requires multiple cores/processors</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Memory Model</strong></td>
+<td style="text-align: left;">Shared memory</td>
+<td style="text-align: left;">Isolated memory per process</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>GIL Impact</strong></td>
+<td style="text-align: left;">Bound by GIL (releases on I/O)</td>
+<td style="text-align: left;">Bypasses GIL by using multiple
+interpreters</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Overhead</strong></td>
+<td style="text-align: left;">Low memory and fast context switching</td>
+<td style="text-align: left;">Higher memory usage; requires data
+serialization</td>
+</tr>
+</tbody>
+</table>
+<p>Choose <strong>concurrency</strong> when your code is waiting on
+outside resources. Choose <strong>parallelism</strong> when your code is
+actively consuming processor cycles to calculate results.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

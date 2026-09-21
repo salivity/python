@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python __subclasses__() Method Explained - python</title>
+    <meta name="description" content="The subclasses() method in Python is a built-in class method that returns a list of all immediate subclasses currently loaded in memory that inherit from a given base class. This introspection feature enables developers to inspect inheritance hierarchies">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-subclasses-method-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python __subclasses__() Method Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-subclasses-method-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The subclasses() method in Python is a built-in class method that returns a list of all immediate subclasses currently loaded in memory that inherit from a given base class. This introspection feature enables developers to inspect inheritance hierarchies" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-subclasses-method-explained">Python
+<strong>subclasses</strong>() Method Explained</h1>
+<p>The <code>__subclasses__()</code> method in Python is a built-in
+class method that returns a list of all immediate subclasses currently
+loaded in memory that inherit from a given base class. This
+introspection feature enables developers to inspect inheritance
+hierarchies at runtime, making it a powerful tool for building plugin
+architectures, implementing dynamic factory patterns, and automating
+class registration without hardcoded registries.</p>
+<h3 id="how-__subclasses__-works">How <code>__subclasses__()</code>
+Works</h3>
+<p>Every class in Python inherits from the root <code>object</code>
+type, which defines the <code>__subclasses__()</code> method. When
+invoked on a class, it queries Python's internal inheritance tree and
+returns a list containing references to its direct derived classes.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Animal:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Dog(Animal):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Cat(Animal):</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(Animal.__subclasses__())</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: [&lt;class &#39;__main__.Dog&#39;&gt;, &lt;class &#39;__main__.Cat&#39;&gt;]</span></span></code></pre></div>
+<h3 id="key-behaviors-and-characteristics">Key Behaviors and
+Characteristics</h3>
+<ol type="1">
+<li><strong>Direct Descendants Only</strong>: The method only returns
+immediate children. If <code>Dog</code> is subclassed by
+<code>GoldenRetriever</code>, <code>Animal.__subclasses__()</code> will
+list <code>Dog</code>, but not <code>GoldenRetriever</code>. To access
+all descendants in a deeply nested hierarchy, you must traverse the tree
+recursively.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_all_subclasses(cls):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    subclasses <span class="op">=</span> <span class="bu">set</span>(cls.__subclasses__())</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> subclasses.union(</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        s <span class="cf">for</span> c <span class="kw">in</span> subclasses <span class="cf">for</span> s <span class="kw">in</span> get_all_subclasses(c)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    )</span></code></pre></div>
+<ol start="2" type="1">
+<li><p><strong>In-Memory Tracking</strong>: Python tracks subclasses via
+weak references. A class will only appear in the list if the module
+defining it has already been imported into the current runtime
+environment. Unimported files will not appear.</p></li>
+<li><p><strong>Class-Level Execution</strong>: The method is meant to be
+called on the class itself, not on an instance of the class.</p></li>
+</ol>
+<h3 id="common-use-cases">Common Use Cases</h3>
+<ul>
+<li><strong>Plugin Systems</strong>: Applications can define an abstract
+base class or interface. Third-party extensions or add-ons subclass this
+base, allowing the application to discover and load all active plugins
+automatically using <code>BasePlugin.__subclasses__()</code>.</li>
+<li><strong>Dynamic Factory Pattern</strong>: Instead of maintaining a
+manual dictionary mapping type names to classes, a base factory class
+can inspect its subclasses to locate the appropriate implementation
+based on an attribute or class name.</li>
+<li><strong>Automated Testing and Validation</strong>: Test suites can
+use the method to verify that all subclasses of a base model implement
+required methods or configuration variables.</li>
+</ul>
+<h3 id="limitations">Limitations</h3>
+<p>Because <code>__subclasses__()</code> relies on imported modules, it
+cannot find subclasses dynamically from the filesystem without an import
+mechanism loading them first. Additionally, because subclasses can be
+dynamically created or garbage-collected during execution, the returned
+list reflects only the state of the program at the exact moment the
+method is called.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

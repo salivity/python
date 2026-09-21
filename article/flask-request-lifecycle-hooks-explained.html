@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Request Lifecycle Hooks Explained - python</title>
+    <meta name="description" content="In Python's Flask framework, the execution lifecycle of an HTTP request is managed through decorator-based hooks that execute code before, after, or at the conclusion of a route handler. Understanding how @app.beforerequest, @app.afterrequest, and @app.t">
+    <link rel="canonical" href="https://salivity.github.io/python/article/flask-request-lifecycle-hooks-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Flask Request Lifecycle Hooks Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/flask-request-lifecycle-hooks-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python's Flask framework, the execution lifecycle of an HTTP request is managed through decorator-based hooks that execute code before, after, or at the conclusion of a route handler. Understanding how @app.beforerequest, @app.afterrequest, and @app.t" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="flask-request-lifecycle-hooks-explained">Flask Request Lifecycle
+Hooks Explained</h1>
+<p>In Python's Flask framework, the execution lifecycle of an HTTP
+request is managed through decorator-based hooks that execute code
+before, after, or at the conclusion of a route handler. Understanding
+how <code>@app.before_request</code>, <code>@app.after_request</code>,
+and <code>@app.teardown_request</code> interact is essential for
+handling tasks like authentication, response header modification,
+database connection pooling, and error cleanup cleanly without
+cluttering individual view functions.</p>
+<h3 id="the-request-lifecycle-flow">The Request Lifecycle Flow</h3>
+<p>When an HTTP request hits a Flask application, it follows a
+deterministic path:</p>
+<ol type="1">
+<li>The Flask application creates a request context.</li>
+<li><code>@app.before_request</code> functions execute.</li>
+<li>The matched route view function processes the request (if not
+short-circuited).</li>
+<li><code>@app.after_request</code> functions modify the generated
+response.</li>
+<li><code>@app.teardown_request</code> functions execute to clean up
+resources.</li>
+<li>The response is returned to the client, and the request context is
+torn down.</li>
+</ol>
+<hr />
+<h3 id="1-appbefore_request">1. <code>@app.before_request</code></h3>
+<p>The <code>before_request</code> hook executes before every request
+enters its corresponding view function.</p>
+<ul>
+<li><strong>Primary Use Cases:</strong> User authentication, session
+validation, establishing database transactions, loading globally
+required data into Flask's <code>g</code> object, and request
+logging.</li>
+<li><strong>Short-Circuiting Behavior:</strong> If a
+<code>before_request</code> function returns a value (such as a
+redirect, an error message, or an abort), Flask halts further execution
+immediately. The intended view function is bypassed, and the returned
+value is converted into a response and passed directly down the
+lifecycle.</li>
+<li><strong>Execution Order:</strong> If multiple
+<code>before_request</code> functions are registered, they run in the
+order they were defined.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> flask <span class="im">import</span> Flask, g, request, abort</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> Flask(<span class="va">__name__</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">@app.before_request</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> authenticate_user():</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    token <span class="op">=</span> request.headers.get(<span class="st">&quot;Authorization&quot;</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> token <span class="kw">and</span> request.endpoint <span class="op">!=</span> <span class="st">&quot;login&quot;</span>:</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        abort(<span class="dv">401</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    g.user <span class="op">=</span> {<span class="st">&quot;id&quot;</span>: <span class="dv">1</span>, <span class="st">&quot;name&quot;</span>: <span class="st">&quot;Alice&quot;</span>}</span></code></pre></div>
+<hr />
+<h3 id="2-appafter_request">2. <code>@app.after_request</code></h3>
+<p>The <code>after_request</code> hook executes after the view function
+successfully produces a response, but before that response is sent to
+the client.</p>
+<ul>
+<li><strong>Primary Use Cases:</strong> Adding security headers,
+injecting CORS headers, modifying cookies, compressing payloads, and
+recording response metrics.</li>
+<li><strong>Requirements:</strong> Functions decorated with
+<code>after_request</code> must accept exactly one argument—the
+<code>response</code> object—and must return a valid
+<code>response</code> object (either the modified original or a new
+one).</li>
+<li><strong>Exception Sensitivity:</strong> This hook runs
+<strong>only</strong> if the request completed without an unhandled
+exception. If an unhandled exception occurs inside a view or a
+<code>before_request</code> function, <code>after_request</code> hooks
+are skipped entirely.</li>
+<li><strong>Execution Order:</strong> If multiple
+<code>after_request</code> functions are registered, they execute in
+<strong>reverse</strong> order of their registration (LIFO: Last-In,
+First-Out).</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="at">@app.after_request</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> add_security_headers(response):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    response.headers[<span class="st">&quot;X-Content-Type-Options&quot;</span>] <span class="op">=</span> <span class="st">&quot;nosniff&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    response.headers[<span class="st">&quot;X-Frame-Options&quot;</span>] <span class="op">=</span> <span class="st">&quot;DENY&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> response</span></code></pre></div>
+<hr />
+<h3 id="3-appteardown_request">3.
+<code>@app.teardown_request</code></h3>
+<p>The <code>teardown_request</code> hook executes at the very end of
+the request context lifecycle, when the request context is being
+popped.</p>
+<ul>
+<li><strong>Primary Use Cases:</strong> Closing database connections,
+releasing locks, terminating third-party network sessions, and cleaning
+up temporary files.</li>
+<li><strong>Guaranteed Execution:</strong> Unlike
+<code>after_request</code>, <code>teardown_request</code> is
+<strong>always</strong> invoked, even if an unhandled exception occurs
+during the execution of a <code>before_request</code> hook or the view
+function.</li>
+<li><strong>Arguments:</strong> Functions decorated with
+<code>teardown_request</code> must accept an optional
+<code>exception</code> parameter. If an unhandled exception caused the
+request to fail, that exception object is passed into the function;
+otherwise, it receives <code>None</code>.</li>
+<li><strong>Limitations:</strong> Teardown handlers cannot alter the
+HTTP response sent to the client because the response has already been
+finalized or generated by an error handler.</li>
+<li><strong>Execution Order:</strong> Like <code>after_request</code>,
+teardown handlers execute in <strong>reverse</strong> order of
+registration.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="at">@app.teardown_request</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> close_db_connection(exception<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    db <span class="op">=</span> <span class="bu">getattr</span>(g, <span class="st">&quot;_database&quot;</span>, <span class="va">None</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> db <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        db.close()</span></code></pre></div>
+<hr />
+<h3 id="comparison-of-lifecycle-hooks">Comparison of Lifecycle
+Hooks</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>before_request</code></th>
+<th style="text-align: left;"><code>after_request</code></th>
+<th style="text-align: left;"><code>teardown_request</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Execution Point</strong></td>
+<td style="text-align: left;">Before route handler</td>
+<td style="text-align: left;">After route handler</td>
+<td style="text-align: left;">When context is destroyed</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Input Arguments</strong></td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;"><code>response</code></td>
+<td style="text-align: left;"><code>exception=None</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Must Return</strong></td>
+<td style="text-align: left;">None (or Response to halt)</td>
+<td style="text-align: left;"><code>response</code></td>
+<td style="text-align: left;">Nothing (ignored)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Runs on Error?</strong></td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes (guaranteed)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Execution Order</strong></td>
+<td style="text-align: left;">Registration order</td>
+<td style="text-align: left;">Reverse order</td>
+<td style="text-align: left;">Reverse order</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

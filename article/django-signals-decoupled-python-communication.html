@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Django Signals: Decoupled Python Communication - python</title>
+    <meta name="description" content="Django signal dispatchers provide a lightweight framework that allows decoupled applications within a Python project to get notified when actions occur elsewhere in the framework. By acting as an internal publish-subscribe (Pub/Sub) messaging system, sig">
+    <link rel="canonical" href="https://salivity.github.io/python/article/django-signals-decoupled-python-communication">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Django Signals: Decoupled Python Communication - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/django-signals-decoupled-python-communication" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Django signal dispatchers provide a lightweight framework that allows decoupled applications within a Python project to get notified when actions occur elsewhere in the framework. By acting as an internal publish-subscribe (Pub/Sub) messaging system, sig" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="django-signals-decoupled-python-communication">Django Signals:
+Decoupled Python Communication</h1>
+<p>Django signal dispatchers provide a lightweight framework that allows
+decoupled applications within a Python project to get notified when
+actions occur elsewhere in the framework. By acting as an internal
+publish-subscribe (Pub/Sub) messaging system, signals enable independent
+components to execute business logic in response to specific framework
+or model events without creating hardcoded dependencies between
+modules.</p>
+<h3 id="understanding-django-signals">Understanding Django Signals</h3>
+<p>At its core, Django's signal framework consists of three primary
+components:</p>
+<ol type="1">
+<li><strong>Senders:</strong> The components or models that emit the
+notification that an event has occurred.</li>
+<li><strong>Signals:</strong> The actual dispatch objects that act as
+communication channels (instances of
+<code>django.dispatch.Signal</code>).</li>
+<li><strong>Receivers:</strong> The Python functions or callbacks that
+listen to the signals and execute logic when the signal is
+dispatched.</li>
+</ol>
+<p>When an event triggers a signal, the dispatcher identifies all
+functions connected to that specific signal and executes them
+sequentially.</p>
+<h3 id="the-purpose-of-decoupled-communication">The Purpose of Decoupled
+Communication</h3>
+<p>In large-scale Django applications, maintaining clean separation of
+concerns is critical. Without a dispatcher, executing side effects—such
+as creating a user profile, sending an onboarding email, or invalidating
+a cache—would require calling secondary services directly within the
+primary model methods or view handlers.</p>
+<p>Direct function calls introduce tight coupling:</p>
+<ul>
+<li>Modifying a secondary feature requires changing the core model or
+view code.</li>
+<li>Reusable third-party apps would need explicit knowledge of your
+project's custom logic, breaking modularity.</li>
+<li>Unit testing becomes more complex because core logic cannot be
+isolated easily from side effects.</li>
+</ul>
+<p>Signal dispatchers solve this by inverting the control. The core
+action—such as saving a record to the database—simply broadcasts that it
+has completed. The sender does not know or care which functions are
+listening, or if any listeners exist at all.</p>
+<h3 id="common-built-in-signals-and-use-cases">Common Built-in Signals
+and Use Cases</h3>
+<p>Django includes several built-in model signals that handle routine
+lifecycle events:</p>
+<ul>
+<li><code>post_save</code> and <code>pre_save</code>: Triggered
+immediately after or before a model's <code>save()</code> method
+completes. A frequent implementation is automatically creating a linked
+<code>UserProfile</code> model whenever a new <code>User</code> instance
+is saved.</li>
+<li><code>post_delete</code> and <code>pre_delete</code>: Triggered
+during the removal of database records, commonly used for deleting
+associated media files from cloud storage.</li>
+<li><code>m2m_changed</code>: Triggered when a
+<code>ManyToManyField</code> on a model is modified.</li>
+<li><code>request_started</code> and <code>request_finished</code>: Sent
+by the core HTTP handler when processing web requests, frequently used
+for performance tracking and custom logging.</li>
+</ul>
+<p>Developers can also define custom signals using
+<code>django.dispatch.Signal</code> to facilitate communication between
+distinct domain boundaries in an enterprise codebase.</p>
+<h3 id="mechanics-connecting-and-sending-signals">Mechanics: Connecting
+and Sending Signals</h3>
+<p>Receivers are connected to signals using the <code>@receiver</code>
+decorator or the explicit <code>Signal.connect()</code> method:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.db.models.signals <span class="im">import</span> post_save</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.dispatch <span class="im">import</span> receiver</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.contrib.auth.models <span class="im">import</span> User</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> .models <span class="im">import</span> Profile</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="at">@receiver</span>(post_save, sender<span class="op">=</span>User)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> create_user_profile(sender, instance, created, <span class="op">**</span>kwargs):</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> created:</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        Profile.objects.create(user<span class="op">=</span>instance)</span></code></pre></div>
+<p>Custom events can dispatch signals manually across modules:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.dispatch <span class="im">import</span> Signal</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the signal</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>order_completed <span class="op">=</span> Signal()</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Dispatch the signal</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>order_completed.send(sender<span class="op">=</span>Order, order_id<span class="op">=</span>order.<span class="bu">id</span>)</span></code></pre></div>
+<h3 id="architectural-considerations">Architectural Considerations</h3>
+<p>While signals excel at decoupling, they must be used judiciously:</p>
+<ul>
+<li><strong>Synchronous Execution:</strong> By default, Django signals
+run synchronously in the same thread and database transaction as the
+caller. Long-running tasks, such as sending emails or heavy data
+processing, should be offloaded to an asynchronous task queue like
+Celery rather than executed directly inside a signal receiver.</li>
+<li><strong>Traceability:</strong> Overusing signals can obscure control
+flow, making it difficult to trace where certain database updates or
+operations originate.</li>
+<li><strong>Alternative Approaches:</strong> Explicit model methods,
+service layers, or custom manager methods are often preferred over
+signals when the logic is inherently central to the model's domain
+rather than a decoupled side effect.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

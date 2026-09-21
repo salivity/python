@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Class Creation with Type in Python - python</title>
+    <meta name="description" content="In Python, classes are first-class objects that can be created dynamically at runtime rather than statically defined via the class keyword. While the built-in type() function is commonly used with a single argument to check an object's type, passing thre">
+    <link rel="canonical" href="https://salivity.github.io/python/article/dynamic-class-creation-with-type-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Dynamic Class Creation with Type in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/dynamic-class-creation-with-type-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, classes are first-class objects that can be created dynamically at runtime rather than statically defined via the class keyword. While the built-in type() function is commonly used with a single argument to check an object's type, passing thre" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="dynamic-class-creation-with-type-in-python">Dynamic Class
+Creation with Type in Python</h1>
+<p>In Python, classes are first-class objects that can be created
+dynamically at runtime rather than statically defined via the
+<code>class</code> keyword. While the built-in <code>type()</code>
+function is commonly used with a single argument to check an object's
+type, passing three arguments to <code>type()</code> invokes Python's
+metaclass machinery to construct and return a new class dynamically.
+This article explains how the three-argument form of <code>type()</code>
+works, breaks down its required parameters, demonstrates practical
+implementation examples including methods and inheritance, and
+highlights typical use cases in modern software development.</p>
+<h3 id="the-three-argument-signature">The Three-Argument Signature</h3>
+<p>The syntax for dynamically creating a class is:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">type</span>(name, bases, <span class="bu">dict</span>)</span></code></pre></div>
+<p>Each argument serves a specific purpose in defining the structure of
+the class:</p>
+<ol type="1">
+<li><strong><code>name</code></strong> <em>(str)</em>: The name of the
+class being created. This value sets the internal <code>__name__</code>
+attribute of the class.</li>
+<li><strong><code>bases</code></strong> <em>(tuple)</em>: A tuple
+containing the base classes from which the new class will inherit. For a
+class inheriting directly from <code>object</code>, you can pass an
+empty tuple <code>()</code> or <code>(object,)</code>.</li>
+<li><strong><code>dict</code></strong> <em>(dict)</em>: The class
+namespace, containing attribute names and their corresponding values,
+including variables and methods. This populates the
+<code>__dict__</code> attribute of the class.</li>
+</ol>
+<h3 id="basic-class-creation">Basic Class Creation</h3>
+<p>The standard class definition:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> User:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    role <span class="op">=</span> <span class="st">&quot;member&quot;</span></span></code></pre></div>
+<p>Is functionally identical to the following dynamic declaration:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>User <span class="op">=</span> <span class="bu">type</span>(<span class="st">&quot;User&quot;</span>, (), {<span class="st">&quot;role&quot;</span>: <span class="st">&quot;member&quot;</span>})</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>user_instance <span class="op">=</span> User()</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(user_instance.role)  <span class="co"># Outputs: member</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">type</span>(user_instance)) <span class="co"># Outputs: &lt;class &#39;__main__.User&#39;&gt;</span></span></code></pre></div>
+<h3 id="adding-methods-dynamically">Adding Methods Dynamically</h3>
+<p>Methods are regular functions bound to the class namespace. To add
+instance methods, define a standard function that accepts
+<code>self</code> as the first argument, then map it into the dictionary
+passed to <code>type()</code>.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, username):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.username <span class="op">=</span> username</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> greet(<span class="va">self</span>):</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f&quot;Hello, </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>username<span class="sc">}</span><span class="ss">!&quot;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>User <span class="op">=</span> <span class="bu">type</span>(</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;User&quot;</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    (),</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;role&quot;</span>: <span class="st">&quot;member&quot;</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;__init__&quot;</span>: <span class="fu">__init__</span>,</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;greet&quot;</span>: greet</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>user <span class="op">=</span> User(<span class="st">&quot;Alice&quot;</span>)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(user.greet())  <span class="co"># Outputs: Hello, Alice!</span></span></code></pre></div>
+<h3 id="implementing-inheritance">Implementing Inheritance</h3>
+<p>To inherit from existing classes, provide them in the
+<code>bases</code> tuple. The dynamic class will respect method
+resolution order (MRO) just like any statically defined subclass.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> BaseEntity:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> save(<span class="va">self</span>):</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f&quot;Saving </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span><span class="va">__class__</span><span class="sc">.</span><span class="va">__name__</span><span class="sc">}</span><span class="ss"> to database.&quot;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>AdminUser <span class="op">=</span> <span class="bu">type</span>(</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;AdminUser&quot;</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    (BaseEntity,),</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    {<span class="st">&quot;role&quot;</span>: <span class="st">&quot;administrator&quot;</span>}</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>admin <span class="op">=</span> AdminUser()</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(admin.role)    <span class="co"># Outputs: administrator</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(admin.save())    <span class="co"># Outputs: Saving AdminUser to database.</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">issubclass</span>(AdminUser, BaseEntity))  <span class="co"># Outputs: True</span></span></code></pre></div>
+<h3 id="use-cases-for-dynamic-class-creation">Use Cases for Dynamic
+Class Creation</h3>
+<p>Dynamic class generation is particularly useful in advanced
+programming scenarios:</p>
+<ul>
+<li><strong>Object-Relational Mapping (ORM) and Serialization</strong>:
+Libraries like SQLAlchemy or Django dynamically construct model classes
+based on database schemas or configuration files.</li>
+<li><strong>API Clients</strong>: Automatically generating
+strongly-typed client classes at runtime based on schemas such as
+OpenAPI or JSON Schema.</li>
+<li><strong>Factory Patterns and Metaprogramming</strong>: Creating mock
+objects, plugins, or customized types on the fly during testing or
+modular application bootstrap.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

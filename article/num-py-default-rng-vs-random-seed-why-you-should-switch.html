@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NumPy default_rng vs random.seed: Why You Should Switch - python</title>
+    <meta name="description" content="NumPy introduced a modern random number generation framework in version 1.17, establishing numpy.random.defaultrng() as the replacement for the legacy numpy.random.seed() and RandomState system. This article explains why the modern Generator API is super">
+    <link rel="canonical" href="https://salivity.github.io/python/article/num-py-default-rng-vs-random-seed-why-you-should-switch">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="NumPy default_rng vs random.seed: Why You Should Switch - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/num-py-default-rng-vs-random-seed-why-you-should-switch" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="NumPy introduced a modern random number generation framework in version 1.17, establishing numpy.random.defaultrng() as the replacement for the legacy numpy.random.seed() and RandomState system. This article explains why the modern Generator API is super" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="numpy-default_rng-vs-randomseed-why-you-should-switch">NumPy
+default_rng vs random.seed: Why You Should Switch</h1>
+<p>NumPy introduced a modern random number generation framework in
+version 1.17, establishing <code>numpy.random.default_rng()</code> as
+the replacement for the legacy <code>numpy.random.seed()</code> and
+<code>RandomState</code> system. This article explains why the modern
+<code>Generator</code> API is superior, focusing on its improved
+statistical quality, execution speed, thread safety, and protection
+against global state corruption.</p>
+<h3 id="superior-underlying-algorithm">Superior Underlying
+Algorithm</h3>
+<p>The legacy interface relies on the Mersenne Twister (MT19937)
+pseudo-random number generator. While historically popular, MT19937
+suffers from known statistical weaknesses, fails modern test suites like
+TestU01, and has a large internal state footprint (2.5 KB).</p>
+<p><code>numpy.random.default_rng()</code> defaults to the
+<strong>PCG64</strong> (Permuted Congruential Generator) algorithm.
+PCG64 provides:</p>
+<ul>
+<li>Exceptional statistical properties, easily passing all modern test
+batteries.</li>
+<li>Better resistance to predictability.</li>
+<li>A much smaller internal state size, allowing for faster
+initialization and reduced memory consumption.</li>
+</ul>
+<h3 id="thread-safety-and-state-isolation">Thread Safety and State
+Isolation</h3>
+<p>The primary flaw of <code>numpy.random.seed()</code> is that it sets
+a <strong>global state</strong>. Any library, dependency, or thread in
+the same Python process that calls a random function mutates this shared
+state, leading to:</p>
+<ul>
+<li><strong>Race conditions:</strong> Concurrent threads can overwrite
+the generator's state unpredictably.</li>
+<li><strong>Non-reproducible pipelines:</strong> Third-party packages
+invoking random functions will silently alter your random sequence.</li>
+</ul>
+<p>In contrast, <code>default_rng()</code> instantiates an independent,
+isolated <code>Generator</code> object. By creating and passing explicit
+instances (<code>rng = np.random.default_rng(seed)</code>), state
+mutations are strictly scoped, making your code deterministic and safe
+for multithreaded workflows.</p>
+<h3 id="faster-performance-across-distributions">Faster Performance
+Across Distributions</h3>
+<p>The new <code>Generator</code> architecture redesigns how
+distributions are generated from raw random bits:</p>
+<ul>
+<li><strong>Bounded Integers:</strong> Legacy
+<code>np.random.randint()</code> used naive modulo arithmetic, which was
+slower and produced modulo bias on certain intervals. Modern
+<code>rng.integers()</code> employs Lemire's method, which is unbiased
+and significantly faster.</li>
+<li><strong>Continuous Distributions:</strong> Algorithms for generating
+standard normal, exponential, and gamma distributions have been updated
+with state-of-the-art methods (such as the Ziggurat method), yielding
+substantial speedups over the legacy implementations.</li>
+</ul>
+<h3 id="elimination-of-bias-and-unwanted-side-effects">Elimination of
+Bias and Unwanted Side Effects</h3>
+<p>Legacy methods often silently altered data types or exhibited
+statistical bias:</p>
+<ul>
+<li>Legacy functions like <code>np.random.random_sample()</code>
+frequently convert outputs through intermediary 32-bit floats before
+returning 64-bit values.</li>
+<li>Modern methods like <code>rng.random()</code> natively produce
+uniform double-precision floating-point numbers without precision
+degradation.</li>
+</ul>
+<h3 id="api-longevity-and-active-maintenance">API Longevity and Active
+Maintenance</h3>
+<p>NumPy guarantees that the legacy system (<code>np.random.seed</code>
+and <code>np.random.*</code> convenience functions) will produce
+identical outputs forever to maintain backward compatibility with old
+codebases. Consequently:</p>
+<ul>
+<li><strong>No bug fixes or improvements</strong> will be applied to the
+legacy interface if they alter numerical output.</li>
+<li><strong>No new distributions or features</strong> will be added to
+the legacy API.</li>
+<li>All active development, optimizations, and modern sampling
+algorithms are exclusive to <code>default_rng()</code>.</li>
+</ul>
+<p>Adopting <code>numpy.random.default_rng()</code> ensures your
+numerical pipelines are faster, statistically sound, reproducible in
+concurrent environments, and compatible with the future of Python
+scientific computing.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

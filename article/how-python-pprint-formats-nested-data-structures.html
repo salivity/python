@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python pprint Formats Nested Data Structures - python</title>
+    <meta name="description" content="Python’s built-in pprint (pretty-print) module formats complex nested data structures into clean, human-readable representations by intelligently managing line breaks, indentation, and depth. Unlike standard print(), which dumps data into a single cont">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-pprint-formats-nested-data-structures">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python pprint Formats Nested Data Structures - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-pprint-formats-nested-data-structures" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s built-in pprint (pretty-print) module formats complex nested data structures into clean, human-readable representations by intelligently managing line breaks, indentation, and depth. Unlike standard print(), which dumps data into a single cont" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-pprint-formats-nested-data-structures">How Python
+pprint Formats Nested Data Structures</h1>
+<p>Python’s built-in <code>pprint</code> (pretty-print) module formats
+complex nested data structures into clean, human-readable
+representations by intelligently managing line breaks, indentation, and
+depth. Unlike standard <code>print()</code>, which dumps data into a
+single continuous stream, <code>pprint</code> calculates character
+widths and nesting levels to output organized, visually structured text.
+This article explains the core mechanics behind how <code>pprint</code>
+analyzes structure, wraps lines, enforces depth limits, and safely
+handles recursive references.</p>
+<h3 id="line-width-and-dynamic-wrapping">Line Width and Dynamic
+Wrapping</h3>
+<p>The primary mechanism behind <code>pprint</code> is its
+width-calculation algorithm. By default, <code>pprint</code> targets an
+80-character line width, controlled by the <code>width</code>
+parameter.</p>
+<p>When evaluating a data structure, the module first checks if the
+entire object fits within the remaining horizontal space on the current
+line. If it fits, <code>pprint</code> formats it inline:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pprint</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> {<span class="st">&quot;status&quot;</span>: <span class="st">&quot;ok&quot;</span>, <span class="st">&quot;codes&quot;</span>: [<span class="dv">200</span>, <span class="dv">201</span>]}</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>pprint.pprint(data, width<span class="op">=</span><span class="dv">40</span>)</span></code></pre></div>
+<p>If an object exceeds the allowed width, the formatter recursively
+splits child elements onto separate lines, placing each item on its own
+row with an opening and closing delimiter.</p>
+<h3 id="indentation-and-hierarchy">Indentation and Hierarchy</h3>
+<p>To reflect hierarchy in nested dictionaries, lists, and tuples,
+<code>pprint</code> adjusts indentation at each nesting level.</p>
+<ul>
+<li><strong><code>indent</code> parameter:</strong> Specifies the number
+of spaces added for each level of nesting (defaults to
+<code>1</code>).</li>
+<li><strong>Delimiters:</strong> Opening brackets (<code>[</code>,
+<code>{</code>, <code>(</code>) determine the alignment of subsequent
+items, visually grouping child elements beneath their parent
+container.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>nested_data <span class="op">=</span> {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;user&quot;</span>: {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;profile&quot;</span>: {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;id&quot;</span>: <span class="dv">42</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;roles&quot;</span>: [<span class="st">&quot;admin&quot;</span>, <span class="st">&quot;editor&quot;</span>, <span class="st">&quot;moderator&quot;</span>]</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>pprint.pprint(nested_data, indent<span class="op">=</span><span class="dv">2</span>, width<span class="op">=</span><span class="dv">30</span>)</span></code></pre></div>
+<p>In this case, each nested level shifts right by two spaces, clearly
+distinguishing parents from children.</p>
+<h3 id="limiting-output-depth">Limiting Output Depth</h3>
+<p>When dealing with deeply nested JSON payloads or tree structures,
+formatting every single layer can clutter output. The <code>depth</code>
+parameter restricts how far down <code>pprint</code> will traverse:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pprint.pprint(nested_data, depth<span class="op">=</span><span class="dv">2</span>)</span></code></pre></div>
+<p>Any container located deeper than the specified threshold is replaced
+with an ellipsis (<code>...</code>), showing the high-level layout
+without rendering every terminal node.</p>
+<h3 id="deterministic-dictionary-ordering">Deterministic Dictionary
+Ordering</h3>
+<p>In debugging, consistent output is critical. By default,
+<code>pprint</code> sorts dictionary keys alphabetically (controlled via
+<code>sort_dicts=True</code>). Even though standard Python dictionaries
+preserve insertion order, sorting ensures that identical data structures
+always produce the exact same visual representation, regardless of how
+keys were inserted. To preserve insertion order, set
+<code>sort_dicts=False</code>.</p>
+<h3 id="packing-sequences-with-the-compact-parameter">Packing Sequences
+with the Compact Parameter</h3>
+<p>For collections containing many small elements, standard vertical
+expansion can lead to excessive scrolling. The <code>compact=True</code>
+parameter changes the line-wrapping strategy:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>numbers <span class="op">=</span> <span class="bu">list</span>(<span class="bu">range</span>(<span class="dv">30</span>))</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>pprint.pprint(numbers, width<span class="op">=</span><span class="dv">40</span>, compact<span class="op">=</span><span class="va">True</span>)</span></code></pre></div>
+<p>Instead of printing each number on a new line, <code>pprint</code>
+packs as many items as possible onto a single line before wrapping to
+the next, maintaining the 40-character boundary while minimizing
+vertical space.</p>
+<h3 id="detecting-recursive-references">Detecting Recursive
+References</h3>
+<p>Standard recursive printing functions can enter infinite loops when
+processing self-referential structures (where an object references
+itself). The <code>pprint</code> module keeps an internal registry of
+visited object IDs (<code>id()</code>). If an object is encountered a
+second time within the same traversal chain, <code>pprint</code> stops
+recursion and prints <code>&lt;Recursion on type with id=...&gt;</code>,
+preventing stack overflow errors.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeautifulSoup vs lxml: Python HTML Parsing Compared - python</title>
+    <meta name="description" content="When extracting data from HTML documents in Python, developers primarily choose between BeautifulSoup and lxml. While BeautifulSoup provides an intuitive, highly forgiving API designed to navigate messy or broken markup easily, lxml is a high-performance">
+    <link rel="canonical" href="https://salivity.github.io/python/article/beautiful-soup-vs-lxml-python-html-parsing-compared">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="BeautifulSoup vs lxml: Python HTML Parsing Compared - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/beautiful-soup-vs-lxml-python-html-parsing-compared" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When extracting data from HTML documents in Python, developers primarily choose between BeautifulSoup and lxml. While BeautifulSoup provides an intuitive, highly forgiving API designed to navigate messy or broken markup easily, lxml is a high-performance" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1
+id="beautifulsoup-vs-lxml-python-html-parsing-compared">BeautifulSoup vs
+lxml: Python HTML Parsing Compared</h1>
+<p>When extracting data from HTML documents in Python, developers
+primarily choose between BeautifulSoup and lxml. While BeautifulSoup
+provides an intuitive, highly forgiving API designed to navigate messy
+or broken markup easily, lxml is a high-performance library written in C
+that excels at speed and advanced querying using XPath. This article
+outlines the architectural differences, performance benchmarks, feature
+sets, and best use cases for both libraries to help you select the right
+tool for your project.</p>
+<h3 id="core-architecture">Core Architecture</h3>
+<p>BeautifulSoup is not a standalone parser; rather, it is a high-level
+abstraction layer that sits on top of other underlying parsers (such as
+Python's built-in <code>html.parser</code>, <code>html5lib</code>, or
+<code>lxml</code>). Its primary goal is to make tree traversal
+straightforward and idiomatically Pythonic.</p>
+<p>In contrast, lxml is a direct Python binding for the C libraries
+<code>libxml2</code> and <code>libxslt</code>. It operates natively at
+the C level, allowing it to parse, traverse, and manipulate both XML and
+HTML documents directly in memory without the overhead of higher-level
+Python abstractions.</p>
+<h3 id="parsing-speed-and-performance">Parsing Speed and
+Performance</h3>
+<p>Performance is the most significant differentiator between the two
+libraries:</p>
+<ul>
+<li><strong>lxml:</strong> Because it processes documents using native C
+code, lxml is exceptionally fast and memory-efficient. For massive web
+scraping operations, large XML dumps, or high-concurrency systems, lxml
+drastically outperforms pure Python parsing routines.</li>
+<li><strong>BeautifulSoup:</strong> BeautifulSoup incurs overhead
+because it constructs Python objects for every tag, attribute, and
+navigable string. While using <code>lxml</code> as the backend parser
+inside BeautifulSoup significantly speeds up the initial parsing step,
+navigating the resulting BeautifulSoup tree is still noticeably slower
+than querying lxml directly.</li>
+</ul>
+<h3 id="ease-of-use-and-api-design">Ease of Use and API Design</h3>
+<p>BeautifulSoup is built around developer convenience and
+readability:</p>
+<ul>
+<li><strong>BeautifulSoup API:</strong> It uses intuitive methods like
+<code>.find()</code>, <code>.find_all()</code>, and dynamic tag access
+(e.g., <code>soup.div.p</code>). It automatically converts incoming
+documents to Unicode and outgoing documents to UTF-8, abstracting away
+encoding headaches.</li>
+<li><strong>lxml API:</strong> lxml follows the ElementTree API
+convention. While robust, its syntax can feel more verbose and
+lower-level for beginners. Simple tasks like retrieving inner text or
+searching nested elements often require explicit helper functions or
+XPath expressions.</li>
+</ul>
+<h3 id="querying-capabilities-css-selectors-vs-xpath">Querying
+Capabilities: CSS Selectors vs. XPath</h3>
+<p>Both libraries support CSS selectors, but their advanced query
+capabilities diverge:</p>
+<ul>
+<li><strong>XPath Support:</strong> lxml provides full native support
+for XPath 1.0, enabling developers to write powerful and concise queries
+that traverse forward and backward through document hierarchies.
+BeautifulSoup does not support XPath natively.</li>
+<li><strong>CSS Selectors:</strong> BeautifulSoup provides modern CSS
+selector support via the <code>SoupSieve</code> package (integrated into
+BeautifulSoup 4). lxml also supports CSS selectors via the
+<code>cssselect</code> module, translating CSS queries into XPath under
+the hood.</li>
+</ul>
+<h3 id="handling-broken-and-malformed-html">Handling Broken and
+Malformed HTML</h3>
+<p>Real-world web pages often contain missing closing tags, unquoted
+attributes, and illegal characters:</p>
+<ul>
+<li><strong>BeautifulSoup:</strong> Renowned for its fault tolerance,
+BeautifulSoup fixes malformed HTML automatically, creating a logical
+tree structure even from severely damaged markup.</li>
+<li><strong>lxml:</strong> While lxml's XML parser is strict and will
+fail on malformed documents, its <code>lxml.html</code> module contains
+a specialized HTML parser capable of handling dirty markup. However, in
+edge cases involving extreme syntax errors, BeautifulSoup's
+<code>html5lib</code> parser backend handles edge cases with greater
+precision.</li>
+</ul>
+<h3 id="using-them-together">Using Them Together</h3>
+<p>Developers do not always have to choose one over the other.
+BeautifulSoup allows you to specify <code>lxml</code> as its backend
+engine:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> bs4 <span class="im">import</span> BeautifulSoup</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>soup <span class="op">=</span> BeautifulSoup(html_content, <span class="st">&quot;lxml&quot;</span>)</span></code></pre></div>
+<p>This hybrid approach provides the best of both worlds for standard
+scraping tasks: the rapid parsing speed of lxml combined with the
+developer-friendly traversal methods of BeautifulSoup.</p>
+<h3 id="summary-when-to-choose-which">Summary: When to Choose Which</h3>
+<ul>
+<li><strong>Choose lxml</strong> if raw parsing speed is critical, you
+are working with large datasets, or your scraping logic relies heavily
+on XPath queries.</li>
+<li><strong>Choose BeautifulSoup</strong> if you prioritize developer
+productivity, need to scrape small-to-medium web pages quickly, or are
+dealing with highly inconsistent, broken HTML that breaks strict
+parsers.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

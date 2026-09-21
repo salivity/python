@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python stat.S_ISDIR Checks os.stat Mode Bits - python</title>
+    <meta name="description" content="When inspecting files in Python, calling os.stat() returns a statresult object containing the stmode attribute, an integer that encodes both file permissions and file type flags. The stat.SISDIR() function evaluates this integer using bitwise operations">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-stat-s-isdir-checks-os-stat-mode-bits">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python stat.S_ISDIR Checks os.stat Mode Bits - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-stat-s-isdir-checks-os-stat-mode-bits" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When inspecting files in Python, calling os.stat() returns a statresult object containing the stmode attribute, an integer that encodes both file permissions and file type flags. The stat.SISDIR() function evaluates this integer using bitwise operations" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-stats_isdir-checks-osstat-mode-bits">How Python
+stat.S_ISDIR Checks os.stat Mode Bits</h1>
+<p>When inspecting files in Python, calling <code>os.stat()</code>
+returns a <code>stat_result</code> object containing the
+<code>st_mode</code> attribute, an integer that encodes both file
+permissions and file type flags. The <code>stat.S_ISDIR()</code>
+function evaluates this integer using bitwise operations to isolate the
+file type bits from permission bits and checks whether they match the
+directory constant. This article explains the internal bitwise logic,
+the underlying POSIX constants, and how the integer values are filtered
+and evaluated.</p>
+<h3 id="understanding-st_mode-integer-encoding">Understanding
+<code>st_mode</code> Integer Encoding</h3>
+<p>The <code>st_mode</code> field is typically a 16-bit integer adhering
+to POSIX standards. This integer encodes multiple pieces of information
+into distinct bit ranges:</p>
+<ul>
+<li><strong>Bits 0–11:</strong> Permissions (read, write, execute for
+user, group, and others) as well as special flags (setuid, setgid,
+sticky bit).</li>
+<li><strong>Bits 12–15:</strong> The file type mask (specifying whether
+the entry is a regular file, directory, symbolic link, socket, FIFO, or
+character/block device).</li>
+</ul>
+<p>Because file permissions change dynamically without altering the
+file's fundamental type, the permissions portion must be cleared before
+identifying the file type.</p>
+<h3 id="the-bitwise-mask-and-directory-constant">The Bitwise Mask and
+Directory Constant</h3>
+<p>Python's <code>stat</code> module defines specific constants
+representing these bit patterns:</p>
+<ul>
+<li><strong><code>stat.S_IFMT</code> (<code>0o170000</code> or
+<code>0xF000</code> / <code>61440</code> in decimal):</strong> The
+bitmask used to clear permission flags and retain only the file type
+bits.</li>
+<li><strong><code>stat.S_IFDIR</code> (<code>0o040000</code> or
+<code>0x4000</code> / <code>16384</code> in decimal):</strong> The
+specific bit pattern designated for directories.</li>
+</ul>
+<h3 id="how-stats_isdir-evaluates-the-integer">How
+<code>stat.S_ISDIR()</code> Evaluates the Integer</h3>
+<p>Internally, <code>stat.S_ISDIR(mode)</code> is implemented as a
+simple bitwise expression:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> S_ISDIR(mode):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> (mode <span class="op">&amp;</span> <span class="bn">0o170000</span>) <span class="op">==</span> <span class="bn">0o040000</span></span></code></pre></div>
+<p>Or, using the module's constants:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> S_ISDIR(mode):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> (mode <span class="op">&amp;</span> stat.S_IFMT) <span class="op">==</span> stat.S_IFDIR</span></code></pre></div>
+<p>The evaluation follows two steps:</p>
+<ol type="1">
+<li><strong>Bitwise AND (<code>mode &amp; stat.S_IFMT</code>):</strong>
+The bitwise AND operation applies the mask <code>0o170000</code> to the
+input <code>mode</code>. Any bits corresponding to permissions (bits
+0–11) become <code>0</code>, while the file type bits (bits 12–15)
+remain unchanged.</li>
+<li><strong>Equality Comparison (<code>== stat.S_IFDIR</code>):</strong>
+The isolated file type bits are compared directly to
+<code>0o040000</code>. If the isolated bits match <code>0o040000</code>,
+the function evaluates to <code>True</code>. If the target is a regular
+file (<code>0o100000</code>), a symlink (<code>0o120000</code>), or any
+other type, the comparison returns <code>False</code>.</li>
+</ol>
+<h3 id="practical-walkthrough">Practical Walkthrough</h3>
+<p>Consider a directory with standard <code>0o755</code>
+(<code>rwxr-xr-x</code>) permissions:</p>
+<ul>
+<li>In octal, its full <code>st_mode</code> value is
+<code>0o040755</code> (decimal <code>16877</code>).</li>
+<li>Applying the mask: <code>0o040755 &amp; 0o170000</code> yields
+<code>0o040000</code>.</li>
+<li>Evaluating equality: <code>0o040000 == 0o040000</code> produces
+<code>True</code>.</li>
+</ul>
+<p>If the entry were a regular script with the same permissions
+(<code>0o100755</code>):</p>
+<ul>
+<li>Applying the mask: <code>0o100755 &amp; 0o170000</code> yields
+<code>0o100000</code> (<code>stat.S_IFREG</code>).</li>
+<li>Evaluating equality: <code>0o100000 == 0o040000</code> produces
+<code>False</code>.</li>
+</ul>
+<p>By using this bitwise masking process, <code>stat.S_ISDIR()</code>
+reliably determines if a path is a directory regardless of the read,
+write, or execute permissions assigned to it.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Tracemalloc Traces Memory Blocks in Python - python</title>
+    <meta name="description" content="Python’s built-in tracemalloc module provides deep visibility into memory usage by tracking individual memory blocks allocated by the interpreter. It works by hooking directly into CPython's internal memory management APIs to record allocation events a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-tracemalloc-traces-memory-blocks-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Tracemalloc Traces Memory Blocks in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-tracemalloc-traces-memory-blocks-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s built-in tracemalloc module provides deep visibility into memory usage by tracking individual memory blocks allocated by the interpreter. It works by hooking directly into CPython's internal memory management APIs to record allocation events a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-tracemalloc-traces-memory-blocks-in-python">How Tracemalloc
+Traces Memory Blocks in Python</h1>
+<p>Python’s built-in <code>tracemalloc</code> module provides deep
+visibility into memory usage by tracking individual memory blocks
+allocated by the interpreter. It works by hooking directly into
+CPython's internal memory management APIs to record allocation events
+alongside their corresponding Python tracebacks. This article explores
+how <code>tracemalloc</code> operates under the hood, detailing its
+integration with CPython memory allocators, its traceback capture
+mechanism, and how it manages tracking overhead.</p>
+<h3 id="hooking-cpython-allocators">Hooking CPython Allocators</h3>
+<p>CPython structures its memory management into three primary
+allocation domains defined by PEP 445:</p>
+<ul>
+<li><strong><code>PYMEM_DOMAIN_RAW</code></strong>: Low-level memory
+wrappers around system allocators like <code>malloc</code> and
+<code>free</code>.</li>
+<li><strong><code>PYMEM_DOMAIN_MEM</code></strong>: The standard Python
+memory allocator used for general memory buffers.</li>
+<li><strong><code>PYMEM_DOMAIN_OBJ</code></strong>: The object
+allocator, managed largely by <code>pymalloc</code>, optimized for small
+Python objects.</li>
+</ul>
+<p>When <code>tracemalloc.start()</code> is called, the module replaces
+the active memory hooks in these domains using
+<code>PyMem_SetAllocator()</code>. It installs custom wrapper functions
+around the standard allocation (<code>malloc</code>), reallocation
+(<code>realloc</code>), and deallocation (<code>free</code>)
+routines.</p>
+<p>To avoid infinite recursion and skewed metrics,
+<code>tracemalloc</code> uses its own dedicated raw allocator that
+operates outside these traced domains when storing its internal tracking
+structures.</p>
+<h3 id="capturing-tracebacks-on-allocation">Capturing Tracebacks on
+Allocation</h3>
+<p>Whenever Python code allocates memory—such as instantiating an object
+or extending a list—the request passes through one of the hooked
+allocator functions. The hook executes the following steps:</p>
+<ol type="1">
+<li><strong>Underlying Allocation</strong>: It calls the original
+allocator function to retrieve the raw memory pointer.</li>
+<li><strong>Stack Inspection</strong>: If the allocation succeeds,
+<code>tracemalloc</code> inspects the current execution state of the
+calling thread (<code>PyThreadState</code>).</li>
+<li><strong>Frame Extraction</strong>: It walks the execution frames up
+to a user-defined limit (<code>nframe</code>, configured via
+<code>tracemalloc.start(nframe)</code>), collecting the filename and
+line number for each active Python frame.</li>
+<li><strong>Trace Creation</strong>: It packages the pointer address,
+block size, and collected traceback into a compact internal structure
+called a trace.</li>
+</ol>
+<h3 id="storage-and-traceback-interning">Storage and Traceback
+Interning</h3>
+<p>Storing full stack traces for every memory allocation introduces
+significant memory overhead. To mitigate this, <code>tracemalloc</code>
+employs an internal hash table that interns tracebacks.</p>
+<p>Each unique sequence of code locations (filename and line number
+pairs) is stored once in a global table and assigned a reference count.
+If multiple allocations occur from the exact same call stack, they store
+a pointer to the same interned traceback structure rather than
+duplicating the frame list.</p>
+<p>The allocated memory addresses are stored in an internal hash table
+mapping the memory block's address to its size and interned traceback
+reference.</p>
+<h3 id="intercepting-deallocations">Intercepting Deallocations</h3>
+<p>When a block of memory is released via <code>free()</code>, the
+installed deallocation hook intercepts the call. It extracts the pointer
+address and looks it up in the internal tracking table:</p>
+<ol type="1">
+<li><strong>Lookup</strong>: The hook finds the recorded trace
+associated with the memory address.</li>
+<li><strong>Counter Updates</strong>: It decrements the module's running
+totals for allocated memory and block counts.</li>
+<li><strong>Cleanup</strong>: It releases the reference to the interned
+traceback (freeing the traceback if its reference count drops to zero)
+and deletes the address entry from the hash table.</li>
+<li><strong>Original Free</strong>: Finally, it passes the pointer to
+the underlying CPython or system <code>free()</code> function.</li>
+</ol>
+<p>Reallocations (<code>realloc</code>) follow a hybrid path: the old
+pointer's trace is updated or replaced with the new address and size,
+updating running totals accordingly.</p>
+<h3 id="generating-snapshots">Generating Snapshots</h3>
+<p>When a user calls <code>tracemalloc.take_snapshot()</code>,
+<code>tracemalloc</code> iterates over its internal hash table of active
+memory blocks. It converts the raw C tracking data into immutable Python
+objects (<code>Snapshot</code>, <code>Statistic</code>, and
+<code>Trace</code> instances).</p>
+<p>Because the module continuously updates its tracking table during
+runtime, snapshots represent an exact, point-in-time state of all live
+memory blocks currently allocated by Python code.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

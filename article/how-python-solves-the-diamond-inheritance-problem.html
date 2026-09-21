@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Solves the Diamond Inheritance Problem - python</title>
+    <meta name="description" content="The diamond inheritance problem occurs in object-oriented programming when a class inherits from two classes that share a common ancestor, potentially causing ambiguity over which method to execute. Python resolves this structural challenge deterministic">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-solves-the-diamond-inheritance-problem">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Solves the Diamond Inheritance Problem - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-solves-the-diamond-inheritance-problem" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The diamond inheritance problem occurs in object-oriented programming when a class inherits from two classes that share a common ancestor, potentially causing ambiguity over which method to execute. Python resolves this structural challenge deterministic" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-solves-the-diamond-inheritance-problem">How Python
+Solves the Diamond Inheritance Problem</h1>
+<p>The diamond inheritance problem occurs in object-oriented programming
+when a class inherits from two classes that share a common ancestor,
+potentially causing ambiguity over which method to execute. Python
+resolves this structural challenge deterministically through the Method
+Resolution Order (MRO), powered by the C3 Linearization algorithm. By
+enforcing a strict, predictable hierarchy and leveraging the dynamic
+dispatch of <code>super()</code>, Python ensures that ancestor methods
+are invoked in a predictable sequence without redundant calls or
+priority conflicts.</p>
+<h2 id="the-diamond-problem-structure">The Diamond Problem
+Structure</h2>
+<p>In multiple inheritance, a diamond architecture forms when:</p>
+<ol type="1">
+<li>Class <code>A</code> defines a method.</li>
+<li>Classes <code>B</code> and <code>C</code> both inherit from
+<code>A</code> and optionally override that method.</li>
+<li>Class <code>D</code> inherits from both <code>B</code> and
+<code>C</code> via <code>class D(B, C):</code>.</li>
+</ol>
+<p>Without a defined resolution strategy, a call to the overridden
+method from an instance of <code>D</code> creates ambiguity: should the
+runtime invoke <code>B</code>'s implementation or <code>C</code>'s
+implementation?</p>
+<h2 id="the-c3-linearization-algorithm">The C3 Linearization
+Algorithm</h2>
+<p>To resolve this ambiguity, modern Python (Python 3 and Python 2.3+
+new-style classes) uses the <strong>C3 Linearization algorithm</strong>.
+This algorithm constructs a flat, ordered list of classes—the Method
+Resolution Order (MRO)—for any class hierarchy.</p>
+<p>C3 Linearization enforces three core properties:</p>
+<ul>
+<li><strong>Local Precedence Order:</strong> Children are checked before
+their parents, and siblings are evaluated in the exact order declared in
+the class definition (e.g., <code>class D(B, C)</code> prioritizes
+<code>B</code> before <code>C</code>).</li>
+<li><strong>Monotonicity:</strong> If class <code>X</code> precedes
+class <code>Y</code> in the MRO of a parent class, <code>X</code> must
+also precede <code>Y</code> in the MRO of any subclass inheriting from
+that parent.</li>
+<li><strong>Extended Precedence:</strong> Each class appears only once
+in the linear hierarchy.</li>
+</ul>
+<p>If an inheritance graph creates a contradiction that violates
+monotonicity or local precedence, Python raises a <code>TypeError</code>
+at class definition time rather than executing ambiguous code.</p>
+<h2 id="cooperative-multiple-inheritance-with-super">Cooperative
+Multiple Inheritance with <code>super()</code></h2>
+<p>Python's <code>super()</code> function is the mechanism that
+traverses the MRO. Unlike similar keywords in languages like Java or
+C++, <code>super()</code> does not simply refer to a direct parent
+class; instead, it delegates calls to the <em>next class in the MRO</em>
+of the calling instance.</p>
+<p>Consider the following implementation:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> A:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> action(<span class="va">self</span>):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;A.action&quot;</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> B(A):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> action(<span class="va">self</span>):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;B.action (start)&quot;</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().action()</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;B.action (end)&quot;</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> C(A):</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> action(<span class="va">self</span>):</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;C.action (start)&quot;</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().action()</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;C.action (end)&quot;</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> D(B, C):</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> action(<span class="va">self</span>):</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;D.action (start)&quot;</span>)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().action()</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;D.action (end)&quot;</span>)</span></code></pre></div>
+<p>Executing <code>D().action()</code> yields:</p>
+<pre class="text"><code>D.action (start)
+B.action (start)
+C.action (start)
+A.action
+C.action (end)
+B.action (end)
+D.action (end)</code></pre>
+<p>In this flow, <code>B</code>'s call to <code>super().action()</code>
+does not immediately invoke <code>A</code>. Because the instance being
+evaluated is of type <code>D</code>, the MRO dictates that
+<code>C</code> comes after <code>B</code>. Control passes to
+<code>C</code>, and only when <code>C</code> calls
+<code>super().action()</code> does execution reach the root ancestor
+<code>A</code>. This cooperative chaining prevents <code>A</code> from
+being executed multiple times.</p>
+<h2 id="inspecting-the-resolution-order">Inspecting the Resolution
+Order</h2>
+<p>Developers can inspect the computed resolution order at runtime using
+either the <code>mro()</code> method or the <code>__mro__</code>
+attribute on any class:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>([cls.<span class="va">__name__</span> <span class="cf">for</span> cls <span class="kw">in</span> D.mro()])</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: [&#39;D&#39;, &#39;B&#39;, &#39;C&#39;, &#39;A&#39;, &#39;object&#39;]</span></span></code></pre></div>
+<p>Python method lookups strictly follow this sequence from left to
+right, executing the first matching implementation found along the
+chain.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Django N+1 Queries: select_related vs prefetch_related - python</title>
+    <meta name="description" content="The N+1 query problem is one of the most common performance bottlenecks encountered when using Django's Object-Relational Mapper (ORM). This article provides a comprehensive guide to understanding why this issue occurs during database access and how Djan">
+    <link rel="canonical" href="https://salivity.github.io/python/article/fix-django-n-1-queries-select-related-vs-prefetch-related">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fix Django N+1 Queries: select_related vs prefetch_related - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/fix-django-n-1-queries-select-related-vs-prefetch-related" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The N+1 query problem is one of the most common performance bottlenecks encountered when using Django's Object-Relational Mapper (ORM). This article provides a comprehensive guide to understanding why this issue occurs during database access and how Djan" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="fix-django-n1-queries-select_related-vs-prefetch_related">Fix
+Django N+1 Queries: select_related vs prefetch_related</h1>
+<p>The N+1 query problem is one of the most common performance
+bottlenecks encountered when using Django's Object-Relational Mapper
+(ORM). This article provides a comprehensive guide to understanding why
+this issue occurs during database access and how Django's built-in query
+optimization methods, <code>select_related</code> and
+<code>prefetch_related</code>, solve it by drastically reducing the
+number of SQL queries sent to the database.</p>
+<h2 id="understanding-the-n1-query-problem">Understanding the N+1 Query
+Problem</h2>
+<p>The N+1 query problem occurs when your application executes 1 initial
+query to fetch a list of <span class="math inline">\(N\)</span> parent
+records, followed by <span class="math inline">\(N\)</span> separate
+queries to fetch related data for each individual record.</p>
+<p>Consider a simple model structure where each <code>Book</code> has a
+foreign key to an <code>Author</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Author(models.Model):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    name <span class="op">=</span> models.CharField(max_length<span class="op">=</span><span class="dv">100</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Book(models.Model):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    title <span class="op">=</span> models.CharField(max_length<span class="op">=</span><span class="dv">100</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    author <span class="op">=</span> models.ForeignKey(Author, on_delete<span class="op">=</span>models.CASCADE)</span></code></pre></div>
+<p>If you iterate through all books to display their authors:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>books <span class="op">=</span> Book.objects.<span class="bu">all</span>()  <span class="co"># 1 Query: SELECT * FROM book;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> book <span class="kw">in</span> books:</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(book.author.name)  <span class="co"># N Queries: SELECT * FROM author WHERE id = ...;</span></span></code></pre></div>
+<p>If you have 100 books, this executes 101 database queries (1 query
+for the books, plus 100 queries for the authors). This latency compounds
+rapidly in production environments.</p>
+<h2 id="how-select_related-solves-the-problem">How
+<code>select_related</code> Solves the Problem</h2>
+<p><code>select_related</code> works at the SQL level by creating an
+<code>INNER JOIN</code> or <code>LEFT OUTER JOIN</code> in the initial
+database query. It retrieves both the main record and the related record
+in a single round-trip to the database.</p>
+<h3 id="when-to-use-select_related">When to Use
+<code>select_related</code></h3>
+<p>Use <code>select_related</code> for single-valued relationships where
+the database can join the tables directly:</p>
+<ul>
+<li><code>ForeignKey</code> (forward relationship)</li>
+<li><code>OneToOneField</code> (forward and reverse relationships)</li>
+</ul>
+<h3 id="implementation">Implementation</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Executes 1 single SQL query with a JOIN</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>books <span class="op">=</span> Book.objects.select_related(<span class="st">&#39;author&#39;</span>).<span class="bu">all</span>()</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> book <span class="kw">in</span> books:</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># No additional database queries are triggered</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(book.author.name)</span></code></pre></div>
+<p>The generated SQL looks similar to:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> book.<span class="kw">id</span>, book.title, book.author_id, author.<span class="kw">id</span>, author.name</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">FROM</span> book</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">INNER</span> <span class="kw">JOIN</span> author <span class="kw">ON</span> (book.author_id <span class="op">=</span> author.<span class="kw">id</span>);</span></code></pre></div>
+<p>Because the related <code>Author</code> data is fetched upfront and
+populated into the model instances' caches, subsequent accesses to
+<code>book.author</code> do not hit the database.</p>
+<h2 id="how-prefetch_related-solves-the-problem">How
+<code>prefetch_related</code> Solves the Problem</h2>
+<p><code>prefetch_related</code> solves the N+1 problem through a
+different strategy: it executes separate queries and performs the "join"
+in Python memory rather than in the database.</p>
+<h3 id="when-to-use-prefetch_related">When to Use
+<code>prefetch_related</code></h3>
+<p>Use <code>prefetch_related</code> for multi-valued relationships
+where standard SQL joins would produce large, duplicate-heavy result
+sets:</p>
+<ul>
+<li><code>ManyToManyField</code></li>
+<li>Reverse <code>ForeignKey</code> (one-to-many)</li>
+<li><code>GenericForeignKey</code></li>
+</ul>
+<h3 id="implementation-1">Implementation</h3>
+<p>Consider accessing all books written by each author:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Executes 2 SQL queries total</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>authors <span class="op">=</span> Author.objects.prefetch_related(<span class="st">&#39;book_set&#39;</span>).<span class="bu">all</span>()</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> author <span class="kw">in</span> authors:</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Iterates over cached data in Python; no extra queries</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> book <span class="kw">in</span> author.book_set.<span class="bu">all</span>():</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(book.title)</span></code></pre></div>
+<p>Behind the scenes, Django executes two queries:</p>
+<ol type="1">
+<li><code>SELECT * FROM author;</code></li>
+<li><code>SELECT * FROM book WHERE author_id IN (1, 2, 3, ...);</code></li>
+</ol>
+<p>Django maps the fetched <code>Book</code> instances to their
+corresponding <code>Author</code> instances in application memory.
+Regardless of whether there are 10 or 10,000 authors, only 2 queries are
+run.</p>
+<h2 id="advanced-usage-custom-prefetching">Advanced Usage: Custom
+Prefetching</h2>
+<p>When using <code>prefetch_related</code>, you can filter or customize
+the secondary query using the <code>Prefetch</code> object:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.db.models <span class="im">import</span> Prefetch</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>authors <span class="op">=</span> Author.objects.prefetch_related(</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    Prefetch(</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;book_set&#39;</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        queryset<span class="op">=</span>Book.objects.<span class="bu">filter</span>(title__startswith<span class="op">=</span><span class="st">&#39;Django&#39;</span>),</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        to_attr<span class="op">=</span><span class="st">&#39;django_books&#39;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> author <span class="kw">in</span> authors:</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> book <span class="kw">in</span> author.django_books:</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(book.title)</span></code></pre></div>
+<h2 id="summary-comparison">Summary Comparison</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>select_related</code></th>
+<th style="text-align: left;"><code>prefetch_related</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Strategy</strong></td>
+<td style="text-align: left;">SQL <code>JOIN</code></td>
+<td style="text-align: left;">Multiple SQL queries combined in
+Python</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Total Queries</strong></td>
+<td style="text-align: left;">Always 1</td>
+<td style="text-align: left;"><span class="math inline">\(1 + K\)</span>
+(where <span class="math inline">\(K\)</span> is the number of
+prefetched relations)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Ideal For</strong></td>
+<td style="text-align: left;"><code>ForeignKey</code>,
+<code>OneToOneField</code></td>
+<td style="text-align: left;"><code>ManyToManyField</code>, reverse
+<code>ForeignKey</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Database Overhead</strong></td>
+<td style="text-align: left;">Larger single query with joined
+columns</td>
+<td style="text-align: left;">Multiple smaller queries</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Memory Overhead</strong></td>
+<td style="text-align: left;">Lower</td>
+<td style="text-align: left;">Higher (matches records in Python
+memory)</td>
+</tr>
+</tbody>
+</table>
+<p>By profiling your queries with tools like Django Debug Toolbar and
+applying <code>select_related</code> for "to-one" relationships and
+<code>prefetch_related</code> for "to-many" relationships, you
+effectively eliminate N+1 query bottlenecks across your application.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LRU and TTL Caching in Python Using Cachetools - python</title>
+    <meta name="description" content="This article examines how the Python cachetools library internally implements Least Recently Used (LRU) and Time-to-Live (TTL) caching algorithms. It covers the underlying data structures—including hash maps, doubly linked lists, and time-ordered track">
+    <link rel="canonical" href="https://salivity.github.io/python/article/lru-and-ttl-caching-in-python-using-cachetools">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="LRU and TTL Caching in Python Using Cachetools - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/lru-and-ttl-caching-in-python-using-cachetools" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines how the Python cachetools library internally implements Least Recently Used (LRU) and Time-to-Live (TTL) caching algorithms. It covers the underlying data structures—including hash maps, doubly linked lists, and time-ordered track" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="lru-and-ttl-caching-in-python-using-cachetools">LRU and TTL
+Caching in Python Using Cachetools</h1>
+<p>This article examines how the Python <code>cachetools</code> library
+internally implements Least Recently Used (LRU) and Time-to-Live (TTL)
+caching algorithms. It covers the underlying data structures—including
+hash maps, doubly linked lists, and time-ordered tracking—that power
+<code>LRUCache</code> and <code>TTLCache</code>, explaining how each
+handles cache hits, cache misses, and key eviction in constant or
+near-constant time.</p>
+<h2 id="core-architecture-mutablemapping">Core Architecture:
+MutableMapping</h2>
+<p>All cache implementations in <code>cachetools</code> derive from
+<code>collections.abc.MutableMapping</code>. This allows cache objects
+to behave like standard Python dictionaries while intercepting
+operations such as <code>__getitem__</code>, <code>__setitem__</code>,
+and <code>__delitem__</code> to enforce capacity limits and eviction
+policies.</p>
+<h2 id="how-lrucache-implements-least-recently-used">How
+<code>LRUCache</code> Implements Least Recently Used</h2>
+<p>The Least Recently Used (LRU) algorithm discards the items that have
+not been accessed for the longest duration when the cache reaches its
+maximum size (<code>maxsize</code>).</p>
+<h3 id="data-structures">Data Structures</h3>
+<p><code>LRUCache</code> maintains <span
+class="math inline">\(O(1)\)</span> time complexity for lookups,
+insertions, and updates by combining two core structures:</p>
+<ol type="1">
+<li><strong>A Hash Map:</strong> A standard Python dictionary maps cache
+keys directly to their values, providing constant-time lookups.</li>
+<li><strong>A Doubly Linked List:</strong> An internal chain of link
+objects tracks usage order. Each link references its previous and next
+siblings, as well as the cache key. A root sentinel node connects the
+head (least recently used) and tail (most recently used).</li>
+</ol>
+<h3 id="state-transitions">State Transitions</h3>
+<ul>
+<li><strong>On Cache Hit (<code>__getitem__</code>):</strong> The key is
+retrieved from the dictionary. Concurrently, the corresponding link node
+is unlinked from its current position in the doubly linked list and
+spliced immediately before the root node, marking it as the most
+recently used.</li>
+<li><strong>On Insert/Update (<code>__setitem__</code>):</strong> If the
+key exists, its value is updated, and its link moves to the tail. If the
+key is new, a new link node is appended to the tail.</li>
+<li><strong>On Eviction:</strong> Before or after insertion,
+<code>LRUCache</code> checks if the current size exceeds
+<code>maxsize</code>. If capacity is exceeded, it initiates
+<code>popitem()</code>. The algorithm removes the node immediately
+following the root sentinel (the LRU head) from both the linked list and
+the internal dictionary.</li>
+</ul>
+<h2 id="how-ttlcache-implements-time-to-live">How <code>TTLCache</code>
+Implements Time-to-Live</h2>
+<p>The Time-to-Live (TTL) algorithm evicts entries that exceed a defined
+lifespan (<code>ttl</code>), while also enforcing a maximum capacity
+limit using an LRU-like fallback.</p>
+<h3 id="data-structures-1">Data Structures</h3>
+<p><code>TTLCache</code> builds on the foundations of
+<code>LRUCache</code> but introduces temporal tracking:</p>
+<ol type="1">
+<li><strong>Value Mapping:</strong> Stores the key-value pairs.</li>
+<li><strong>Access Order Tracking:</strong> Tracks access recency using
+a doubly linked list, similar to <code>LRUCache</code>.</li>
+<li><strong>Expiration Queue:</strong> Maintains a secondary doubly
+linked list or ordered chain of expiration records tracking
+<code>(key, expires_at)</code> pairs, ordered monotonically by
+expiration time.</li>
+<li><strong>Monotonic Timer:</strong> Uses <code>time.monotonic</code>
+(or a custom timer function) to avoid issues caused by system clock
+adjustments.</li>
+</ol>
+<h3 id="state-transitions-and-expiration-mechanics">State Transitions
+and Expiration Mechanics</h3>
+<p><code>TTLCache</code> applies both proactive and lazy eviction
+strategies to minimize overhead while keeping memory usage bounded:</p>
+<ul>
+<li><strong>Clock Evaluation:</strong> Every read and write operation
+evaluates the current time against stored expiration timestamps using
+<code>timer()</code>.</li>
+<li><strong>Lazy Eviction on Read (<code>__getitem__</code>):</strong>
+When a key is requested, <code>TTLCache</code> checks whether
+<code>current_time &gt;= expires_at</code>. If the item has expired, it
+is deleted immediately, and a <code>KeyError</code> is raised (resulting
+in a cache miss). If valid, its access order is refreshed.</li>
+<li><strong>Proactive Purging on Write
+(<code>__setitem__</code>):</strong> Before adding a new item,
+<code>TTLCache</code> calls an internal <code>expire()</code> routine.
+This walks the expiration queue starting from the oldest timestamp,
+removing all keys where <code>expires_at &lt;= current_time</code>.</li>
+<li><strong>Capacity Eviction:</strong> If the cache remains full after
+purging expired keys, it falls back to the access-order links and evicts
+the least recently used valid item, ensuring the collection never
+exceeds <code>maxsize</code>.</li>
+</ul>
+<h2 id="basic-usage-example">Basic Usage Example</h2>
+<p>The following code illustrates how to instantiate and use both cache
+types:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> cachetools <span class="im">import</span> LRUCache, TTLCache</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># LRU Cache: capacity of 2 items</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>lru <span class="op">=</span> LRUCache(maxsize<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>lru[<span class="st">&quot;a&quot;</span>] <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>lru[<span class="st">&quot;b&quot;</span>] <span class="op">=</span> <span class="dv">2</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>_ <span class="op">=</span> lru[<span class="st">&quot;a&quot;</span>]      <span class="co"># &quot;a&quot; becomes most recently used</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>lru[<span class="st">&quot;c&quot;</span>] <span class="op">=</span> <span class="dv">3</span>      <span class="co"># Evicts &quot;b&quot;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">&quot;b&quot;</span> <span class="kw">not</span> <span class="kw">in</span> lru</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">&quot;a&quot;</span> <span class="kw">in</span> lru</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># TTL Cache: capacity of 2 items, 1-second lifetime</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>ttl <span class="op">=</span> TTLCache(maxsize<span class="op">=</span><span class="dv">2</span>, ttl<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>ttl[<span class="st">&quot;x&quot;</span>] <span class="op">=</span> <span class="dv">100</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> ttl[<span class="st">&quot;x&quot;</span>] <span class="op">==</span> <span class="dv">100</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>time.sleep(<span class="fl">1.1</span>)   <span class="co"># Wait for expiration</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">&quot;x&quot;</span> <span class="kw">not</span> <span class="kw">in</span> ttl</span></code></pre></div>
+<p>Both classes guarantee predictable memory bounds and algorithmic
+efficiency by pairing Python's native hash tables with managed pointer
+chains.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

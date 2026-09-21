@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Zipfile: Compress and Extract Archives - python</title>
+    <meta name="description" content="Python's built-in zipfile module provides a complete toolkit for manipulating ZIP archives directly within your applications without external dependencies. This article explains how zipfile processes data under the hood, how it implements compression and">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-zipfile-compress-and-extract-archives">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Zipfile: Compress and Extract Archives - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-zipfile-compress-and-extract-archives" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's built-in zipfile module provides a complete toolkit for manipulating ZIP archives directly within your applications without external dependencies. This article explains how zipfile processes data under the hood, how it implements compression and" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-zipfile-compress-and-extract-archives">Python Zipfile:
+Compress and Extract Archives</h1>
+<p>Python's built-in <code>zipfile</code> module provides a complete
+toolkit for manipulating ZIP archives directly within your applications
+without external dependencies. This article explains how
+<code>zipfile</code> processes data under the hood, how it implements
+compression and decompression algorithms through standard libraries, and
+how to programmatically create and unpack ZIP files using pure
+Python.</p>
+<h2 id="the-architecture-of-a-zip-file">The Architecture of a ZIP
+File</h2>
+<p>To understand how <code>zipfile</code> operates, you must understand
+the structure of a standard ZIP archive. Unlike tarballs
+(<code>.tar.gz</code>), which compress an entire collection of files as
+a single stream, a ZIP file compresses each file individually and stores
+them alongside metadata headers.</p>
+<p>A standard ZIP archive consists of:</p>
+<ol type="1">
+<li><strong>Local File Headers and Data:</strong> Each archived file has
+a preceding local header containing metadata (file name, uncompressed
+size, compressed size, timestamp) followed immediately by the compressed
+data block.</li>
+<li><strong>Central Directory:</strong> Located toward the end of the
+archive, this table lists all contained files, their exact byte offsets,
+and storage attributes.</li>
+<li><strong>End of Central Directory (EOCD) Record:</strong> The final
+bytes of the file, which mark the boundary and point to the beginning of
+the Central Directory.</li>
+</ol>
+<p>Because the master index resides at the end in the Central Directory,
+the <code>zipfile</code> module can inspect, list, or selectively unpack
+individual files without decompressing the entire archive.</p>
+<h2 id="how-zipfile-compresses-data">How <code>zipfile</code> Compresses
+Data</h2>
+<p>The <code>zipfile</code> module itself is written in pure Python,
+located in the standard library as <code>zipfile.py</code>. However,
+heavy mathematical operations for compression are delegated to built-in
+C-extensions that come pre-packaged with Python.</p>
+<h3 id="compression-modes">Compression Modes</h3>
+<p>When writing files to an archive, <code>zipfile</code> supports
+several compression algorithms specified via the
+<code>compression</code> argument:</p>
+<ul>
+<li><strong><code>zipfile.ZIP_STORED</code> (Default):</strong> No
+compression. Files are copied directly into the archive with metadata
+headers.</li>
+<li><strong><code>zipfile.ZIP_DEFLATED</code>:</strong> The standard ZIP
+compression method. It utilizes Python's built-in <code>zlib</code>
+module to apply the DEFLATE algorithm (a combination of LZ77 and Huffman
+coding).</li>
+<li><strong><code>zipfile.ZIP_BZIP2</code>:</strong> Uses the
+<code>bz2</code> module for higher compression ratios at the cost of
+speed and memory.</li>
+<li><strong><code>zipfile.ZIP_LZMA</code>:</strong> Uses the
+<code>lzma</code> module (often associated with <code>.xz</code> and
+<code>7z</code> formats) for maximum compression efficiency.</li>
+</ul>
+<h3 id="writing-an-archive">Writing an Archive</h3>
+<p>When you add a file using <code>.write()</code> or
+<code>.writestr()</code>, <code>zipfile</code> executes the following
+sequence:</p>
+<ol type="1">
+<li><strong>Header Creation:</strong> It generates a local file header
+with a temporary CRC-32 checksum and size values.</li>
+<li><strong>Streaming and Compressing:</strong> It reads the source file
+in chunks (typically 64 KB or custom buffer sizes) and feeds them into
+the chosen compressor object (such as
+<code>zlib.compressobj</code>).</li>
+<li><strong>Writing Payload:</strong> The compressed stream is written
+to the archive target.</li>
+<li><strong>Directory Staging:</strong> The file's metadata, byte
+position, and final CRC-32 checksum are appended to an in-memory Central
+Directory list.</li>
+<li><strong>Finalization:</strong> When the <code>ZipFile</code> object
+closes, it writes the complete Central Directory and the EOCD record to
+the end of the file.</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> zipfile</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>files_to_pack <span class="op">=</span> [<span class="st">&#39;document.txt&#39;</span>, <span class="st">&#39;data.csv&#39;</span>]</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> zipfile.ZipFile(<span class="st">&#39;archive.zip&#39;</span>, mode<span class="op">=</span><span class="st">&#39;w&#39;</span>, compression<span class="op">=</span>zipfile.ZIP_DEFLATED) <span class="im">as</span> archive:</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="bu">file</span> <span class="kw">in</span> files_to_pack:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        archive.write(<span class="bu">file</span>)</span></code></pre></div>
+<p>To create files directly from memory without saving them to the disk
+first, use <code>writestr()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> zipfile.ZipFile(<span class="st">&#39;archive.zip&#39;</span>, mode<span class="op">=</span><span class="st">&#39;a&#39;</span>, compression<span class="op">=</span>zipfile.ZIP_DEFLATED) <span class="im">as</span> archive:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    archive.writestr(<span class="st">&#39;virtual_file.txt&#39;</span>, <span class="st">&#39;This data was generated in memory.&#39;</span>)</span></code></pre></div>
+<h2 id="how-zipfile-extracts-data">How <code>zipfile</code> Extracts
+Data</h2>
+<p>Extraction is an inverse process optimized by the Central Directory
+index.</p>
+<h3 id="reading-and-validation">Reading and Validation</h3>
+<p>When <code>zipfile.ZipFile</code> opens an existing archive in read
+mode (<code>'r'</code>):</p>
+<ol type="1">
+<li>It seeks to the end of the file to find the EOCD record.</li>
+<li>It parses the location of the Central Directory and reads the
+complete index into memory as <code>ZipInfo</code> objects.</li>
+<li>Because the directory is already mapped, operations like
+<code>archive.namelist()</code> or inspecting timestamps take minimal
+time and zero decompression overhead.</li>
+</ol>
+<h3 id="decompressing-data">Decompressing Data</h3>
+<p>When extracting an item via <code>.extract()</code> or reading it via
+<code>.open()</code>:</p>
+<ol type="1">
+<li><code>zipfile</code> checks the <code>ZipInfo</code> record for the
+file's exact byte offset in the archive.</li>
+<li>The file pointer seeks directly to the local data stream.</li>
+<li>It passes the raw compressed bytes through a decompressor object
+(such as <code>zlib.decompressobj</code>).</li>
+<li>As chunks decompress, the module calculates the running CRC-32
+checksum.</li>
+<li>If the calculated checksum does not match the header's recorded
+checksum, a <code>zipfile.BadZipFile</code> exception is raised,
+ensuring file integrity.</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> zipfile</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Extracting all files to a specific directory</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> zipfile.ZipFile(<span class="st">&#39;archive.zip&#39;</span>, mode<span class="op">=</span><span class="st">&#39;r&#39;</span>) <span class="im">as</span> archive:</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    archive.extractall(path<span class="op">=</span><span class="st">&#39;extracted_files/&#39;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Extracting or reading a single file into memory</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> zipfile.ZipFile(<span class="st">&#39;archive.zip&#39;</span>, mode<span class="op">=</span><span class="st">&#39;r&#39;</span>) <span class="im">as</span> archive:</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> archive.<span class="bu">open</span>(<span class="st">&#39;document.txt&#39;</span>) <span class="im">as</span> <span class="bu">file</span>:</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        content <span class="op">=</span> <span class="bu">file</span>.read().decode(<span class="st">&#39;utf-8&#39;</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(content)</span></code></pre></div>
+<h2 id="security-considerations-zip-slip">Security Considerations: Zip
+Slip</h2>
+<p>Historically, malicious ZIP files could contain relative paths (e.g.,
+<code>../../etc/passwd</code>) designed to write files outside the
+target directory during extraction—a vulnerability known as "Zip
+Slip."</p>
+<p>Modern versions of Python mitigate this:</p>
+<ul>
+<li><code>zipfile.extract()</code> and <code>zipfile.extractall()</code>
+strip leading slashes and drive letters automatically.</li>
+<li>In Python 3.12+, extraction filters (such as
+<code>filter='data'</code>) can be explicitly applied to sanitize file
+paths and prevent dangerous symlink traversal.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

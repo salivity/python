@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python typing.Annotated: Attach Metadata to Types - python</title>
+    <meta name="description" content="Python's typing.Annotated provides a standardized mechanism for attaching arbitrary, non-type metadata to variable declarations and type hints without altering how static type checkers interpret them. Introduced in Python 3.9 via PEP 593, it bridges the">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-typing-annotated-attach-metadata-to-types">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python typing.Annotated: Attach Metadata to Types - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-typing-annotated-attach-metadata-to-types" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's typing.Annotated provides a standardized mechanism for attaching arbitrary, non-type metadata to variable declarations and type hints without altering how static type checkers interpret them. Introduced in Python 3.9 via PEP 593, it bridges the" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-typingannotated-attach-metadata-to-types">Python
+typing.Annotated: Attach Metadata to Types</h1>
+<p>Python's <code>typing.Annotated</code> provides a standardized
+mechanism for attaching arbitrary, non-type metadata to variable
+declarations and type hints without altering how static type checkers
+interpret them. Introduced in Python 3.9 via PEP 593, it bridges the gap
+between static analysis and runtime tooling. This article explains the
+role of <code>typing.Annotated</code>, how it functions with static type
+checkers, how runtime frameworks leverage its metadata, and how to
+inspect these annotations programmatically.</p>
+<h3 id="the-purpose-of-typingannotated">The Purpose of
+<code>typing.Annotated</code></h3>
+<p>Before <code>typing.Annotated</code>, developers and library authors
+often struggled to attach runtime metadata to type hints. Common
+workarounds included subclassing types, using custom wrapper classes, or
+defining non-standard docstrings. These approaches frequently broke
+static type checking with tools like Mypy and Pyright or caused runtime
+overhead.</p>
+<p><code>typing.Annotated</code> solves this by separating the core type
+from its contextual metadata. Its signature accepts a base type as the
+first argument, followed by one or more arbitrary metadata objects:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> Annotated</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Syntax: Annotated[BaseType, Metadata1, Metadata2, ...]</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>Age <span class="op">=</span> Annotated[<span class="bu">int</span>, <span class="st">&quot;Value must be between 0 and 120&quot;</span>]</span></code></pre></div>
+<h3 id="static-type-checker-behavior">Static Type Checker Behavior</h3>
+<p>To static analysis tools (Mypy, Pyright, IDEs),
+<code>Annotated[T, ...]</code> is treated identically to <code>T</code>.
+The metadata elements are completely invisible to static type inference
+and verification rules.</p>
+<p>For example:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> Annotated</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>PositiveInt <span class="op">=</span> Annotated[<span class="bu">int</span>, <span class="st">&quot;greater than zero&quot;</span>]</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>count: PositiveInt <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>count <span class="op">=</span> <span class="st">&quot;ten&quot;</span>  <span class="co"># Static type checker raises: Incompatible types (expression has type &quot;str&quot;, variable has type &quot;int&quot;)</span></span></code></pre></div>
+<p>The type checker enforces that <code>count</code> must be an integer,
+ignoring the string <code>"greater than zero"</code>. This guarantees
+that attaching operational metadata never degrades or complicates static
+typing guarantees.</p>
+<h3 id="accessing-metadata-at-runtime">Accessing Metadata at
+Runtime</h3>
+<p>The metadata stored in <code>Annotated</code> is preserved at runtime
+in the type's <code>__metadata__</code> attribute. Standard inspection
+tools like <code>typing.get_type_hints()</code> can extract this
+information when configured with the <code>include_extras=True</code>
+flag:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> Annotated, get_type_hints</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> UserProfile:</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    username: Annotated[<span class="bu">str</span>, {<span class="st">&quot;max_length&quot;</span>: <span class="dv">30</span>, <span class="st">&quot;unique&quot;</span>: <span class="va">True</span>}]</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    score: Annotated[<span class="bu">int</span>, <span class="st">&quot;Must be positive&quot;</span>]</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>hints <span class="op">=</span> get_type_hints(UserProfile, include_extras<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(hints[<span class="st">&quot;username&quot;</span>].__metadata__)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: ({&#39;max_length&#39;: 30, &#39;unique&#39;: True},)</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(hints[<span class="st">&quot;score&quot;</span>].__metadata__)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: (&#39;Must be positive&#39;,)</span></span></code></pre></div>
+<p>By default, calling <code>get_type_hints(UserProfile)</code> without
+<code>include_extras=True</code> strips the <code>Annotated</code>
+wrapper and returns the raw base types (<code>str</code> and
+<code>int</code>), ensuring backward compatibility with tools that do
+not expect metadata wrappers.</p>
+<h3 id="primary-use-cases">Primary Use Cases</h3>
+<p>Modern Python frameworks rely heavily on <code>Annotated</code> for
+declarative design patterns:</p>
+<ol type="1">
+<li><strong>Validation and Constraints:</strong> Libraries like Pydantic
+use <code>Annotated</code> alongside constraint specifiers (such as
+<code>Field()</code>) to define boundaries, regex patterns, or
+serialization aliases directly within data models.</li>
+<li><strong>Dependency Injection:</strong> Web frameworks like FastAPI
+use <code>Annotated</code> to inject dependencies (such as database
+sessions, headers, or query parameters) into route functions via
+<code>Annotated[Session, Depends(get_db)]</code>.</li>
+<li><strong>Database ORM Mapping:</strong> Modern ORMs use metadata to
+declare database column attributes, foreign keys, or indexing parameters
+alongside standard Python types.</li>
+</ol>
+<p>By providing a clean, standard interface for attaching supplementary
+information to types, <code>typing.Annotated</code> allows frameworks to
+build rich runtime behaviors while maintaining strict, fully compatible
+static type checking.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

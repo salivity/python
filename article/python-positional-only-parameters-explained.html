@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Positional-Only Parameters Explained - python</title>
+    <meta name="description" content="Positional-only parameters, introduced in Python 3.8 via PEP 570, allow developers to specify function arguments that must be supplied by position rather than as keyword arguments. In a function signature, the forward slash (/) acts as a delimiter indica">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-positional-only-parameters-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Positional-Only Parameters Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-positional-only-parameters-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Positional-only parameters, introduced in Python 3.8 via PEP 570, allow developers to specify function arguments that must be supplied by position rather than as keyword arguments. In a function signature, the forward slash (/) acts as a delimiter indica" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-positional-only-parameters-explained">Python
+Positional-Only Parameters Explained</h1>
+<p>Positional-only parameters, introduced in Python 3.8 via PEP 570,
+allow developers to specify function arguments that must be supplied by
+position rather than as keyword arguments. In a function signature, the
+forward slash (<code>/</code>) acts as a delimiter indicating that all
+parameters to its left cannot be passed using <code>name=value</code>
+syntax. This article explores why the slash syntax exists, its primary
+design advantages, and how it improves API design and code
+stability.</p>
+<h3 id="the-syntax-of-the-slash-">The Syntax of the Slash
+(<code>/</code>)</h3>
+<p>In Python, the forward slash divides parameters into positional-only
+and standard parameters. When defining a function:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> example(a, b, <span class="op">/</span>, c, d, <span class="op">*</span>, e, f):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<ul>
+<li><strong><code>a</code> and <code>b</code></strong> are
+<strong>positional-only</strong> (must be passed as values only).</li>
+<li><strong><code>c</code> and <code>d</code></strong> can be passed by
+<strong>position or keyword</strong>.</li>
+<li><strong><code>e</code> and <code>f</code></strong> are
+<strong>keyword-only</strong> (marked by <code>*</code>, must be passed
+as <code>name=value</code>).</li>
+</ul>
+<p>Calling <code>example(a=1, b=2, c=3, d=4, e=5, f=6)</code> will raise
+a <code>TypeError</code> because <code>a</code> and <code>b</code>
+cannot be supplied as keyword arguments.</p>
+<h3 id="1-api-stability-and-name-decoupling">1. API Stability and Name
+Decoupling</h3>
+<p>The primary significance of positional-only parameters is decoupling
+an API's implementation from its public contract. When arguments can be
+passed by keyword, parameter names become part of the public interface.
+If an author renames a parameter in a later release, any caller relying
+on the old keyword name will experience broken code.</p>
+<p>By marking parameters with <code>/</code>, authors reserve the right
+to rename parameters in future refactors without breaking backwards
+compatibility:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># The parameter name &#39;x&#39; can be renamed to &#39;value&#39; later without breaking callers</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> square(x, <span class="op">/</span>):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x <span class="op">**</span> <span class="dv">2</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Valid call</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>square(<span class="dv">5</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Raises TypeError: square() got some positional-only arguments passed as keyword arguments: &#39;x&#39;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>square(x<span class="op">=</span><span class="dv">5</span>)</span></code></pre></div>
+<h3 id="2-preventing-collisions-with-kwargs">2. Preventing Collisions
+with <code>**kwargs</code></h3>
+<p>When a function accepts arbitrary keyword arguments via
+<code>**kwargs</code>, named parameters can create ambiguous namespace
+conflicts. Positional-only parameters eliminate this problem.</p>
+<p>Consider a function that formats data using arbitrary keyword
+pairs:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> format_entry(template, <span class="op">/</span>, <span class="op">**</span>kwargs):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> template.<span class="bu">format</span>(<span class="op">**</span>kwargs)</span></code></pre></div>
+<p>Because <code>template</code> is positional-only, a caller can safely
+pass a keyword argument named <code>template</code> inside
+<code>kwargs</code> without causing a collision:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This works seamlessly</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>format_entry(<span class="st">&quot;Template name: </span><span class="sc">{template}</span><span class="st">&quot;</span>, template<span class="op">=</span><span class="st">&quot;BaseTheme&quot;</span>)</span></code></pre></div>
+<p>Without the <code>/</code>, Python would raise a
+<code>TypeError: format_entry() got multiple values for keyword argument 'template'</code>.</p>
+<h3 id="3-emulating-built-in-c-functions">3. Emulating Built-In C
+Functions</h3>
+<p>Historically, many built-in functions implemented in C (such as
+<code>len()</code>, <code>abs()</code>, and <code>min()</code>) only
+accepted positional arguments. Before Python 3.8, pure Python functions
+could not replicate this behavior natively, leading to inconsistencies
+between built-in APIs and user-defined functions. The <code>/</code>
+syntax standardizes function signature capabilities across both pure
+Python and C-extension modules.</p>
+<h3 id="4-enforcing-natural-and-readable-call-semantics">4. Enforcing
+Natural and Readable Call Semantics</h3>
+<p>Some arguments have obvious positional meaning, and forcing or
+allowing them to be passed as keywords adds noise or confusion rather
+than clarity. For example, mathematical coordinates or
+transformations:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calculate_distance(x1, y1, x2, y2, <span class="op">/</span>):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    ...</span></code></pre></div>
+<p>Calling <code>calculate_distance(0, 0, 10, 10)</code> is idiomatic
+and clean, whereas allowing calls like
+<code>calculate_distance(x2=10, y1=0, x1=0, y2=10)</code> degrades
+readability without providing any practical benefit.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

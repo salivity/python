@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python weakref Prevents Strong Reference Cycles - python</title>
+    <meta name="description" content="Python primarily uses reference counting for memory management, deallocating an object as soon as its reference count drops to zero. However, when two or more objects reference each other, they create a strong reference cycle that reference counting alon">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-weakref-prevents-strong-reference-cycles">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python weakref Prevents Strong Reference Cycles - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-weakref-prevents-strong-reference-cycles" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python primarily uses reference counting for memory management, deallocating an object as soon as its reference count drops to zero. However, when two or more objects reference each other, they create a strong reference cycle that reference counting alon" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-weakref-prevents-strong-reference-cycles">How Python
+weakref Prevents Strong Reference Cycles</h1>
+<p>Python primarily uses reference counting for memory management,
+deallocating an object as soon as its reference count drops to zero.
+However, when two or more objects reference each other, they create a
+strong reference cycle that reference counting alone cannot resolve,
+forcing Python to rely on its slower, periodic cyclic garbage collector.
+The <code>weakref</code> module solves this issue by allowing developers
+to reference an object without incrementing its reference count,
+ensuring that circular relationships do not artificially keep objects
+alive in memory.</p>
+<h3 id="the-problem-strong-reference-cycles">The Problem: Strong
+Reference Cycles</h3>
+<p>In standard Python code, every assignment creates a "strong"
+reference:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Node:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, name):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.name <span class="op">=</span> name</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.parent <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.child <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>parent <span class="op">=</span> Node(<span class="st">&quot;Parent&quot;</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>child <span class="op">=</span> Node(<span class="st">&quot;Child&quot;</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>parent.child <span class="op">=</span> child</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>child.parent <span class="op">=</span> parent  <span class="co"># Strong reference cycle created</span></span></code></pre></div>
+<p>Even if <code>parent</code> and <code>child</code> variables are
+deleted from the local namespace, both instances retain a reference
+count of 1 because they point to each other. Consequently, neither
+object is immediately freed by the reference counter. They remain in
+memory until the generational cyclic garbage collector runs, which adds
+overhead and can delay finalizers (<code>__del__</code>) from running
+promptly.</p>
+<h3 id="how-weakref-breaks-the-cycle">How <code>weakref</code> Breaks
+the Cycle</h3>
+<p>A weak reference provides access to an object without increasing its
+internal reference counter (<code>ob_refcnt</code>). If all strong
+references to an object are removed, Python immediately deallocates the
+target object, and any weak references pointing to it are automatically
+invalidated.</p>
+<p>By converting one leg of a bidirectional relationship into a weak
+reference, the circular dependency is broken:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> weakref</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Node:</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, name):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.name <span class="op">=</span> name</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._parent <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.child <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">@property</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> parent(<span class="va">self</span>):</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Dereference the weak reference</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>._parent() <span class="cf">if</span> <span class="va">self</span>._parent <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="cf">else</span> <span class="va">None</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">@parent.setter</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> parent(<span class="va">self</span>, node):</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Store as a weak reference instead of a strong one</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._parent <span class="op">=</span> weakref.ref(node) <span class="cf">if</span> node <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="cf">else</span> <span class="va">None</span></span></code></pre></div>
+<p>In this structure:</p>
+<ol type="1">
+<li><code>parent</code> holds a strong reference to
+<code>child</code>.</li>
+<li><code>child</code> holds a weak reference to
+<code>parent</code>.</li>
+<li>The reference count of <code>parent</code> remains 1 (held only by
+the variable <code>parent</code>).</li>
+</ol>
+<p>When <code>parent</code> is reassigned or deleted, its reference
+count reaches zero and it is garbage-collected immediately. The weak
+reference inside <code>child</code> now evaluates to <code>None</code>,
+successfully preventing any memory retention issues.</p>
+<h3 id="weak-reference-utilities">Weak Reference Utilities</h3>
+<p>The <code>weakref</code> module provides several specialized tools to
+eliminate cycles across different architectural patterns:</p>
+<ul>
+<li><strong><code>weakref.ref(obj)</code></strong>: Creates a callable
+weak reference. Calling it returns the referenced object if it still
+exists, or <code>None</code> if it has been collected.</li>
+<li><strong><code>weakref.proxy(obj)</code></strong>: Creates a
+transparent proxy that behaves directly like the target object without
+needing to be called like a function.</li>
+<li><strong><code>weakref.WeakKeyDictionary</code> and
+<code>weakref.WeakValueDictionary</code></strong>: Mapping types that
+store weak references to keys or values. They are ideal for caches,
+graphs, and metadata tracking, automatically removing entries when their
+targets are no longer strongly referenced elsewhere.</li>
+<li><strong><code>weakref.finalize(obj, func, *args)</code></strong>:
+Registers a cleanup callback that executes when the target object is
+collected, avoiding cyclic references often introduced by custom
+<code>__del__</code> methods.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

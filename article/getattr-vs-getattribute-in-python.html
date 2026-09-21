@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>__getattr__ vs __getattribute__ in Python - python</title>
+    <meta name="description" content="Python provides two primary magic methods for intercepting attribute access on objects: getattr and getattribute. While both methods allow developers to customize how attributes are retrieved, they operate at fundamentally different stages of the lookup">
+    <link rel="canonical" href="https://salivity.github.io/python/article/getattr-vs-getattribute-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="__getattr__ vs __getattribute__ in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/getattr-vs-getattribute-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python provides two primary magic methods for intercepting attribute access on objects: getattr and getattribute. While both methods allow developers to customize how attributes are retrieved, they operate at fundamentally different stages of the lookup" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="getattr-vs-getattribute-in-python"><strong>getattr</strong> vs
+<strong>getattribute</strong> in Python</h1>
+<p>Python provides two primary magic methods for intercepting attribute
+access on objects: <code>__getattr__</code> and
+<code>__getattribute__</code>. While both methods allow developers to
+customize how attributes are retrieved, they operate at fundamentally
+different stages of the lookup process. This article breaks down the
+mechanics of each method, illustrates their execution flow, highlights
+the risk of infinite recursion, and clarifies when to use one over the
+other.</p>
+<h2 id="the-core-difference">The Core Difference</h2>
+<p>The primary distinction between the two methods lies in
+<strong>when</strong> they are invoked by the Python interpreter:</p>
+<ul>
+<li><strong><code>__getattribute__</code></strong> is invoked
+<strong>unconditionally</strong> every time an attribute is accessed on
+an object, regardless of whether the attribute actually exists in the
+object's namespace.</li>
+<li><strong><code>__getattr__</code></strong> is invoked
+<strong>conditionally</strong> as a fallback mechanism. It is only
+called when an attribute cannot be found through normal lookup
+mechanisms (i.e., after looking in the instance dictionary, class
+attributes, descriptors, and raising an
+<code>AttributeError</code>).</li>
+</ul>
+<h2 id="how-__getattribute__-works">How <code>__getattribute__</code>
+Works</h2>
+<p>Whenever you access an attribute via dot notation (e.g.,
+<code>obj.name</code>), Python implicitly calls
+<code>obj.__getattribute__('name')</code>. Because it executes on every
+single attribute lookup, it provides complete control over attribute
+resolution.</p>
+<h3 id="the-recursion-trap">The Recursion Trap</h3>
+<p>Because <code>__getattribute__</code> intercepts <em>all</em>
+lookups, referencing an attribute inside it using <code>self.attr</code>
+or <code>self.__dict__</code> triggers another call to
+<code>__getattribute__</code>, resulting in an infinite recursion error
+(<code>RecursionError</code>).</p>
+<p>To safely access attributes inside <code>__getattribute__</code>, you
+must route the lookup through the base class implementation using
+<code>super()</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Interceptor:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, value):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.value <span class="op">=</span> value</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__getattribute__</span>(<span class="va">self</span>, name):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Intercepting access to: </span><span class="sc">{</span>name<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Safe access using super()</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">super</span>().<span class="fu">__getattribute__</span>(name)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>obj <span class="op">=</span> Interceptor(<span class="dv">42</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(obj.value)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Output:</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Intercepting access to: value</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># 42</span></span></code></pre></div>
+<h2 id="how-__getattr__-works">How <code>__getattr__</code> Works</h2>
+<p><code>__getattr__</code> is designed for handling missing attributes.
+If Python resolves an attribute successfully through standard lookup (or
+via <code>__getattribute__</code>), <code>__getattr__</code> is never
+invoked.</p>
+<p>This makes <code>__getattr__</code> much safer and more performant
+for typical use cases, such as dynamic delegation or providing default
+values:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> DynamicFallback:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.existing <span class="op">=</span> <span class="st">&quot;I exist&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__getattr__</span>(<span class="va">self</span>, name):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Attribute &#39;</span><span class="sc">{</span>name<span class="sc">}</span><span class="ss">&#39; not found. Handling dynamically.&quot;</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f&quot;default_</span><span class="sc">{</span>name<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>obj <span class="op">=</span> DynamicFallback()</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Normal lookup: __getattr__ is NOT called</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(obj.existing)  <span class="co"># Output: I exist</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Missing attribute: __getattr__ IS called</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(obj.missing)   </span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Output:</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Attribute &#39;missing&#39; not found. Handling dynamically.</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co"># default_missing</span></span></code></pre></div>
+<h2 id="the-attribute-lookup-order">The Attribute Lookup Order</h2>
+<p>When an attribute <code>obj.x</code> is accessed, Python follows this
+sequence:</p>
+<ol type="1">
+<li><code>obj.__getattribute__('x')</code> is called.</li>
+<li>The default implementation checks descriptors, the instance
+<code>__dict__</code>, and the class hierarchy.</li>
+<li>If the attribute is found, it is returned.</li>
+<li>If the attribute is not found, Python raises an
+<code>AttributeError</code>.</li>
+<li>If defined, <code>obj.__getattr__('x')</code> catches the
+<code>AttributeError</code> and handles the request.</li>
+<li>If <code>__getattr__</code> is not implemented, the
+<code>AttributeError</code> bubbles up to the caller.</li>
+</ol>
+<h2 id="practical-comparison">Practical Comparison</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>__getattr__</code></th>
+<th style="text-align: left;"><code>__getattribute__</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Invocation</strong></td>
+<td style="text-align: left;">Only when attribute is not found</td>
+<td style="text-align: left;">On every attribute access</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Performance Impact</strong></td>
+<td style="text-align: left;">Negligible on existing attributes</td>
+<td style="text-align: left;">Overhead on every lookup</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Recursion Risk</strong></td>
+<td style="text-align: left;">Low</td>
+<td style="text-align: left;">High</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Base Class Call</strong></td>
+<td style="text-align: left;">Generally not required</td>
+<td style="text-align: left;">Required via <code>super()</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Common Use Case</strong></td>
+<td style="text-align: left;">Proxies, adapters, dynamic attributes</td>
+<td style="text-align: left;">Profiling, security wrappers,
+auditing</td>
+</tr>
+</tbody>
+</table>
+<h2 id="when-to-use-which">When to Use Which</h2>
+<p>Use <strong><code>__getattr__</code></strong> in the vast majority of
+scenarios. It is the appropriate choice when implementing proxies,
+delegating method calls to wrapped objects, or handling lazy-loaded
+attributes. It leaves Python's fast, default lookup mechanisms untouched
+for attributes that exist.</p>
+<p>Use <strong><code>__getattribute__</code></strong> only when absolute
+control over the object's namespace is required. Common scenarios
+include building debugging tools, creating security proxies that hide
+existing attributes, or deeply integrating with custom data-binding
+frameworks.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

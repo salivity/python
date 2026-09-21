@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python C API: Borrowed vs Owned References - python</title>
+    <meta name="description" content="Managing memory in Python C extensions requires a solid understanding of reference counting, specifically the distinction between owned references and borrowed references. At the language and compiler level, both reference types share the exact same C ty">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-c-api-borrowed-vs-owned-references">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python C API: Borrowed vs Owned References - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-c-api-borrowed-vs-owned-references" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Managing memory in Python C extensions requires a solid understanding of reference counting, specifically the distinction between owned references and borrowed references. At the language and compiler level, both reference types share the exact same C ty" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-c-api-borrowed-vs-owned-references">Python C API:
+Borrowed vs Owned References</h1>
+<p>Managing memory in Python C extensions requires a solid understanding
+of reference counting, specifically the distinction between owned
+references and borrowed references. At the language and compiler level,
+both reference types share the exact same C type—a pointer to
+<code>PyObject</code>—meaning Python runtime does not technically
+differentiate between them automatically. Instead, the distinction is an
+API contract governed entirely by reference counting rules that the
+extension developer must manually enforce to prevent memory leaks and
+segmentation faults.</p>
+<h3 id="the-core-difference-ownership-and-lifetime">The Core Difference:
+Ownership and Lifetime</h3>
+<p>Every Python object contains an internal reference count
+(<code>ob_refcnt</code>). When a C extension interacts with an object,
+ownership dictates who holds responsibility for that count.</p>
+<ul>
+<li><strong>Owned References:</strong> Holding an owned reference means
+your C code has an explicit claim on the object. You are responsible for
+disposing of this reference when it is no longer needed by calling
+<code>Py_DECREF()</code> or <code>Py_XDECREF()</code>. Failing to do so
+causes a memory leak. If you pass an owned reference to another function
+that takes over ownership, that process is called "stealing" a
+reference.</li>
+<li><strong>Borrowed References:</strong> A borrowed reference provides
+a pointer to a <code>PyObject*</code> without incrementing its reference
+count. The caller does not own the reference and must
+<strong>not</strong> call <code>Py_DECREF()</code> on it. The validity
+of a borrowed reference depends entirely on the lifetime of the true
+owner (typically a container or internal frame).</li>
+</ul>
+<h3 id="how-python-implements-the-distinction">How Python Implements the
+Distinction</h3>
+<p>Because both forms are represented as <code>PyObject*</code>,
+Python's runtime engine has no metadata flag on the pointer to
+differentiate between an owned and borrowed reference. The
+differentiation exists strictly through API design and conventions:</p>
+<ol type="1">
+<li><p><strong>API Return Values:</strong> Python's C API documentation
+defines whether a function returns an owned or a borrowed reference.</p>
+<ul>
+<li>Functions that create new objects (like
+<code>PyLong_FromLong()</code> or <code>PyList_New()</code>) or retrieve
+object attributes (like <code>PyObject_GetAttrString()</code>) return
+<strong>owned references</strong>. The caller owns the reference and
+must clean it up.</li>
+<li>Functions that access elements inside collections without altering
+their state (such as <code>PyTuple_GetItem()</code> or
+<code>PyList_GetItem()</code>) return <strong>borrowed
+references</strong>. The container maintains ownership.</li>
+</ul></li>
+<li><p><strong>Reference Stealing:</strong> Some API functions actively
+consume (steal) an owned reference rather than requiring you to manage
+it after the call. A common example is
+<code>PyList_SetItem(list, index, item)</code>, which assumes ownership
+of <code>item</code>. If the call succeeds, you must not call
+<code>Py_DECREF(item)</code>.</p></li>
+</ol>
+<h3 id="converting-borrowed-references-to-owned-references">Converting
+Borrowed References to Owned References</h3>
+<p>Borrowed references can introduce dangerous race conditions or
+dangling pointers if the owner releases the object while your C code is
+still using it. For example, modifying a list while holding a borrowed
+reference to one of its items might trigger garbage collection on that
+item.</p>
+<p>To safely extend the lifetime of a borrowed reference, convert it
+into an owned reference by explicitly incrementing its reference
+count:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>PyObject <span class="op">*</span>borrowed_item <span class="op">=</span> PyList_GetItem<span class="op">(</span>my_list<span class="op">,</span> <span class="dv">0</span><span class="op">);</span> <span class="co">// Borrowed</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">/* Convert to an owned reference to prevent unexpected deallocation */</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>Py_INCREF<span class="op">(</span>borrowed_item<span class="op">);</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">/* Perform operations that might modify my_list */</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>do_something_mutating<span class="op">(</span>my_list<span class="op">);</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">/* Release ownership when finished */</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>Py_DECREF<span class="op">(</span>borrowed_item<span class="op">);</span></span></code></pre></div>
+<h3 id="static-analysis-and-tooling">Static Analysis and Tooling</h3>
+<p>Because the C compiler cannot identify incorrect reference handling
+at compile time, developers rely on documentation, code review, and
+specialized static analysis tools like <code>cpychecker</code> or the
+internal debug builds of Python
+(<code>./configure --with-pydebug</code>). Debug builds track active
+references and can detect imbalances, helping verify that borrowed
+references are never decremented and owned references are never
+abandoned.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

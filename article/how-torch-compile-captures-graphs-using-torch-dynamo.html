@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How torch.compile Captures Graphs Using TorchDynamo - python</title>
+    <meta name="description" content="PyTorch 2.0 introduced torch.compile() to dramatically accelerate deep learning models without requiring fundamental changes to standard Python code. At the heart of this feature is TorchDynamo, an internal CPython interception engine that parses Python">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-torch-compile-captures-graphs-using-torch-dynamo">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How torch.compile Captures Graphs Using TorchDynamo - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-torch-compile-captures-graphs-using-torch-dynamo" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="PyTorch 2.0 introduced torch.compile() to dramatically accelerate deep learning models without requiring fundamental changes to standard Python code. At the heart of this feature is TorchDynamo, an internal CPython interception engine that parses Python" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-torchcompile-captures-graphs-using-torchdynamo">How
+torch.compile Captures Graphs Using TorchDynamo</h1>
+<p>PyTorch 2.0 introduced <code>torch.compile()</code> to dramatically
+accelerate deep learning models without requiring fundamental changes to
+standard Python code. At the heart of this feature is TorchDynamo, an
+internal CPython interception engine that parses Python bytecode at
+runtime, dynamically isolates numerical operations, and transforms them
+into computation graphs using <code>torch.fx</code>. This article
+explains the step-by-step mechanism TorchDynamo uses to intercept
+execution, construct deterministic computation traces, handle complex
+Python control flow via guards and graph breaks, and hand the resulting
+graphs over to compilation backends.</p>
+<h3
+id="intercepting-execution-via-the-cpython-frame-evaluation-api">Intercepting
+Execution via the CPython Frame Evaluation API</h3>
+<p>Unlike earlier tracing mechanisms that rely on custom Python wrappers
+or static Abstract Syntax Tree (AST) analysis, TorchDynamo hooks
+directly into the CPython runtime using the Frame Evaluation API defined
+in PEP 523 (<code>PyFrame_EvalFrameEx</code>).</p>
+<p>When a function wrapped with <code>torch.compile()</code> is
+executed, TorchDynamo registers a custom evaluation frame callback with
+the Python interpreter:</p>
+<ol type="1">
+<li><strong>Frame Registration:</strong> The standard CPython
+interpreter routes the execution of the target function’s call frame to
+TorchDynamo instead of the default evaluation loop.</li>
+<li><strong>Bytecode Stream Ingestion:</strong> TorchDynamo receives the
+raw Python bytecode instructions, along with the function's local
+variables, globals, and closure contexts.</li>
+<li><strong>Instruction Simulation:</strong> Instead of immediately
+executing the bytecode, TorchDynamo passes the instructions into an
+internal abstract interpreter (the symbolic evaluator).</li>
+</ol>
+<h3 id="symbolic-evaluation-and-fx-graph-construction">Symbolic
+Evaluation and FX Graph Construction</h3>
+<p>TorchDynamo evaluates bytecode instructions sequentially in an
+internal virtual stack machine to capture operations without running
+unoptimized kernel calls:</p>
+<ul>
+<li><strong>Variable Tracking:</strong> Standard Python objects,
+variables, and data structures are tracked symbolically. Non-tensor
+logic (like basic integers, loop iterators, or dictionary lookups) is
+evaluated on the fly where possible.</li>
+<li><strong>Tensor Operation Capture:</strong> When the abstract
+interpreter encounters PyTorch API calls (such as <code>torch.add</code>
+or tensor method invocations), it does not execute the underlying C++
+kernels. Instead, it logs the operations as nodes inside a
+<code>torch.fx.GraphModule</code>.</li>
+<li><strong>Bytecode Rewriting:</strong> As TorchDynamo traces the
+operations, it rewrites the original bytecode. It replaces the sequence
+of individual tensor calls with a single call to the compiled graph
+artifact generated by backends like TorchInductor.</li>
+</ul>
+<h3 id="managing-dynamism-with-guards">Managing Dynamism with
+Guards</h3>
+<p>Python is inherently dynamic, meaning variables, object attributes,
+and tensor dimensions can change between function invocations. To ensure
+correctness across runs, TorchDynamo generates a set of validations
+known as <strong>Guards</strong> alongside the captured graph.</p>
+<ul>
+<li><strong>Guard Creation:</strong> Guards are lightweight conditional
+checks attached to the compiled code. They check invariants such as
+tensor shape, tensor data type, device placement, and values of global
+or module-level Python variables.</li>
+<li><strong>Cache Validation:</strong> When the compiled function is
+called again, TorchDynamo evaluates the guards before executing the
+compiled graph.</li>
+<li><strong>Cache Hit vs. Invalidation:</strong> If all guards evaluate
+to true, PyTorch bypasses tracing and invokes the cached compiled kernel
+directly. If any guard fails (for example, if a tensor shape changes or
+an internal flag toggles), the cached graph is bypassed, and TorchDynamo
+retraces the frame to generate a new specialized graph.</li>
+</ul>
+<h3 id="handling-unsupported-features-with-graph-breaks">Handling
+Unsupported Features with Graph Breaks</h3>
+<p>A core limitation of legacy static graph capture tools was their
+inability to handle arbitrary Python constructs, such as calls to
+unsupported native C-extensions, file system I/O, or
+<code>print()</code> statements. TorchDynamo solves this using
+<strong>Graph Breaks</strong>.</p>
+<p>When the symbolic interpreter encounters an operation it cannot
+represent inside a PyTorch computation graph:</p>
+<ol type="1">
+<li><strong>Graph Split:</strong> TorchDynamo finalizes the
+<code>torch.fx</code> graph constructed up to that point and compiles
+it.</li>
+<li><strong>State Fallback:</strong> It resumes standard CPython
+execution to handle the unsupported instruction natively.</li>
+<li><strong>Subsequent Graph Capture:</strong> Once the unsupported
+operation finishes, TorchDynamo resumes frame interception and begins
+tracing a new graph for any remaining tensor operations in the
+function.</li>
+</ol>
+<p>This design enables <code>torch.compile()</code> to guarantee program
+execution safety: code that cannot be optimized simply executes at
+standard Python speeds rather than raising a compilation exception.</p>
+<h3 id="export-to-backends">Export to Backends</h3>
+<p>Once TorchDynamo extracts a pure computational graph without
+unsupported side-effects, it packages the operations into a
+<code>torch.fx.Graph</code> structure. This intermediate representation
+is then handed off to the configured backend (by default,
+TorchInductor). The backend takes the symbolic trace, performs operator
+fusion and memory-layout planning, and generates optimized machine code
+or Triton kernels tailored to the host hardware.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

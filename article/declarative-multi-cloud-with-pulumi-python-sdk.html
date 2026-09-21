@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Declarative Multi-Cloud with Pulumi Python SDK - python</title>
+    <meta name="description" content="This article explores how the Pulumi Python SDK enables engineers to define declarative cloud infrastructure across Amazon Web Services (AWS), Microsoft Azure, and Google Cloud Platform (GCP). It details the core mechanics of Pulumi's object-oriented app">
+    <link rel="canonical" href="https://salivity.github.io/python/article/declarative-multi-cloud-with-pulumi-python-sdk">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Declarative Multi-Cloud with Pulumi Python SDK - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/declarative-multi-cloud-with-pulumi-python-sdk" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how the Pulumi Python SDK enables engineers to define declarative cloud infrastructure across Amazon Web Services (AWS), Microsoft Azure, and Google Cloud Platform (GCP). It details the core mechanics of Pulumi's object-oriented app" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="declarative-multi-cloud-with-pulumi-python-sdk">Declarative
+Multi-Cloud with Pulumi Python SDK</h1>
+<p>This article explores how the Pulumi Python SDK enables engineers to
+define declarative cloud infrastructure across Amazon Web Services
+(AWS), Microsoft Azure, and Google Cloud Platform (GCP). It details the
+core mechanics of Pulumi's object-oriented approach, explaining how
+imperative Python code is translated into a deterministic desired-state
+graph, how cross-cloud dependencies are managed seamlessly, and how
+resources across disparate cloud providers are orchestrated within a
+unified codebase.</p>
+<h2 id="the-declarative-model-in-an-imperative-language">The Declarative
+Model in an Imperative Language</h2>
+<p>Pulumi allows developers to write standard Python while maintaining a
+strictly declarative infrastructure model. Instead of executing direct
+API calls during program execution, running a Pulumi Python script
+instantiates resource objects that describe the desired end state of the
+infrastructure.</p>
+<p>When you run <code>pulumi up</code>, the Pulumi runtime executes the
+Python code to construct a Directed Acyclic Graph (DAG) representing all
+declared resources and their relationships. The engine compares this
+graph against the existing state stored in the Pulumi state backend,
+calculates the necessary create, read, update, or delete (CRUD)
+operations, and displays a preview before applying changes. This
+separation of resource declaration from execution ensures idempotent
+deployments.</p>
+<h2 id="core-abstractions-resources-inputs-and-outputs">Core
+Abstractions: Resources, Inputs, and Outputs</h2>
+<p>The foundation of Pulumi's Python SDK lies in three primary
+abstractions:</p>
+<ul>
+<li><strong>Resources:</strong> Cloud components (such as a compute
+instance, database, or virtual private network) represented as Python
+classes exported by provider-specific packages.</li>
+<li><strong>Inputs:</strong> Arguments passed to resource constructors.
+These can be plain Python primitives (strings, dictionaries) or dynamic
+values resolved at deploy time.</li>
+<li><strong>Outputs:</strong> Asynchronous properties returned by
+resources that are only known once the cloud provider provisions the
+resource (such as auto-generated IDs, endpoints, or IP addresses).
+Outputs act similarly to Python futures or promises.</li>
+</ul>
+<p>Dependencies are handled automatically through Outputs. Passing an
+<code>Output</code> from an AWS resource as an <code>Input</code> to a
+GCP resource causes Pulumi's engine to resolve the dependency order
+implicitly, eliminating the need to manually configure provisioning
+sequences.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pulumi</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pulumi_aws <span class="im">as</span> aws</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pulumi_gcp <span class="im">as</span> gcp</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># AWS S3 Bucket</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>aws_bucket <span class="op">=</span> aws.s3.BucketV2(<span class="st">&quot;app-backup-aws&quot;</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># GCP Cloud Storage Bucket using the AWS bucket name in its metadata</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>gcp_bucket <span class="op">=</span> gcp.storage.Bucket(</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;app-backup-gcp&quot;</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    location<span class="op">=</span><span class="st">&quot;US&quot;</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>{<span class="st">&quot;paired-aws-bucket&quot;</span>: aws_bucket.<span class="bu">id</span>}</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>pulumi.export(<span class="st">&quot;aws_bucket_name&quot;</span>, aws_bucket.<span class="bu">id</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>pulumi.export(<span class="st">&quot;gcp_bucket_name&quot;</span>, gcp_bucket.name)</span></code></pre></div>
+<h2 id="multi-cloud-definitions-aws-azure-and-gcp">Multi-Cloud
+Definitions: AWS, Azure, and GCP</h2>
+<p>Pulumi delivers distinct, actively maintained packages for each major
+cloud provider, allowing native definitions across diverse
+architectures:</p>
+<h3 id="amazon-web-services-pulumi_aws-and-pulumi_aws_native">Amazon Web
+Services (<code>pulumi_aws</code> and
+<code>pulumi_aws_native</code>)</h3>
+<p>The AWS provider interfaces with AWS Cloud APIs. Engineers define
+resources like VPCs, ECS clusters, and DynamoDB tables by instantiating
+typed classes with clear keyword arguments.</p>
+<h3 id="microsoft-azure-pulumi_azure_native">Microsoft Azure
+(<code>pulumi_azure_native</code>)</h3>
+<p>Pulumi's native Azure provider is generated directly from the Azure
+Resource Manager (ARM) specifications. It provides zero-day support for
+all Azure services, exposing exact ARM templates as idiomatic Python
+classes with complete typing support.</p>
+<h3
+id="google-cloud-platform-pulumi_gcp-and-pulumi_google_native">Google
+Cloud Platform (<code>pulumi_gcp</code> and
+<code>pulumi_google_native</code>)</h3>
+<p>Resources in GCP, such as Google Kubernetes Engine (GKE) clusters,
+BigQuery datasets, and Cloud Functions, are declared via dedicated GCP
+packages, allowing configurations tailored to Google Cloud's specific
+networking and IAM models.</p>
+<h2 id="managing-cross-cloud-workflows-in-a-unified-program">Managing
+Cross-Cloud Workflows in a Unified Program</h2>
+<p>Because Pulumi uses standard Python, multi-cloud architectures do not
+require distinct configuration languages or disjointed state files. A
+single <code>__main__.py</code> file or a modularized Python package can
+import multiple providers simultaneously.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pulumi</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pulumi_aws <span class="im">as</span> aws</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pulumi_azure_native <span class="im">as</span> azure</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pulumi_gcp <span class="im">as</span> gcp</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. AWS Networking</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>vpc <span class="op">=</span> aws.ec2.Vpc(<span class="st">&quot;multi-cloud-vpc&quot;</span>, cidr_block<span class="op">=</span><span class="st">&quot;10.0.0.0/16&quot;</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Azure Resource Group</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>resource_group <span class="op">=</span> azure.resources.ResourceGroup(<span class="st">&quot;multi-cloud-rg&quot;</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. GCP Storage</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>bucket <span class="op">=</span> gcp.storage.Bucket(<span class="st">&quot;multi-cloud-bucket&quot;</span>, location<span class="op">=</span><span class="st">&quot;US&quot;</span>)</span></code></pre></div>
+<p>Cross-cloud references are evaluated uniformly. If an Azure virtual
+machine requires an access key stored in AWS Secrets Manager, or a GCP
+analytics pipeline reads from an Azure Blob storage endpoint, the Pulumi
+engine chains these dependencies into a single execution plan.</p>
+<h2 id="the-deployment-lifecycle">The Deployment Lifecycle</h2>
+<ol type="1">
+<li><strong>Code Execution:</strong> The Python runtime evaluates the
+code, instantiating resource classes and wiring dependencies using
+<code>Output.apply()</code> or direct assignment.</li>
+<li><strong>Graph Generation:</strong> The SDK sends the declared
+resource definitions to the central Pulumi CLI engine via gRPC.</li>
+<li><strong>Diff and Plan:</strong> The engine compares the requested
+graph against the recorded state and computes the delta.</li>
+<li><strong>Provider Execution:</strong> The engine calls the respective
+provider plugins (AWS, Azure, GCP) to execute the necessary REST API
+requests concurrently whenever the dependency graph permits.</li>
+<li><strong>State Persistence:</strong> Once the providers confirm
+resource creation or modification, the new state is securely written to
+the backend.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Docstrings and the __doc__ Attribute - python</title>
+    <meta name="description" content="Python docstrings provide a built-in mechanism for documenting modules, classes, functions, and methods. When a string literal appears as the very first statement within an object's definition, the Python compiler binds it to that object's doc attribute">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-docstrings-and-the-doc-attribute">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Docstrings and the __doc__ Attribute - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-docstrings-and-the-doc-attribute" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python docstrings provide a built-in mechanism for documenting modules, classes, functions, and methods. When a string literal appears as the very first statement within an object's definition, the Python compiler binds it to that object's doc attribute" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-docstrings-and-the-doc-attribute">Python Docstrings and
+the <strong>doc</strong> Attribute</h1>
+<p>Python docstrings provide a built-in mechanism for documenting
+modules, classes, functions, and methods. When a string literal appears
+as the very first statement within an object's definition, the Python
+compiler binds it to that object's <code>__doc__</code> attribute rather
+than executing it as standard code. This article explains how Python
+processes docstrings, how it exposes them via <code>__doc__</code>, how
+tools consume this metadata at runtime, and how docstrings differ from
+regular comments.</p>
+<h2 id="what-is-a-docstring">What is a Docstring?</h2>
+<p>A docstring (short for documentation string) is a string literal that
+occurs as the first statement in a module, function, class, or method
+definition. While single-line strings enclosed in single or double
+quotes can serve as docstrings, multi-line strings using triple quotes
+(<code>"""</code> or <code>'''</code>) are the standard convention
+defined in PEP 257.</p>
+<p>Unlike comments, which are ignored by the Python interpreter,
+docstrings are retained as live metadata during program execution.</p>
+<h2 id="how-python-binds-the-__doc__-attribute">How Python Binds the
+<code>__doc__</code> Attribute</h2>
+<p>When the Python compiler parses a code block (such as a module,
+function body, or class body), it inspects the first statement in the
+block's Abstract Syntax Tree (AST).</p>
+<ol type="1">
+<li><strong>Detection:</strong> If the first statement is an expression
+consisting solely of a string literal, the compiler designates it as a
+docstring.</li>
+<li><strong>Assignment:</strong> During the creation of the underlying
+code object or namespace, Python automatically writes this string to the
+<code>__doc__</code> attribute of the resulting object.</li>
+<li><strong>Default Value:</strong> If no docstring is defined, the
+object is still created with a <code>__doc__</code> attribute, but its
+value is initialized to <code>None</code>.</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calculate_area(width: <span class="bu">float</span>, height: <span class="bu">float</span>) <span class="op">-&gt;</span> <span class="bu">float</span>:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;Calculate the area of a rectangle given width and height.&quot;&quot;&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> width <span class="op">*</span> height</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(calculate_area.__doc__)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: Calculate the area of a rectangle given width and height.</span></span></code></pre></div>
+<h2 id="docstrings-across-different-scopes">Docstrings Across Different
+Scopes</h2>
+<p>The <code>__doc__</code> attribute behaves consistently across
+modules, classes, and functions:</p>
+<h3 id="1-functions-and-methods">1. Functions and Methods</h3>
+<p>Inside functions, the docstring is attached directly to the function
+object.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> add(a, b):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;Add two numbers and return the result.&quot;&quot;&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">+</span> b</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(add.__doc__)</span></code></pre></div>
+<h3 id="2-classes">2. Classes</h3>
+<p>Inside classes, the docstring resides in the class namespace and is
+attached to the class object itself.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> DatabaseConnection:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;Manages connections and transactions with the database.&quot;&quot;&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(DatabaseConnection.__doc__)</span></code></pre></div>
+<h3 id="3-modules">3. Modules</h3>
+<p>For modules, a docstring placed at the top of the <code>.py</code>
+file is stored in the module's global <code>__doc__</code> variable.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># In my_module.py</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co">&quot;&quot;&quot;Utilities for network socket configuration.&quot;&quot;&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># ...</span></span></code></pre></div>
+<p>When imported, it can be accessed via
+<code>my_module.__doc__</code>.</p>
+<h2 id="accessing-docstrings-at-runtime">Accessing Docstrings at
+Runtime</h2>
+<p>Besides direct attribute access via <code>obj.__doc__</code>, Python
+provides higher-level interfaces to read and display documentation:</p>
+<ul>
+<li><strong>The <code>help()</code> Function:</strong> Python's
+interactive help utility retrieves the <code>__doc__</code> attribute,
+formats it, and displays it inside the terminal.</li>
+<li><strong>The <code>inspect.getdoc()</code> Method:</strong> The
+<code>inspect</code> module provides <code>inspect.getdoc(obj)</code>.
+Unlike raw access to <code>__doc__</code>, <code>inspect.getdoc()</code>
+cleans up common indentation, trims leading/trailing whitespace, and
+handles inheritance chains for classes that inherit documentation from
+their parents.</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> inspect</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Base:</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;Base class documentation.&quot;&quot;&quot;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Derived(Base):</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(Derived.__doc__)           <span class="co"># Output: None</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(inspect.getdoc(Derived))   <span class="co"># Output: Base class documentation.</span></span></code></pre></div>
+<h2 id="docstrings-vs-comments">Docstrings vs. Comments</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Docstring</th>
+<th style="text-align: left;">Comment (<code>#</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Visibility</strong></td>
+<td style="text-align: left;">Available at runtime via
+<code>__doc__</code></td>
+<td style="text-align: left;">Discarded during tokenization</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Syntax</strong></td>
+<td style="text-align: left;">String literal (<code>"""</code> or
+<code>'''</code>)</td>
+<td style="text-align: left;">Prefixed with <code>#</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Purpose</strong></td>
+<td style="text-align: left;">Explains <em>what</em> an object does and
+<em>how</em> to use it</td>
+<td style="text-align: left;">Explains <em>why</em> non-obvious code was
+written</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Tooling</strong></td>
+<td style="text-align: left;">Consumed by IDEs, Sphinx, and
+<code>help()</code></td>
+<td style="text-align: left;">Ignored by automated documentation
+tools</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-optimization-flag-caveat">The Optimization Flag Caveat</h2>
+<p>Docstrings occupy memory because they are loaded into runtime memory
+as string objects. To reduce memory usage in resource-constrained
+environments, Python can be run with the <code>-OO</code> optimization
+flag:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-OO</span> script.py</span></code></pre></div>
+<p>When <code>-OO</code> is active, the bytecode compiler discards
+docstrings entirely, setting <code>__doc__</code> to <code>None</code>
+for all functions, classes, and modules. For this reason, production
+code should never rely on the runtime existence of <code>__doc__</code>
+for application logic or control flow.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

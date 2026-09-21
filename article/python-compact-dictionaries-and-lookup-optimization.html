@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Compact Dictionaries and Lookup Optimization - python</title>
+    <meta name="description" content="Python optimizes dictionary performance and memory usage through a compact dictionary layout first introduced in CPython 3.6 and standardized in Python 3.7. By decoupling the sparse hash table structure from the actual key-value storage, Python reduces m">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-compact-dictionaries-and-lookup-optimization">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Compact Dictionaries and Lookup Optimization - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-compact-dictionaries-and-lookup-optimization" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python optimizes dictionary performance and memory usage through a compact dictionary layout first introduced in CPython 3.6 and standardized in Python 3.7. By decoupling the sparse hash table structure from the actual key-value storage, Python reduces m" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-compact-dictionaries-and-lookup-optimization">Python
+Compact Dictionaries and Lookup Optimization</h1>
+<p>Python optimizes dictionary performance and memory usage through a
+compact dictionary layout first introduced in CPython 3.6 and
+standardized in Python 3.7. By decoupling the sparse hash table
+structure from the actual key-value storage, Python reduces memory
+consumption by 20% to 25%, improves CPU cache locality, maintains
+insertion ordering, and retains average <span
+class="math inline">\(O(1)\)</span> time complexity for key lookups.</p>
+<h3 id="the-traditional-dictionary-layout">The Traditional Dictionary
+Layout</h3>
+<p>Prior to Python 3.6, dictionaries were implemented as a single sparse
+hash table. The table consisted of an array of 24-byte entries, where
+each entry stored:</p>
+<ul>
+<li><code>me_hash</code> (the cached hash of the key)</li>
+<li><code>me_key</code> (a pointer to the key object)</li>
+<li><code>me_value</code> (a pointer to the value object)</li>
+</ul>
+<p>To minimize hash collisions, the table remained roughly one-third
+empty at all times. This design wasted substantial memory because empty
+slots still reserved the full 24 bytes of memory, leading to sparse
+memory footprints and poor CPU cache utilization during lookups.</p>
+<h3 id="the-compact-dictionary-structure">The Compact Dictionary
+Structure</h3>
+<p>The modern compact dictionary splits the single sparse table into two
+separate arrays:</p>
+<ol type="1">
+<li><strong><code>indices</code> Array:</strong> A sparse array that
+acts as the primary hash table, containing only integer offsets
+(indices). Depending on the total dictionary size, these integers are
+stored using the smallest possible C data type: <code>int8_t</code> (for
+tables up to 128 items), <code>int16_t</code>, <code>int32_t</code>, or
+<code>int64_t</code>.</li>
+<li><strong><code>entries</code> Array:</strong> A dense array that
+stores the actual <code>hash</code>, <code>key</code>, and
+<code>value</code> tuples. Entries are appended sequentially in the
+exact order they are inserted.</li>
+</ol>
+<p>Empty slots are confined exclusively to the <code>indices</code>
+array, where each unused slot consumes only 1 to 4 bytes rather than the
+full 24 bytes of a traditional entry.</p>
+<h3 id="how-lookup-optimization-works">How Lookup Optimization
+Works</h3>
+<p>When looking up a key, Python executes the following steps:</p>
+<ol type="1">
+<li><strong>Compute Hash:</strong> Python computes
+<code>hash(key)</code>.</li>
+<li><strong>Locate Index:</strong> Python applies a bitmask to the hash
+(<code>hash &amp; mask</code>) to calculate a slot position inside the
+small <code>indices</code> array.</li>
+<li><strong>Resolve Collisions:</strong> If the value at
+<code>indices[slot]</code> is empty (represented by <code>-1</code> or
+<code>DKIX_EMPTY</code>), the key does not exist. If occupied, Python
+retrieves the integer index <code>i = indices[slot]</code>.</li>
+<li><strong>Fetch Entry:</strong> Python directly accesses
+<code>entries[i]</code> to verify whether the stored hash and key match
+the requested key. If a collision occurs (the key at
+<code>entries[i]</code> does not match), Python follows its standard
+pseudo-random probing sequence within the <code>indices</code> array
+until the key is matched or an empty slot is encountered.</li>
+</ol>
+<h3 id="performance-and-cache-benefits">Performance and Cache
+Benefits</h3>
+<p>Lookups in compact dictionaries remain <span
+class="math inline">\(O(1)\)</span> on average, with several tangible
+runtime advantages:</p>
+<ul>
+<li><strong>Enhanced Cache Locality:</strong> Because the
+<code>indices</code> table is small and composed of compact integers, a
+larger portion of the lookup table fits directly into L1/L2 CPU caches,
+reducing cache misses during the probing phase.</li>
+<li><strong>Faster Iteration:</strong> Iterating over keys, values, or
+items no longer requires skipping empty slots in a sparse array. Python
+simply scans the contiguous <code>entries</code> array from beginning to
+end.</li>
+<li><strong>Guaranteed Insertion Order:</strong> Storing entries
+sequentially in the order of insertion guarantees deterministic key
+ordering without requiring auxiliary linked lists or secondary tracking
+structures.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

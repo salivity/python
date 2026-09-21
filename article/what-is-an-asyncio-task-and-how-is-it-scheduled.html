@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Is an asyncio.Task and How Is It Scheduled? - python</title>
+    <meta name="description" content="An asyncio.Task is a core building block in Python's asynchronous programming model that wraps a coroutine to run concurrently in an event loop. This article explains the nature of a Task, how it differs from a raw coroutine, and the internal step-by-ste">
+    <link rel="canonical" href="https://salivity.github.io/python/article/what-is-an-asyncio-task-and-how-is-it-scheduled">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="What Is an asyncio.Task and How Is It Scheduled? - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/what-is-an-asyncio-task-and-how-is-it-scheduled" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="An asyncio.Task is a core building block in Python's asynchronous programming model that wraps a coroutine to run concurrently in an event loop. This article explains the nature of a Task, how it differs from a raw coroutine, and the internal step-by-ste" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="what-is-an-asynciotask-and-how-is-it-scheduled">What Is an
+asyncio.Task and How Is It Scheduled?</h1>
+<p>An <code>asyncio.Task</code> is a core building block in Python's
+asynchronous programming model that wraps a coroutine to run
+concurrently in an event loop. This article explains the nature of a
+<code>Task</code>, how it differs from a raw coroutine, and the internal
+step-by-step mechanism the event loop uses to register, schedule, and
+drive its execution to completion.</p>
+<h2 id="what-is-an-asynciotask">What Is an asyncio.Task?</h2>
+<p>In Python, a standard coroutine defined with <code>async def</code>
+does not run automatically when called; it merely returns a coroutine
+object. To execute concurrently alongside other operations, that
+coroutine must be wrapped inside an <code>asyncio.Task</code>.</p>
+<p>A <code>Task</code> is a concrete subclass of
+<code>asyncio.Future</code>. It serves two primary responsibilities:</p>
+<ol type="1">
+<li><strong>State Tracking:</strong> It tracks the execution state of
+the wrapped coroutine (e.g., pending, running, finished, or cancelled)
+and stores the eventual return value or raised exception.</li>
+<li><strong>Execution Driver:</strong> It repeatedly steps through the
+coroutine's execution frames using <code>coro.send(None)</code> whenever
+the coroutine is ready to resume.</li>
+</ol>
+<p>Creating a task is commonly done via
+<code>asyncio.create_task(coro)</code> (introduced in Python 3.7) or the
+lower-level <code>loop.create_task(coro)</code>.</p>
+<h2 id="how-a-task-is-scheduled-onto-the-event-loop">How a Task Is
+Scheduled onto the Event Loop</h2>
+<p>The transition from a raw coroutine to a running background task
+follows a precise internal sequence:</p>
+<h3 id="1-task-initialization-and-immediate-registration">1. Task
+Initialization and Immediate Registration</h3>
+<p>When <code>asyncio.create_task(coro)</code> is called, the
+<code>Task</code> object is instantiated immediately. During its
+initialization (<code>__init__</code>), the task automatically schedules
+its own execution onto the current event loop:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>loop.call_soon(<span class="va">self</span>.__step, context<span class="op">=</span><span class="va">self</span>._context)</span></code></pre></div>
+<p>The task does not wait for an explicit <code>await</code> to register
+itself. By passing its internal driving method (conventionally named
+<code>__step</code>) to <code>loop.call_soon</code>, the task requests
+that the event loop run it at the earliest opportunity.</p>
+<h3 id="2-placement-in-the-event-loop-ready-queue">2. Placement in the
+Event Loop Ready Queue</h3>
+<p>The event loop maintains an internal FIFO queue of callbacks that are
+ready to run (often an internal <code>collections.deque</code> named
+<code>_ready</code>). Calling <code>loop.call_soon()</code> places a
+<code>Handle</code> pointing to <code>task.__step</code> directly into
+this ready queue.</p>
+<h3 id="3-driving-the-coroutine-__step">3. Driving the Coroutine
+(<code>__step</code>)</h3>
+<p>When the event loop reaches its next iteration, it pulls handles from
+the <code>_ready</code> queue and executes them:</p>
+<ol type="1">
+<li>The loop calls <code>task.__step()</code>.</li>
+<li>Inside <code>__step</code>, the task advances the coroutine by
+invoking <code>result = coro.send(None)</code>.</li>
+<li>The coroutine executes synchronously until it either returns a
+value, raises an exception, or yields control back to the loop via an
+<code>await</code> expression.</li>
+</ol>
+<h3 id="4-handling-suspension-await">4. Handling Suspension
+(<code>await</code>)</h3>
+<p>When the coroutine hits an <code>await other_awaitable</code>
+expression, it yields control back to <code>__step</code>:</p>
+<ul>
+<li>If <code>other_awaitable</code> is an I/O operation (such as a
+network socket read), the event loop registers the underlying file
+descriptor with an OS-level selector (like <code>epoll</code>,
+<code>kqueue</code>, or IOCP).</li>
+<li>The task attaches a callback to that low-level future using
+<code>add_done_callback()</code>.</li>
+<li>Once the requested I/O event completes or the awaited future
+resolves, the callback executes and calls
+<code>loop.call_soon(task.__step)</code> again, moving the task back
+into the <code>_ready</code> queue.</li>
+</ul>
+<h3 id="5-completion-and-cleanup">5. Completion and Cleanup</h3>
+<p>When the coroutine finishes execution without awaiting further
+operations:</p>
+<ul>
+<li>If it returns a value, the <code>Task</code> catches the resulting
+<code>StopIteration</code> exception, marks itself as <code>done</code>,
+and sets its internal result to the returned value.</li>
+<li>If it raises an unhandled exception, the <code>Task</code> catches
+it, sets it as its internal exception state, and marks itself as
+<code>done</code>.</li>
+<li>Finally, the task triggers any callbacks registered via
+<code>task.add_done_callback()</code> and removes itself from the event
+loop's active tasks set.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

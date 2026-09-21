@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cython cdef vs cpdef vs def Syntax Differences - python</title>
+    <meta name="description" content="Cython provides three distinct function declaration keywords—def, cdef, and cpdef—which control how functions are compiled, where they can be accessed, and how efficiently they execute. Understanding the differences among these keywords allows develo">
+    <link rel="canonical" href="https://salivity.github.io/python/article/cython-cdef-vs-cpdef-vs-def-syntax-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Cython cdef vs cpdef vs def Syntax Differences - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/cython-cdef-vs-cpdef-vs-def-syntax-differences" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Cython provides three distinct function declaration keywords—def, cdef, and cpdef—which control how functions are compiled, where they can be accessed, and how efficiently they execute. Understanding the differences among these keywords allows develo" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="cython-cdef-vs-cpdef-vs-def-syntax-differences">Cython cdef vs
+cpdef vs def Syntax Differences</h1>
+<p>Cython provides three distinct function declaration
+keywords—<code>def</code>, <code>cdef</code>, and
+<code>cpdef</code>—which control how functions are compiled, where they
+can be accessed, and how efficiently they execute. Understanding the
+differences among these keywords allows developers to balance execution
+speed with Python interoperability. This guide outlines the syntax,
+accessibility, performance implications, and practical use cases for
+each function type in Cython.</p>
+<h2 id="quick-comparison">Quick Comparison</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>def</code></th>
+<th style="text-align: left;"><code>cdef</code></th>
+<th style="text-align: left;"><code>cpdef</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Callable from
+Python?</strong></td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Callable from
+Cython/C?</strong></td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Return/Argument
+Types</strong></td>
+<td style="text-align: left;">Python objects (or auto-coerced)</td>
+<td style="text-align: left;">C types and Python objects</td>
+<td style="text-align: left;">C types and Python objects</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Call Overhead</strong></td>
+<td style="text-align: left;">High (Python standard)</td>
+<td style="text-align: left;">Minimal (Pure C call)</td>
+<td style="text-align: left;">Minimal via Cython; High via Python</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Primary Use Case</strong></td>
+<td style="text-align: left;">Public Python API</td>
+<td style="text-align: left;">Internal, performance-critical tasks</td>
+<td style="text-align: left;">Hybrid public/private functions</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1-the-def-function">1. The <code>def</code> Function</h2>
+<p>The <code>def</code> statement declares a standard Python function.
+It produces a regular Python function object that is placed into the
+module's namespace and can be invoked directly from pure Python
+code.</p>
+<h3 id="syntax">Syntax</h3>
+<pre class="cython"><code>def add_py(int a, int b):
+    return a + b</code></pre>
+<h3 id="characteristics">Characteristics</h3>
+<ul>
+<li><strong>Visibility:</strong> Accessible from both Python and Cython
+modules.</li>
+<li><strong>Typing:</strong> Parameter types can be statically typed
+using C-types (like <code>int a</code>), but the function always accepts
+and returns Python objects under the hood. Cython handles the conversion
+(boxing and unboxing) of arguments and return values.</li>
+<li><strong>Performance:</strong> Suffers from standard Python function
+call overhead. It is not suitable for inner loops where call overhead
+dominates run time.</li>
+</ul>
+<hr />
+<h2 id="2-the-cdef-function">2. The <code>cdef</code> Function</h2>
+<p>The <code>cdef</code> statement defines a pure C-level function. It
+cannot be accessed directly from pure Python code because it is not
+exported to the Python module’s symbol table.</p>
+<h3 id="syntax-1">Syntax</h3>
+<pre class="cython"><code>cdef int add_c(int a, int b):
+    return a + b</code></pre>
+<h3 id="characteristics-1">Characteristics</h3>
+<ul>
+<li><strong>Visibility:</strong> Only callable from Cython code within
+the same compilation unit or via <code>.pxd</code> header files. It is
+invisible to pure Python.</li>
+<li><strong>Typing:</strong> Can accept and return arbitrary C types
+(including raw pointers, structs, and unions) in addition to Python
+objects. The return type is declared immediately after
+<code>cdef</code>.</li>
+<li><strong>Performance:</strong> Executes with native C speed and
+near-zero function call overhead. It is ideal for internal helper
+functions, mathematical operations, and tight loops.</li>
+</ul>
+<hr />
+<h2 id="3-the-cpdef-function">3. The <code>cpdef</code> Function</h2>
+<p>The <code>cpdef</code> keyword creates a hybrid function. The Cython
+compiler generates two versions: a fast C-level function and a
+lightweight Python wrapper that forwards arguments to the C
+function.</p>
+<h3 id="syntax-2">Syntax</h3>
+<pre class="cython"><code>cpdef int add_hybrid(int a, int b):
+    return a + b</code></pre>
+<h3 id="characteristics-2">Characteristics</h3>
+<ul>
+<li><strong>Visibility:</strong> Fully accessible from both pure Python
+and Cython.</li>
+<li><strong>Typing:</strong> Requires types that Cython knows how to
+convert to and from Python objects. C pointers, C unions, or C++
+references cannot be used in the signature of a <code>cpdef</code>
+function.</li>
+<li><strong>Performance:</strong> When called from Cython, it bypasses
+Python's runtime and calls the underlying C function directly for native
+speed. When called from Python, it introduces the standard wrapper
+overhead.</li>
+</ul>
+<hr />
+<h2 id="summary-of-syntax-rules">Summary of Syntax Rules</h2>
+<ol type="1">
+<li><strong>Return Types:</strong>
+<ul>
+<li><code>def</code> does not allow an explicit C return type before the
+function name (e.g., <code>def int func():</code> is invalid).</li>
+<li><code>cdef</code> and <code>cpdef</code> require or allow a C return
+type directly after the keyword (e.g.,
+<code>cdef double compute():</code> or
+<code>cpdef void process():</code>).</li>
+</ul></li>
+<li><strong>Type Compatibility:</strong>
+<ul>
+<li>Use <code>cdef</code> if you need to use non-Python-compatible types
+(like raw memory pointers: <code>int*</code>).</li>
+<li>Use <code>cpdef</code> if you want maximum speed in Cython while
+keeping the function accessible to standard Python scripts.</li>
+<li>Use <code>def</code> when creating external module interfaces that
+do not benefit from C-level internal calls.</li>
+</ul></li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding Python super() in Multiple Inheritance - python</title>
+    <meta name="description" content="In Python, the super() built-in function does not simply refer to an immediate base class; instead, it dynamically delegates method calls to the next class along an instance's Method Resolution Order (MRO). In cooperative multiple inheritance, super() en">
+    <link rel="canonical" href="https://salivity.github.io/python/article/understanding-python-super-in-multiple-inheritance">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding Python super() in Multiple Inheritance - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/understanding-python-super-in-multiple-inheritance" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, the super() built-in function does not simply refer to an immediate base class; instead, it dynamically delegates method calls to the next class along an instance's Method Resolution Order (MRO). In cooperative multiple inheritance, super() en" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1
+id="understanding-python-super-in-multiple-inheritance">Understanding
+Python super() in Multiple Inheritance</h1>
+<p>In Python, the <code>super()</code> built-in function does not simply
+refer to an immediate base class; instead, it dynamically delegates
+method calls to the next class along an instance's Method Resolution
+Order (MRO). In cooperative multiple inheritance, <code>super()</code>
+enables sibling and ancestor classes to work together by forming a
+deterministic chain of execution, ensuring each class in complex
+inheritance hierarchies—such as the diamond pattern—is visited exactly
+once.</p>
+<h2 id="the-role-of-method-resolution-order-mro">The Role of Method
+Resolution Order (MRO)</h2>
+<p>To resolve method calls in multiple inheritance, Python computes a
+linear execution order known as the Method Resolution Order (MRO) using
+the C3 Linearization algorithm. The algorithm guarantees two
+properties:</p>
+<ol type="1">
+<li><strong>Local Precedence Order:</strong> Children precede their
+parents, and base classes listed in a class definition maintain their
+left-to-right order.</li>
+<li><strong>Monotonicity:</strong> If a class precedes another in one
+class's MRO, it must precede it in any subclass's MRO.</li>
+</ol>
+<p>When <code>super().method()</code> is called, Python looks at the MRO
+of the <em>original caller instance</em> (the runtime type of
+<code>self</code>), not the class where the <code>super()</code> call is
+written. <code>super()</code> finds the current class in that MRO list
+and invokes the method on the subsequent class in the chain.</p>
+<p>You can inspect an object's MRO using the <code>__mro__</code>
+attribute or the <code>mro()</code> method:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Base:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> A(Base):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> B(Base):</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Child(A, B):</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(Child.mro())</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: [&lt;class &#39;__main__.Child&#39;&gt;, &lt;class &#39;__main__.A&#39;&gt;, &lt;class &#39;__main__.B&#39;&gt;, &lt;class &#39;__main__.Base&#39;&gt;, &lt;class &#39;object&#39;&gt;]</span></span></code></pre></div>
+<h2 id="how-cooperative-calling-works">How Cooperative Calling
+Works</h2>
+<p>Cooperative multiple inheritance relies on every class in the
+hierarchy invoking <code>super()</code>. When a method executes, it
+passes control to the next class in the MRO until it reaches the root
+class (ultimately <code>object</code>).</p>
+<p>Consider the diamond inheritance pattern:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Root:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> process(<span class="va">self</span>):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Root executed&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Left(Root):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> process(<span class="va">self</span>):</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Left executed&quot;</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().process()</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Right(Root):</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> process(<span class="va">self</span>):</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Right executed&quot;</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().process()</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Bottom(Left, Right):</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> process(<span class="va">self</span>):</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Bottom executed&quot;</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().process()</span></code></pre></div>
+<p>When invoking <code>Bottom().process()</code>, the MRO is:
+<code>Bottom</code> <span class="math inline">\(\rightarrow\)</span>
+<code>Left</code> <span class="math inline">\(\rightarrow\)</span>
+<code>Right</code> <span class="math inline">\(\rightarrow\)</span>
+<code>Root</code> <span class="math inline">\(\rightarrow\)</span>
+<code>object</code>.</p>
+<p>Execution proceeds as follows:</p>
+<ol type="1">
+<li><code>Bottom.process()</code> executes, prints
+<code>"Bottom executed"</code>, and calls
+<code>super().process()</code>.</li>
+<li>Python inspects the instance's MRO. The class following
+<code>Bottom</code> is <code>Left</code>.</li>
+<li><code>Left.process()</code> executes, prints
+<code>"Left executed"</code>, and calls
+<code>super().process()</code>.</li>
+<li>Even though <code>Left</code>'s syntactic parent is
+<code>Root</code>, the next class in the <em>runtime instance's</em> MRO
+is <code>Right</code>. Control shifts horizontally to
+<code>Right.process()</code>.</li>
+<li><code>Right.process()</code> executes, prints
+<code>"Right executed"</code>, and calls
+<code>super().process()</code>.</li>
+<li>Control moves to <code>Root.process()</code>, which prints
+<code>"Root executed"</code>.</li>
+</ol>
+<p>Output:</p>
+<pre class="text"><code>Bottom executed
+Left executed
+Right executed
+Root executed</code></pre>
+<p>Without <code>super()</code>, manually calling direct base classes
+(e.g., <code>Left.process(self)</code> and
+<code>Right.process(self)</code>) would cause
+<code>Root.process()</code> to execute twice, leading to duplicate
+operations.</p>
+<h2 id="requirements-for-reliable-cooperative-inheritance">Requirements
+for Reliable Cooperative Inheritance</h2>
+<p>For cooperative inheritance to succeed without runtime errors,
+classes must follow specific design practices:</p>
+<ul>
+<li><strong>Uniform Method Signatures:</strong> Because a class cannot
+predict which sibling or ancestor will follow it in a subclass's MRO,
+cooperative methods should accept <code>*args</code> and
+<code>**kwargs</code> and pass them along to <code>super()</code>:
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, <span class="op">*</span>args, <span class="op">**</span>kwargs):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">super</span>().<span class="fu">__init__</span>(<span class="op">*</span>args, <span class="op">**</span>kwargs)</span></code></pre></div></li>
+<li><strong>Universal Participation:</strong> If any class in the
+inheritance chain omits <code>super()</code>, the chain breaks
+prematurely, preventing subsequent classes in the MRO from
+executing.</li>
+<li><strong>Terminal Base Class:</strong> The final class in the
+cooperative chain (before <code>object</code>) must safely consume or
+terminate any remaining arguments to avoid passing unhandled parameters
+to <code>object.__init__</code>.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

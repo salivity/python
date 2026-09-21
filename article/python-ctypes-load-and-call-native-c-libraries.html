@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python ctypes: Load and Call Native C Libraries - python</title>
+    <meta name="description" content="This article explains the role of Python's built-in ctypes module in interfacing with compiled C code. It covers how ctypes acts as a Foreign Function Interface (FFI) to load dynamic libraries (.dll, .so, .dylib), map Python data types to native C repres">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-ctypes-load-and-call-native-c-libraries">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python ctypes: Load and Call Native C Libraries - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-ctypes-load-and-call-native-c-libraries" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the role of Python's built-in ctypes module in interfacing with compiled C code. It covers how ctypes acts as a Foreign Function Interface (FFI) to load dynamic libraries (.dll, .so, .dylib), map Python data types to native C repres" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-ctypes-load-and-call-native-c-libraries">Python ctypes:
+Load and Call Native C Libraries</h1>
+<p>This article explains the role of Python's built-in
+<code>ctypes</code> module in interfacing with compiled C code. It
+covers how <code>ctypes</code> acts as a Foreign Function Interface
+(FFI) to load dynamic libraries (<code>.dll</code>, <code>.so</code>,
+<code>.dylib</code>), map Python data types to native C representations,
+configure function signatures, and safely invoke native procedures to
+achieve high-performance execution and hardware-level access.</p>
+<h3 id="what-is-ctypes">What is ctypes?</h3>
+<p><code>ctypes</code> is a standard library module in Python that
+provides a Foreign Function Interface (FFI). Its primary function is to
+allow pure Python code to interact with low-level, compiled libraries
+without requiring a separate C extension module or a C compiler during
+the Python runtime. It bridges the gap between Python's dynamic runtime
+and C's statically typed, compiled memory model.</p>
+<h3 id="loading-dynamic-libraries">Loading Dynamic Libraries</h3>
+<p>To invoke functions from a precompiled C library, <code>ctypes</code>
+must first load the binary into the Python process address space. It
+provides dynamic loaders suited for platform-specific calling
+conventions:</p>
+<ul>
+<li><strong><code>ctypes.CDLL</code></strong>: Used to load libraries
+that follow the standard <code>cdecl</code> calling convention (standard
+for Linux/macOS dynamic libraries and most standard C Windows
+libraries).</li>
+<li><strong><code>ctypes.WinDLL</code></strong>: Specific to Windows,
+used to load libraries conforming to the <code>stdcall</code> calling
+convention (commonly used by the Win32 API).</li>
+</ul>
+<p>Loading is achieved by passing the dynamic library path (such as
+<code>libexample.so</code> on Linux, <code>example.dll</code> on
+Windows, or <code>libexample.dylib</code> on macOS) to the loader:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ctypes</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load a shared library</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>my_lib <span class="op">=</span> ctypes.CDLL(<span class="st">&quot;./libmath.so&quot;</span>)</span></code></pre></div>
+<h3 id="type-marshaling-and-signatures">Type Marshaling and
+Signatures</h3>
+<p>Because Python variables are high-level objects
+(<code>PyObject</code>) and C functions expect raw memory addresses or
+primitive values, <code>ctypes</code> handles data marshaling. It
+defines compatible types that correspond directly to C data types, such
+as <code>c_int</code>, <code>c_float</code>, <code>c_double</code>,
+<code>c_char_p</code> (for strings), and <code>c_void_p</code> (for raw
+pointers).</p>
+<p>Before invoking a function, you must define its prototype using two
+critical attributes:</p>
+<ol type="1">
+<li><strong><code>argtypes</code></strong>: A list or tuple of
+<code>ctypes</code> types specifying the arguments the C function
+accepts. This enforces type-checking on the Python side before the call
+reaches native code.</li>
+<li><strong><code>restype</code></strong>: The data type returned by the
+function. By default, <code>ctypes</code> assumes a return type of
+standard C <code>int</code>. If the function returns a float, pointer,
+or void, <code>restype</code> must be explicitly declared.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Prototype for: double add_floats(double a, double b);</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>my_lib.add_floats.argtypes <span class="op">=</span> [ctypes.c_double, ctypes.c_double]</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>my_lib.add_floats.restype <span class="op">=</span> ctypes.c_double</span></code></pre></div>
+<h3 id="handling-complex-types-pointers-and-structs">Handling Complex
+Types: Pointers and Structs</h3>
+<p>Beyond primitives, <code>ctypes</code> can interface with complex C
+constructs:</p>
+<ul>
+<li><strong>Pointers and References</strong>: Functions expecting
+pointers can be passed Python objects wrapped using
+<code>ctypes.byref()</code> for pass-by-reference speed, or
+<code>ctypes.pointer()</code> to construct explicit pointer
+objects.</li>
+<li><strong>Structures</strong>: Users can subclass
+<code>ctypes.Structure</code> and define a <code>_fields_</code>
+attribute to mirror C <code>struct</code> memory layouts exactly,
+ensuring field alignment and padding match the native binary.</li>
+</ul>
+<h3 id="invoking-functions">Invoking Functions</h3>
+<p>Once the library is loaded and the signature is declared, the
+function is invoked using normal Python syntax. <code>ctypes</code>
+automatically converts the input arguments into their corresponding C
+representations, jumps to the function address, executes the machine
+code, and converts the return value back into a native Python type:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> my_lib.add_floats(<span class="fl">3.5</span>, <span class="fl">4.2</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)  <span class="co"># Outputs: 7.7</span></span></code></pre></div>
+<h3 id="key-considerations">Key Considerations</h3>
+<p>While <code>ctypes</code> eliminates the need to compile C wrappers,
+it bypasses Python's memory management and exception handling.
+Mismatched argument types, incorrect calling conventions, or accessing
+null pointers will lead to immediate segmentation faults or program
+crashes rather than Python exceptions. Precise signature configuration
+is essential for system stability.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

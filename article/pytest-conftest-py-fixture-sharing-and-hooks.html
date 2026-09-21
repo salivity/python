@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pytest conftest.py: Fixture Sharing and Hooks - python</title>
+    <meta name="description" content="In Python testing with pytest, the conftest.py file serves as a decentralized configuration hub that provides reusable fixtures and custom hook implementations across test suites without requiring explicit imports. This article explores how pytest levera">
+    <link rel="canonical" href="https://salivity.github.io/python/article/pytest-conftest-py-fixture-sharing-and-hooks">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pytest conftest.py: Fixture Sharing and Hooks - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/pytest-conftest-py-fixture-sharing-and-hooks" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python testing with pytest, the conftest.py file serves as a decentralized configuration hub that provides reusable fixtures and custom hook implementations across test suites without requiring explicit imports. This article explores how pytest levera" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pytest-conftestpy-fixture-sharing-and-hooks">Pytest conftest.py:
+Fixture Sharing and Hooks</h1>
+<p>In Python testing with <code>pytest</code>, the
+<code>conftest.py</code> file serves as a decentralized configuration
+hub that provides reusable fixtures and custom hook implementations
+across test suites without requiring explicit imports. This article
+explores how <code>pytest</code> leverages the directory hierarchy to
+control the scope and visibility of fixtures, how nested
+<code>conftest.py</code> files override or extend parent behaviors, and
+how directory-specific hooks dynamically customize test execution and
+reporting.</p>
+<h3 id="hierarchical-fixture-discovery">Hierarchical Fixture
+Discovery</h3>
+<p>The primary feature of <code>conftest.py</code> is its ability to
+share fixtures across multiple test modules automatically. When a test
+function requests a fixture, <code>pytest</code> traverses the directory
+tree upward, starting from the directory containing the test file up to
+the root directory where the test runner was executed.</p>
+<p>This discovery model eliminates the need for
+<code>from conftest import my_fixture</code> statements. Because
+<code>pytest</code> dynamically registers fixtures during its discovery
+phase, any fixture defined in a <code>conftest.py</code> file is
+immediately available to:</p>
+<ol type="1">
+<li>All test files located in the same directory as that
+<code>conftest.py</code>.</li>
+<li>All test files in any subdirectories underneath it.</li>
+</ol>
+<p>Conversely, tests located in sibling or parent directories cannot
+access fixtures defined inside an isolated child directory's
+<code>conftest.py</code>. This mechanism ensures strict isolation
+between disparate test suites, such as unit tests and end-to-end
+integration tests.</p>
+<h3 id="directory-scoped-fixture-overriding">Directory-Scoped Fixture
+Overriding</h3>
+<p>As test suites grow, different modules often require variations of
+the same underlying resource—for example, a database connection with
+different permissions or mocked network clients. <code>pytest</code>
+allows downstream directories to override fixtures declared in parent
+directories.</p>
+<p>When a child directory contains its own <code>conftest.py</code> that
+defines a fixture with the same name as one in a parent
+<code>conftest.py</code>, the child fixture shadows the parent fixture
+for all tests within that child directory tree. This enables developers
+to declare generic, global defaults at the project root while
+specializing behaviors in subfolders without renaming fixtures or
+rewriting test signatures.</p>
+<h3
+id="interaction-between-fixture-scopes-and-directory-boundaries">Interaction
+Between Fixture Scopes and Directory Boundaries</h3>
+<p>Fixtures specify their lifespan using the <code>scope</code>
+argument: <code>function</code>, <code>class</code>,
+<code>module</code>, <code>package</code>, or <code>session</code>. The
+location of the <code>conftest.py</code> file introduces an additional
+spatial boundary that works alongside temporal fixture scopes:</p>
+<ul>
+<li><strong>Global Access:</strong> A <code>session</code>-scoped
+fixture in the root <code>conftest.py</code> executes once across the
+entire test session.</li>
+<li><strong>Localized Session Scope:</strong> A
+<code>session</code>-scoped fixture defined in a sub-folder's
+<code>conftest.py</code> still runs once, but it is only instantiated if
+and when tests within that specific sub-folder run. It remains
+inaccessible to tests outside that folder hierarchy.</li>
+</ul>
+<p>This synergy allows expensive operations (like starting an external
+Docker container) to be confined strictly to the sub-suite that requires
+them, avoiding unneeded resource consumption when running unrelated
+tests.</p>
+<h3 id="hook-configurations-and-local-customization">Hook Configurations
+and Local Customization</h3>
+<p><code>pytest</code> operates via a hook-based plugin architecture.
+Hooks allow users to intercept and modify the testing lifecycle,
+including test collection, environment configuration, reporting, and
+execution phases.</p>
+<p>Every <code>conftest.py</code> functions as an in-tree plugin. By
+implementing standard <code>pytest_*</code> hooks within a
+<code>conftest.py</code>, you configure behaviors specifically for that
+directory's scope:</p>
+<ul>
+<li><strong><code>pytest_collection_modifyitems</code></strong>: Alter,
+filter, or reorder test items dynamically (e.g., adding marks like
+<code>@pytest.mark.integration</code> to all tests within a specific
+directory).</li>
+<li><strong><code>pytest_runtest_setup</code></strong>: Run custom setup
+logic before individual tests execute within that specific folder.</li>
+<li><strong><code>pytest_generate_tests</code></strong>: Implement
+dynamic parameterization tailored to the resources of that
+directory.</li>
+</ul>
+<p>While hooks defined in the root <code>conftest.py</code> apply
+globally to the entire test run, hooks implemented in nested
+<code>conftest.py</code> files only intercept events related to tests
+collected within that folder's branch, providing fine-grained control
+over execution mechanics without polluting the global testing
+context.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

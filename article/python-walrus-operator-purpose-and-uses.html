@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Walrus Operator: Purpose and Uses - python</title>
+    <meta name="description" content="The walrus operator (:=), introduced in Python 3.8, is formally known as the assignment expression operator. Its primary purpose is to allow developers to assign values to variables directly inside an expression, such as within an if condition, a while l">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-walrus-operator-purpose-and-uses">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Walrus Operator: Purpose and Uses - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-walrus-operator-purpose-and-uses" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The walrus operator (:=), introduced in Python 3.8, is formally known as the assignment expression operator. Its primary purpose is to allow developers to assign values to variables directly inside an expression, such as within an if condition, a while l" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-walrus-operator-purpose-and-uses">Python Walrus Operator:
+Purpose and Uses</h1>
+<p>The walrus operator (<code>:=</code>), introduced in Python 3.8, is
+formally known as the assignment expression operator. Its primary
+purpose is to allow developers to assign values to variables directly
+inside an expression, such as within an <code>if</code> condition, a
+<code>while</code> loop, or a list comprehension. By combining
+assignment and evaluation into a single step, the walrus operator
+reduces code duplication, streamlines logic, and can significantly
+improve execution efficiency.</p>
+<h3 id="syntax-and-basic-concept">Syntax and Basic Concept</h3>
+<p>The operator gets its nickname from its visual resemblance to the
+eyes and tusks of a walrus. The basic syntax is:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>NAME <span class="op">:=</span> expr</span></code></pre></div>
+<p>This syntax assigns the result of evaluating <code>expr</code> to
+<code>NAME</code>, while simultaneously returning that evaluated value
+for use in the surrounding context.</p>
+<h3 id="the-problem-it-solves">The Problem It Solves</h3>
+<p>Prior to Python 3.8, assignment statements could not be used inside
+expressions. This often required developers to write extra lines of code
+or compute expensive operations twice to both check a condition and use
+the result.</p>
+<p>Consider capturing user input until they type "quit":</p>
+<p><strong>Without the Walrus Operator:</strong></p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="va">True</span>:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    command <span class="op">=</span> <span class="bu">input</span>(<span class="st">&quot;Enter command: &quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> command <span class="op">==</span> <span class="st">&quot;quit&quot;</span>:</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">break</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Processing </span><span class="sc">{</span>command<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p><strong>With the Walrus Operator:</strong></p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> (command <span class="op">:=</span> <span class="bu">input</span>(<span class="st">&quot;Enter command: &quot;</span>)) <span class="op">!=</span> <span class="st">&quot;quit&quot;</span>:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Processing </span><span class="sc">{</span>command<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>In this revised version, <code>command</code> is assigned and
+evaluated inside the loop condition itself, eliminating the need for an
+infinite loop and an explicit <code>break</code> check.</p>
+<h3 id="common-use-cases">Common Use Cases</h3>
+<h4 id="1-conditional-checks-with-functions">1. Conditional Checks with
+Functions</h4>
+<p>When working with functions or regular expressions that return a
+value you want to test and then use, the walrus operator prevents
+re-running the operation or nesting checks.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> <span class="st">&quot;Order ID: 12345&quot;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> match <span class="op">:=</span> re.search(<span class="vs">r&quot;</span><span class="dv">\d</span><span class="op">+</span><span class="vs">&quot;</span>, data):</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Found ID: </span><span class="sc">{</span>match<span class="sc">.</span>group()<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>Here, <code>re.search</code> runs once, stores the match object in
+<code>match</code>, and evaluates whether a match occurred within the
+same statement.</p>
+<h4 id="2-filtering-in-list-comprehensions">2. Filtering in List
+Comprehensions</h4>
+<p>When filtering and transforming data in list comprehensions,
+computing an expensive function twice can slow down execution.</p>
+<p><strong>Without the Walrus Operator (Inefficient):</strong></p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> [f(x) <span class="cf">for</span> x <span class="kw">in</span> data <span class="cf">if</span> f(x) <span class="op">&gt;</span> <span class="dv">10</span>]</span></code></pre></div>
+<p><strong>With the Walrus Operator (Efficient):</strong></p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> [y <span class="cf">for</span> x <span class="kw">in</span> data <span class="cf">if</span> (y <span class="op">:=</span> f(x)) <span class="op">&gt;</span> <span class="dv">10</span>]</span></code></pre></div>
+<p>This computes <code>f(x)</code> only once per iteration, saving
+processing time while keeping the comprehension compact.</p>
+<h3 id="summary">Summary</h3>
+<p>The walrus operator serves to write cleaner, more idiomatic Python
+code by merging evaluation and assignment. When used judiciously, it
+prevents redundant computations and eliminates unnecessary boilerplate
+variables, making complex conditional logic more concise and
+readable.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python deque Achieves O(1) Appends and Pops - python</title>
+    <meta name="description" content="Python's collections.deque (double-ended queue) achieves $O(1)$ time complexity for appends and pops from both ends by using an internal doubly linked list of fixed-size memory blocks rather than a single contiguous dynamic array. While a standard Python">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-deque-achieves-o-1-appends-and-pops">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python deque Achieves O(1) Appends and Pops - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-deque-achieves-o-1-appends-and-pops" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's collections.deque (double-ended queue) achieves $O(1)$ time complexity for appends and pops from both ends by using an internal doubly linked list of fixed-size memory blocks rather than a single contiguous dynamic array. While a standard Python" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-deque-achieves-o1-appends-and-pops">How Python deque
+Achieves O(1) Appends and Pops</h1>
+<p>Python's <code>collections.deque</code> (double-ended queue) achieves
+<span class="math inline">\(O(1)\)</span> time complexity for appends
+and pops from both ends by using an internal doubly linked list of
+fixed-size memory blocks rather than a single contiguous dynamic array.
+While a standard Python <code>list</code> requires <span
+class="math inline">\(O(n)\)</span> time to shift every element when
+prepending, <code>deque</code> avoids bulk memory reallocation and
+shifting altogether. This article explains the underlying CPython data
+structure, how the block system handles bidirectional mutations, and why
+it outperforms traditional lists and pure linked lists for queue
+operations.</p>
+<h2 id="the-underlying-architecture-a-doubly-linked-list-of-blocks">The
+Underlying Architecture: A Doubly Linked List of Blocks</h2>
+<p>Unlike a standard Python <code>list</code>, which is a flat,
+contiguous dynamic array (like a C++ <code>std::vector</code>),
+<code>collections.deque</code> is implemented in CPython as a doubly
+linked list of fixed-size arrays. In the CPython source code
+(<code>Modules/_collectionsmodule.c</code>), each node in this linked
+list is defined as a <code>block</code>.</p>
+<p>Each <code>block</code> contains:</p>
+<ul>
+<li>An array of element pointers with a fixed capacity (defined by
+<code>BLOCKLEN</code>, typically 64 pointers on 64-bit systems).</li>
+<li>A pointer to the previous block (<code>leftblock</code>).</li>
+<li>A pointer to the next block (<code>rightblock</code>).</li>
+</ul>
+<p>The <code>deque</code> object itself tracks the leftmost and
+rightmost blocks, along with indices indicating the current boundary
+positions within those edge blocks.</p>
+<h2 id="how-appends-and-pops-stay-o1">How Appends and Pops Stay
+O(1)</h2>
+<p>Because the container maintains direct pointers to both the leftmost
+and rightmost blocks, operations on either end do not require traversing
+the entire collection.</p>
+<h3 id="appending-to-the-ends-append-and-appendleft">Appending to the
+Ends (<code>append</code> and <code>appendleft</code>)</h3>
+<p>When adding an item to either end:</p>
+<ol type="1">
+<li>The deque checks whether the current edge block (left or right) has
+free slots.</li>
+<li>If space is available, the element pointer is stored directly in the
+block's internal array at the next available index, taking strictly
+<span class="math inline">\(O(1)\)</span> time.</li>
+<li>If the edge block is full, a new fixed-size block is allocated,
+connected via pointers to the previous edge block, and updated as the
+new edge. This allocation is also an <span
+class="math inline">\(O(1)\)</span> operation because the block size is
+fixed and does not scale with the total number of items in the
+deque.</li>
+</ol>
+<h3 id="popping-from-the-ends-pop-and-popleft">Popping from the Ends
+(<code>pop</code> and <code>popleft</code>)</h3>
+<p>When removing an item from either end:</p>
+<ol type="1">
+<li>The element pointer is read and cleared from the edge block at the
+current boundary index.</li>
+<li>If the block still contains remaining elements, only the boundary
+index is adjusted (<span class="math inline">\(O(1)\)</span>).</li>
+<li>If the block becomes entirely empty, it is unlinked from the chain,
+freed from memory, and the adjacent block becomes the new edge block
+(<span class="math inline">\(O(1)\)</span>).</li>
+</ol>
+<h2 id="why-deque-outperforms-lists-and-simple-linked-lists">Why deque
+Outperforms Lists and Simple Linked Lists</h2>
+<p>In a standard Python <code>list</code>, inserting or removing an item
+at the beginning (<code>insert(0, val)</code> or <code>pop(0)</code>)
+requires shifting every subsequent element in memory to the left or
+right, causing <span class="math inline">\(O(n)\)</span> performance.
+<code>deque</code> eliminates shifting because new elements simply fill
+the remaining slots of an existing block or trigger the creation of a
+new linked block.</p>
+<p>At the same time, <code>deque</code> outperforms a naive,
+single-element doubly linked list by significantly reducing memory
+overhead and improving CPU cache locality:</p>
+<ul>
+<li><strong>Memory Overhead:</strong> A single-element linked list
+requires two pointer references (prev and next) for every single stored
+value. In <code>deque</code>, two pointer references are shared across
+64 elements, reducing pointer overhead substantially.</li>
+<li><strong>Cache Locality:</strong> Modern CPUs rely on cache lines to
+read contiguous memory efficiently. Because 64 items reside sequentially
+inside each block's array, traversing or accessing elements within a
+block is fast and cache-friendly compared to hopping across disparate
+heap allocations for every single item.</li>
+</ul>
+<h2 id="the-trade-off-slow-random-access">The Trade-Off: Slow Random
+Access</h2>
+<p>While <code>deque</code> guarantees true <span
+class="math inline">\(O(1)\)</span> operations at both ends, it
+sacrifices fast random access. Accessing an element by index in a
+standard <code>list</code> is an instant <span
+class="math inline">\(O(1)\)</span> offset calculation
+(<code>base_address + index * pointer_size</code>). In a
+<code>deque</code>, accessing <code>d[n]</code> requires calculating
+which block contains the index and traversing through the linked blocks
+from the nearest end, resulting in <span
+class="math inline">\(O(n)\)</span> worst-case lookup performance for
+items located in the middle of the collection.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

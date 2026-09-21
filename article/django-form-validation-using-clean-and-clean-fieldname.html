@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Django Form Validation Using clean and clean_fieldname - python</title>
+    <meta name="description" content="Django processes form data through a robust two-step validation pipeline designed to ensure data integrity before saving or using input. When a form's isvalid() method is invoked, Django executes field-specific validation via individual clean<fieldname>(">
+    <link rel="canonical" href="https://salivity.github.io/python/article/django-form-validation-using-clean-and-clean-fieldname">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Django Form Validation Using clean and clean_fieldname - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/django-form-validation-using-clean-and-clean-fieldname" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Django processes form data through a robust two-step validation pipeline designed to ensure data integrity before saving or using input. When a form's isvalid() method is invoked, Django executes field-specific validation via individual clean<fieldname>(" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="django-form-validation-using-clean-and-clean_fieldname">Django
+Form Validation Using clean and clean_fieldname</h1>
+<p>Django processes form data through a robust two-step validation
+pipeline designed to ensure data integrity before saving or using input.
+When a form's <code>is_valid()</code> method is invoked, Django executes
+field-specific validation via individual
+<code>clean_&lt;fieldname&gt;()</code> methods, followed by form-wide
+validation through the <code>clean()</code> method. This article breaks
+down the execution order, individual roles, data handling, and
+implementation patterns for both validation steps.</p>
+<h2 id="the-validation-lifecycle">The Validation Lifecycle</h2>
+<p>When <code>form.is_valid()</code> is called, it triggers
+<code>form.full_clean()</code>. The process follows a strict sequential
+order:</p>
+<ol type="1">
+<li><strong>Field-level validation:</strong> Django runs default field
+validation (e.g., verifying an <code>EmailField</code> has an "@"
+symbol) and checks any registered <code>validators</code>.</li>
+<li><strong><code>clean_&lt;fieldname&gt;()</code> execution:</strong>
+Django looks for custom cleaning methods defined on the form matching
+the field names.</li>
+<li><strong>Form-level <code>clean()</code> execution:</strong> After
+all individual fields are processed, the general <code>clean()</code>
+method is called to perform multi-field or interdependent
+validation.</li>
+</ol>
+<p>Data that passes field-level checks is stored in the
+<code>self.cleaned_data</code> dictionary, which becomes the single
+source of truth for subsequent validation steps.</p>
+<hr />
+<h2 id="step-1-field-specific-validation-with-clean_fieldname">Step 1:
+Field-Specific Validation with
+<code>clean_&lt;fieldname&gt;()</code></h2>
+<p>The <code>clean_&lt;fieldname&gt;()</code> hook is designed to
+validate, sanitize, or transform a single, specific field independently
+of any other fields on the form.</p>
+<h3 id="how-it-works">How It Works</h3>
+<ul>
+<li><strong>Accessing Input:</strong> The partially validated data is
+retrieved from
+<code>self.cleaned_data.get('&lt;fieldname&gt;')</code>.</li>
+<li><strong>Transforming Data:</strong> You can normalize the input
+(such as converting an email address to lowercase or stripping
+whitespace).</li>
+<li><strong>Raising Errors:</strong> If the value violates business
+logic, you raise a <code>forms.ValidationError</code>. This error
+attaches directly to the field, making it easy to render alongside the
+corresponding input element in templates.</li>
+<li><strong>Return Value:</strong> You <strong>must</strong> return the
+cleaned value at the end of the method. If you omit the return
+statement, the field's value in <code>cleaned_data</code> will be set to
+<code>None</code>.</li>
+</ul>
+<h3 id="example">Example</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django <span class="im">import</span> forms</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> RegistrationForm(forms.Form):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    username <span class="op">=</span> forms.CharField(max_length<span class="op">=</span><span class="dv">50</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> clean_username(<span class="va">self</span>):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        username <span class="op">=</span> <span class="va">self</span>.cleaned_data.get(<span class="st">&#39;username&#39;</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Validation</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="st">&quot;admin&quot;</span> <span class="kw">in</span> username.lower():</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> forms.ValidationError(<span class="st">&quot;Usernames containing &#39;admin&#39; are reserved.&quot;</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Normalization</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> username.lower()</span></code></pre></div>
+<hr />
+<h2 id="step-2-cross-field-validation-with-clean">Step 2: Cross-Field
+Validation with <code>clean()</code></h2>
+<p>The <code>clean()</code> method executes after every individual
+<code>clean_&lt;fieldname&gt;()</code> method has completed. It is
+primarily used for cross-field validation where the validity of one
+input depends on another.</p>
+<h3 id="how-it-works-1">How It Works</h3>
+<ul>
+<li><strong>Accessing Input:</strong> Access all field values directly
+from the <code>self.cleaned_data</code> dictionary.</li>
+<li><strong>Handling Missing Keys:</strong> If an individual field
+failed its earlier validation step, it will not exist in
+<code>cleaned_data</code> (or will be <code>None</code>). Always use
+<code>.get()</code> to avoid <code>KeyError</code> exceptions.</li>
+<li><strong>Raising Errors:</strong>
+<ul>
+<li>Raising a standard <code>forms.ValidationError</code> inside
+<code>clean()</code> creates a <strong>non-field error</strong>, which
+typically displays at the top of the form.</li>
+<li>Alternatively, you can use
+<code>self.add_error('fieldname', 'Error message')</code> to assign an
+error generated during the <code>clean()</code> phase to a specific
+input field.</li>
+</ul></li>
+<li><strong>Return Value:</strong> You <strong>must</strong> return the
+entire <code>cleaned_data</code> dictionary.</li>
+</ul>
+<h3 id="example-1">Example</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django <span class="im">import</span> forms</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> RegistrationForm(forms.Form):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    password <span class="op">=</span> forms.CharField(widget<span class="op">=</span>forms.PasswordInput)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    confirm_password <span class="op">=</span> forms.CharField(widget<span class="op">=</span>forms.PasswordInput)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> clean(<span class="va">self</span>):</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        cleaned_data <span class="op">=</span> <span class="bu">super</span>().clean()</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        password <span class="op">=</span> cleaned_data.get(<span class="st">&quot;password&quot;</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        confirm_password <span class="op">=</span> cleaned_data.get(<span class="st">&quot;confirm_password&quot;</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> password <span class="kw">and</span> confirm_password <span class="kw">and</span> password <span class="op">!=</span> confirm_password:</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Assign error directly to the confirm_password field</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.add_error(<span class="st">&#39;confirm_password&#39;</span>, <span class="st">&quot;Passwords do not match.&quot;</span>)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> cleaned_data</span></code></pre></div>
+<hr />
+<h2 id="key-differences-summary">Key Differences Summary</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th
+style="text-align: left;"><code>clean_&lt;fieldname&gt;()</code></th>
+<th style="text-align: left;"><code>clean()</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Scope</strong></td>
+<td style="text-align: left;">Single field</td>
+<td style="text-align: left;">Multiple fields / Whole form</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Execution Order</strong></td>
+<td style="text-align: left;">First</td>
+<td style="text-align: left;">Second (after all field methods)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Return Value</strong></td>
+<td style="text-align: left;">The cleaned field value</td>
+<td style="text-align: left;">The entire <code>cleaned_data</code>
+dictionary</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Error Attachment</strong></td>
+<td style="text-align: left;">Associated automatically with that
+field</td>
+<td style="text-align: left;">Non-field error (unless using
+<code>add_error()</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Best Used For</strong></td>
+<td style="text-align: left;">Normalizing data, single-field checks</td>
+<td style="text-align: left;">Password confirmation, date range
+validation</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SciPy CSR vs CSC: Sparse Matrix Storage Differences - python</title>
+    <meta name="description" content="This article provides a comparison of the Compressed Sparse Row (CSR) and Compressed Sparse Column (CSC) matrix storage formats in Python's SciPy library. While both formats drastically reduce memory consumption by storing only non-zero elements, their i">
+    <link rel="canonical" href="https://salivity.github.io/python/article/sci-py-csr-vs-csc-sparse-matrix-storage-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SciPy CSR vs CSC: Sparse Matrix Storage Differences - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/sci-py-csr-vs-csc-sparse-matrix-storage-differences" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a comparison of the Compressed Sparse Row (CSR) and Compressed Sparse Column (CSC) matrix storage formats in Python's SciPy library. While both formats drastically reduce memory consumption by storing only non-zero elements, their i" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="scipy-csr-vs-csc-sparse-matrix-storage-differences">SciPy CSR vs
+CSC: Sparse Matrix Storage Differences</h1>
+<p>This article provides a comparison of the Compressed Sparse Row (CSR)
+and Compressed Sparse Column (CSC) matrix storage formats in Python's
+SciPy library. While both formats drastically reduce memory consumption
+by storing only non-zero elements, their internal structures prioritize
+different memory layouts. Below, we break down how each format organizes
+data internally, the structural differences in their index pointer
+arrays, and how their memory arrangements impact operational
+efficiency.</p>
+<h2 id="the-three-array-system">The Three-Array System</h2>
+<p>Both <code>scipy.sparse.csr_matrix</code> and
+<code>scipy.sparse.csc_matrix</code> store sparse data using three
+one-dimensional NumPy arrays:</p>
+<ol type="1">
+<li><strong><code>data</code></strong>: Contains the actual non-zero
+values of the matrix.</li>
+<li><strong><code>indices</code></strong>: Contains the coordinate
+indices for each element in <code>data</code>.</li>
+<li><strong><code>indptr</code></strong>: Contains pointers indicating
+where each row or column starts and ends within <code>data</code> and
+<code>indices</code>.</li>
+</ol>
+<p>The key difference between CSR and CSC is how these three arrays
+represent rows versus columns.</p>
+<h2 id="compressed-sparse-row-csr-storage">Compressed Sparse Row (CSR)
+Storage</h2>
+<p>CSR organizes data along rows (row-major order). It traverses the
+matrix left-to-right, top-to-bottom.</p>
+<ul>
+<li><strong><code>data</code></strong>: Stores non-zero values traversed
+row-by-row.</li>
+<li><strong><code>indices</code></strong>: Stores the <strong>column
+index</strong> for each corresponding entry in <code>data</code>. Length
+is equal to the number of non-zero elements (<span
+class="math inline">\(NNZ\)</span>).</li>
+<li><strong><code>indptr</code></strong>: Represents row boundaries. The
+elements at row <code>i</code> are found in
+<code>data[indptr[i]:indptr[i+1]]</code>, with corresponding column
+positions in <code>indices[indptr[i]:indptr[i+1]]</code>. The length of
+<code>indptr</code> is <code>n_rows + 1</code>.</li>
+</ul>
+<h3 id="csr-example">CSR Example</h3>
+<p>For the following <span class="math inline">\(3 \times 3\)</span>
+matrix:</p>
+<pre class="text"><code>[[1, 0, 2],
+ [0, 0, 3],
+ [4, 5, 0]]</code></pre>
+<p>The CSR arrays are:</p>
+<ul>
+<li><code>data</code>: <code>[1, 2, 3, 4, 5]</code></li>
+<li><strong><code>indices</code></strong> (column positions):
+<code>[0, 2, 2, 0, 1]</code></li>
+<li><strong><code>indptr</code></strong> (row offsets):
+<code>[0, 2, 3, 5]</code></li>
+</ul>
+<h2 id="compressed-sparse-column-csc-storage">Compressed Sparse Column
+(CSC) Storage</h2>
+<p>CSC organizes data along columns (column-major order). It traverses
+the matrix top-to-bottom, left-to-right.</p>
+<ul>
+<li><strong><code>data</code></strong>: Stores non-zero values traversed
+column-by-column.</li>
+<li><strong><code>indices</code></strong>: Stores the <strong>row
+index</strong> for each corresponding entry in <code>data</code>. Length
+is equal to <span class="math inline">\(NNZ\)</span>.</li>
+<li><strong><code>indptr</code></strong>: Represents column boundaries.
+The elements at column <code>j</code> are found in
+<code>data[indptr[j]:indptr[j+1]]</code>, with corresponding row
+positions in <code>indices[indptr[j]:indptr[j+1]]</code>. The length of
+<code>indptr</code> is <code>n_cols + 1</code>.</li>
+</ul>
+<h3 id="csc-example">CSC Example</h3>
+<p>For the same <span class="math inline">\(3 \times 3\)</span>
+matrix:</p>
+<pre class="text"><code>[[1, 0, 2],
+ [0, 0, 3],
+ [4, 5, 0]]</code></pre>
+<p>The CSC arrays are:</p>
+<ul>
+<li><code>data</code>: <code>[1, 4, 5, 2, 3]</code></li>
+<li><strong><code>indices</code></strong> (row positions):
+<code>[0, 2, 2, 0, 1]</code></li>
+<li><strong><code>indptr</code></strong> (column offsets):
+<code>[0, 2, 3, 5]</code></li>
+</ul>
+<h2 id="key-storage-and-performance-trade-offs">Key Storage and
+Performance Trade-Offs</h2>
+<h3 id="1-memory-footprint-variation">1. Memory Footprint Variation</h3>
+<p>The total memory of both formats is primarily determined by <span
+class="math inline">\(2 \times NNZ\)</span> (for <code>data</code> and
+<code>indices</code>). However, the size of <code>indptr</code>
+varies:</p>
+<ul>
+<li><strong>CSR <code>indptr</code> size</strong>:
+<code>n_rows + 1</code></li>
+<li><strong>CSC <code>indptr</code> size</strong>:
+<code>n_cols + 1</code></li>
+</ul>
+<p>For non-square matrices, CSR is slightly more memory-efficient when
+<code>n_rows &lt; n_cols</code>, while CSC is more memory-efficient when
+<code>n_cols &lt; n_rows</code>.</p>
+<h3 id="2-slicing-and-access-patterns">2. Slicing and Access
+Patterns</h3>
+<ul>
+<li><strong>CSR</strong>: Fast row slicing (<code>matrix[i, :]</code>)
+because all elements of a given row are contiguous in memory. Column
+slicing (<code>matrix[:, j]</code>) is slow because it requires scanning
+through the entire <code>indices</code> array.</li>
+<li><strong>CSC</strong>: Fast column slicing
+(<code>matrix[:, j]</code>) because column entries are contiguous in
+memory. Row slicing (<code>matrix[i, :]</code>) is slow for the same
+reason.</li>
+</ul>
+<h3 id="3-arithmetic-operations">3. Arithmetic Operations</h3>
+<ul>
+<li><strong>CSR</strong> is optimized for matrix-vector multiplication
+(<span class="math inline">\(Ax\)</span>) and operations involving
+row-wise iterations.</li>
+<li><strong>CSC</strong> is optimized for column-wise operations,
+solving linear systems where column pre-ordering is applied, and
+transposed matrix-vector multiplication (<span class="math inline">\(A^T
+x\)</span>).</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

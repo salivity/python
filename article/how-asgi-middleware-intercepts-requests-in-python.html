@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How ASGI Middleware Intercepts Requests in Python - python</title>
+    <meta name="description" content="Asynchronous Server Gateway Interface (ASGI) middleware acts as a pipeline component between an ASGI web server and the underlying application, providing a standard mechanism to inspect, modify, or halt HTTP requests and WebSocket connections. This artic">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-asgi-middleware-intercepts-requests-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How ASGI Middleware Intercepts Requests in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-asgi-middleware-intercepts-requests-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Asynchronous Server Gateway Interface (ASGI) middleware acts as a pipeline component between an ASGI web server and the underlying application, providing a standard mechanism to inspect, modify, or halt HTTP requests and WebSocket connections. This artic" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-asgi-middleware-intercepts-requests-in-python">How ASGI
+Middleware Intercepts Requests in Python</h1>
+<p>Asynchronous Server Gateway Interface (ASGI) middleware acts as a
+pipeline component between an ASGI web server and the underlying
+application, providing a standard mechanism to inspect, modify, or halt
+HTTP requests and WebSocket connections. This article explains the
+architectural role of ASGI middleware in Python web applications,
+demonstrating how it hooks into the <code>scope</code>,
+<code>receive</code>, and <code>send</code> communication channels to
+intercept incoming client requests and outgoing server responses for
+tasks like authentication, logging, and performance monitoring.</p>
+<h3 id="the-anatomy-of-an-asgi-callable">The Anatomy of an ASGI
+Callable</h3>
+<p>In Python's asynchronous ecosystem—powering frameworks such as
+FastAPI, Starlette, and Quart—an ASGI application is defined as an async
+callable accepting three core parameters:</p>
+<ul>
+<li><strong><code>scope</code></strong>: A dictionary containing
+connection metadata, including the request method, URL path, headers,
+client IP, and connection type (<code>http</code>,
+<code>websocket</code>, or <code>lifespan</code>).</li>
+<li><strong><code>receive</code></strong>: An asynchronous callable that
+yields incoming event messages, such as HTTP request body chunks.</li>
+<li><strong><code>send</code></strong>: An asynchronous callable used to
+dispatch outgoing event messages, such as HTTP status codes, headers,
+and response bodies, back to the server.</li>
+</ul>
+<p>ASGI middleware is constructed as an outer wrapper around another
+ASGI callable. When a request arrives, the server passes execution to
+the outermost middleware, which can either pass control down the chain
+or terminate the cycle early.</p>
+<h3 id="intercepting-incoming-requests">Intercepting Incoming
+Requests</h3>
+<p>Request interception occurs before calling the downstream
+application. Middleware can read and modify the request state using two
+mechanisms:</p>
+<ol type="1">
+<li><strong>Modifying the <code>scope</code></strong>: Because
+<code>scope</code> is a standard mutable dictionary, middleware can
+attach custom data (such as authenticated user identities), alter
+routing paths, or append synthetic headers before the core application
+ever processes the request.</li>
+<li><strong>Wrapping the <code>receive</code> channel</strong>: If the
+middleware needs to inspect or mutate the incoming payload (for example,
+validating HMAC signatures or decrypting payloads), it wraps the
+original <code>receive</code> function with a custom async function.
+This allows the middleware to intercept data packets as they are
+streamed from the client.</li>
+</ol>
+<p>If a request fails validation—such as an invalid API key or a missing
+authentication token—the middleware can bypass the downstream
+application entirely by using the <code>send</code> callable to return
+an immediate HTTP 401 or 403 error.</p>
+<h3 id="intercepting-outgoing-responses">Intercepting Outgoing
+Responses</h3>
+<p>To intercept and modify server responses, the middleware must wrap
+the <code>send</code> callable before invoking the inner application.
+Because ASGI applications stream responses in distinct messages (e.g.,
+<code>http.response.start</code> for headers and status codes, followed
+by one or more <code>http.response.body</code> messages), the wrapped
+<code>send</code> function intercepts these events on their way back to
+the client.</p>
+<p>Through response interception, middleware can:</p>
+<ul>
+<li><strong>Inject Security Headers</strong>: Add headers such as
+<code>Content-Security-Policy</code>, <code>X-Frame-Options</code>, or
+Cross-Origin Resource Sharing (CORS) headers dynamically.</li>
+<li><strong>Measure Execution Metrics</strong>: Record timestamps
+immediately before passing control downstream and compute the total
+processing latency once the response status is returned.</li>
+<li><strong>Compress or Encrypt Content</strong>: Intercept body chunks
+to apply gzip, brotli, or custom encryption before the network socket
+receives the bytes.</li>
+</ul>
+<h3 id="core-architectural-roles">Core Architectural Roles</h3>
+<p>By sitting transparently between the server and the endpoint logic,
+ASGI middleware centralizes cross-cutting concerns:</p>
+<ul>
+<li><strong>Authentication and Authorization</strong>: Decoding JWTs or
+session cookies at the perimeter to guard application routes.</li>
+<li><strong>Observability</strong>: Injecting distributed tracing IDs
+(e.g., OpenTelemetry span contexts) into request headers and emitting
+structured logs for every transaction.</li>
+<li><strong>Error Handling</strong>: Wrapping the entire lifecycle in
+<code>try/except</code> blocks to catch unhandled exceptions, log
+tracebacks, and return consistent, sanitized JSON error payloads to
+clients.</li>
+<li><strong>Traffic Management</strong>: Implementing rate limiting and
+IP allowlisting before any database or business logic executes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

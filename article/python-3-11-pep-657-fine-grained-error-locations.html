@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python 3.11 PEP 657: Fine-Grained Error Locations - python</title>
+    <meta name="description" content="Python 3.11 introduced PEP 657, which incorporates fine-grained error locations into tracebacks to point directly to the exact expressions causing runtime errors instead of merely highlighting the entire line of code. By pinpointing the specific sub-expr">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-3-11-pep-657-fine-grained-error-locations">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python 3.11 PEP 657: Fine-Grained Error Locations - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-3-11-pep-657-fine-grained-error-locations" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python 3.11 introduced PEP 657, which incorporates fine-grained error locations into tracebacks to point directly to the exact expressions causing runtime errors instead of merely highlighting the entire line of code. By pinpointing the specific sub-expr" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-311-pep-657-fine-grained-error-locations">Python 3.11 PEP
+657: Fine-Grained Error Locations</h1>
+<p>Python 3.11 introduced PEP 657, which incorporates fine-grained error
+locations into tracebacks to point directly to the exact expressions
+causing runtime errors instead of merely highlighting the entire line of
+code. By pinpointing the specific sub-expression with carets and tildes
+(<code>^~~~^</code>), this feature eliminates ambiguity in complex
+statements, drastically speeds up debugging, improves developer
+ergonomics, and allows tools and IDEs to offer richer diagnostics.</p>
+<h3 id="elimination-of-ambiguity-in-complex-expressions">Elimination of
+Ambiguity in Complex Expressions</h3>
+<p>Prior to Python 3.11, a traceback only indicated the line number
+where an exception occurred. When a line contained multiple operations
+of the same type, developers had to guess which operation failed.</p>
+<p>Consider an arithmetic expression such as:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> (x <span class="op">/</span> y) <span class="op">+</span> (a <span class="op">/</span> b)</span></code></pre></div>
+<p>If a <code>ZeroDivisionError</code> occurred, older versions could
+not show whether <code>y</code> or <code>b</code> was zero. Under PEP
+657, the interpreter prints the exact failing sub-expression:</p>
+<pre class="text"><code>Traceback (most recent call last):
+  File &quot;example.py&quot;, line 1, in &lt;module&gt;
+    result = (x / y) + (a / b)
+                        ~~^~~
+ZeroDivisionError: division by zero</code></pre>
+<h3
+id="precise-pinpointing-in-chained-calls-and-nested-dictionaries">Precise
+Pinpointing in Chained Calls and Nested Dictionaries</h3>
+<p>Deeply nested data structures and method chaining are common in
+modern Python, especially when working with APIs, ORMs, or JSON
+payloads:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>user_city <span class="op">=</span> response.json()[<span class="st">&quot;data&quot;</span>][<span class="st">&quot;user&quot;</span>][<span class="st">&quot;address&quot;</span>][<span class="st">&quot;city&quot;</span>]</span></code></pre></div>
+<p>If any intermediate key is missing, standard Python historically
+raised a generic <code>KeyError</code> showing the whole line. With
+fine-grained tracebacks, the interpreter highlights the specific key
+lookup that failed, removing the need to inspect the dictionary manually
+or split the assignment across multiple lines for debugging purposes.
+The same benefit applies to chained method calls
+(<code>object.first().second().third()</code>), where an
+<code>AttributeError: 'NoneType' object has no attribute ...</code>
+explicitly underlines the method or attribute that evaluated to
+<code>None</code>.</p>
+<h3 id="faster-debugging-cycles">Faster Debugging Cycles</h3>
+<p>Because tracebacks now convey the exact failure point at a
+glance:</p>
+<ul>
+<li>Developers spend significantly less time setting up interactive
+debuggers (<code>pdb</code>) or inserting temporary print statements
+solely to identify which variable triggered a failure.</li>
+<li>Code review and log triage become faster in production environments
+where local reproduction of issues is difficult.</li>
+<li>New developers and students face a lower cognitive barrier when
+learning language concepts, as error reports are visually
+self-explanatory.</li>
+</ul>
+<h3 id="enhanced-ecosystem-and-tooling-integration">Enhanced Ecosystem
+and Tooling Integration</h3>
+<p>PEP 657 exposes column offsets (<code>end_lineno</code>,
+<code>col_offset</code>, and <code>end_col_offset</code>) directly via
+the standard library’s <code>code</code> objects and the
+<code>traceback</code> module. This structured metadata enables:</p>
+<ul>
+<li><strong>IDEs and Editors:</strong> Tools like VS Code and PyCharm
+can highlight the exact inline token that caused a crash directly within
+the editor interface.</li>
+<li><strong>Testing Frameworks:</strong> Frameworks such as
+<code>pytest</code> provide clearer failure summaries without requiring
+third-party AST manipulation plugins.</li>
+<li><strong>Error Tracking Platforms:</strong> Sentry, Datadog, and
+other monitoring platforms can render more actionable stack traces in
+their dashboards.</li>
+</ul>
+<h3 id="negligible-performance-impact">Negligible Performance
+Impact</h3>
+<p>The additional positional information requires an increased bytecode
+size of approximately 22% on disk, but it incurs zero runtime
+performance overhead for code that executes without raising exceptions.
+For memory-constrained environments where disk space or memory is
+critical, the enhanced traceback data can be disabled entirely using the
+environment variable <code>PYTHONNODEBUGRANGES=1</code> or the
+<code>-X no_debug_ranges</code> command-line flag.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

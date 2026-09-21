@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How functools lru_cache Optimizes Python Functions - python</title>
+    <meta name="description" content="This article explains how Python's built-in functools.lrucache decorator optimizes repetitive, computationally expensive function calls. You will learn the mechanics behind memoization, how the Least Recently Used (LRU) eviction strategy manages memory,">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-functools-lru-cache-optimizes-python-functions">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How functools lru_cache Optimizes Python Functions - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-functools-lru-cache-optimizes-python-functions" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how Python's built-in functools.lrucache decorator optimizes repetitive, computationally expensive function calls. You will learn the mechanics behind memoization, how the Least Recently Used (LRU) eviction strategy manages memory," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-functools-lru_cache-optimizes-python-functions">How
+functools lru_cache Optimizes Python Functions</h1>
+<p>This article explains how Python's built-in
+<code>functools.lru_cache</code> decorator optimizes repetitive,
+computationally expensive function calls. You will learn the mechanics
+behind memoization, how the Least Recently Used (LRU) eviction strategy
+manages memory, how to implement the decorator with practical examples,
+and the key conditions required for using it effectively.</p>
+<hr />
+<h3 id="what-is-functoolslru_cache">What is
+<code>functools.lru_cache</code>?</h3>
+<p><code>functools.lru_cache</code> is a decorator in Python's standard
+library designed to implement <strong>memoization</strong>. Memoization
+is an optimization technique where the return values of expensive
+function calls are stored in memory. When the function is subsequently
+called with the exact same arguments, the cached result is returned
+immediately, bypassing redundant execution.</p>
+<p>The decorator utilizes an <strong>LRU (Least Recently Used)</strong>
+cache algorithm, which ensures that the cache does not grow
+indefinitely. Once the cache reaches its defined size limit, it
+automatically discards the items that have not been accessed for the
+longest period.</p>
+<hr />
+<h3 id="how-it-works-internally">How It Works Internally</h3>
+<ol type="1">
+<li><strong>Argument Hashing:</strong> When a decorated function is
+invoked, <code>lru_cache</code> evaluates the positional and keyword
+arguments passed to it. It combines these arguments into a hashable
+key.</li>
+<li><strong>Lookup:</strong> The decorator checks its internal
+dictionary to see if the key already exists:
+<ul>
+<li><strong>Cache Hit:</strong> If the key is present, the stored result
+is returned instantly. The entry is marked as recently used.</li>
+<li><strong>Cache Miss:</strong> If the key is absent, the function
+executes normally. The resulting value is stored in the cache alongside
+the key.</li>
+</ul></li>
+<li><strong>Eviction:</strong> If adding a new entry causes the cache to
+exceed its configured <code>maxsize</code>, the least recently accessed
+key-value pair is evicted.</li>
+</ol>
+<p>Because inputs are stored as dictionary keys, <strong>all arguments
+passed to a cached function must be hashable</strong> (e.g., integers,
+strings, tuples). Passing unhashable types like <code>list</code> or
+<code>dict</code> raises a <code>TypeError</code>.</p>
+<hr />
+<h3 id="performance-comparison-a-practical-example">Performance
+Comparison: A Practical Example</h3>
+<p>The impact of <code>lru_cache</code> is most evident in recursive
+algorithms, such as computing Fibonacci numbers.</p>
+<h4 id="without-caching">Without Caching:</h4>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fibonacci(n):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> n <span class="op">&lt;</span> <span class="dv">2</span>:</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> n</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fibonacci(n <span class="op">-</span> <span class="dv">1</span>) <span class="op">+</span> fibonacci(n <span class="op">-</span> <span class="dv">2</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Computing fibonacci(35) takes several seconds due to O(2^n) time complexity.</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fibonacci(<span class="dv">35</span>)</span></code></pre></div>
+<p>In this unoptimized version, the function repeatedly recalculates
+identical subproblems (e.g., <code>fibonacci(3)</code> is computed
+millions of times).</p>
+<h4 id="with-lru_cache">With <code>lru_cache</code>:</h4>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functools <span class="im">import</span> lru_cache</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="at">@lru_cache</span>(maxsize<span class="op">=</span><span class="dv">128</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fibonacci(n):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> n <span class="op">&lt;</span> <span class="dv">2</span>:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> n</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fibonacci(n <span class="op">-</span> <span class="dv">1</span>) <span class="op">+</span> fibonacci(n <span class="op">-</span> <span class="dv">2</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Computing fibonacci(35) executes in fractions of a millisecond (O(n) time complexity).</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(fibonacci(<span class="dv">35</span>))</span></code></pre></div>
+<p>By caching previous results, the time complexity drops from
+exponential to linear.</p>
+<hr />
+<h3 id="key-configuration-parameters">Key Configuration Parameters</h3>
+<p>The <code>@lru_cache</code> decorator accepts two optional
+arguments:</p>
+<ul>
+<li><strong><code>maxsize</code></strong> (default: <code>128</code>):
+Sets the maximum number of entries the cache can hold.
+<ul>
+<li>Setting <code>maxsize=None</code> disables the LRU eviction logic,
+allowing the cache to grow without bound.</li>
+<li>In Python 3.9+, you can use <code>@functools.cache</code> as a
+shorthand for <code>@lru_cache(maxsize=None)</code>.</li>
+</ul></li>
+<li><strong><code>typed</code></strong> (default: <code>False</code>):
+When set to <code>True</code>, arguments of different data types are
+cached separately. For example, <code>f(3)</code> and
+<code>f(3.0)</code> will be treated as distinct calls.</li>
+</ul>
+<hr />
+<h3 id="monitoring-and-managing-cache-performance">Monitoring and
+Managing Cache Performance</h3>
+<p>Functions wrapped with <code>lru_cache</code> provide built-in
+methods for inspection and maintenance:</p>
+<ul>
+<li><p><strong><code>cache_info()</code></strong>: Returns a named tuple
+showing cache metrics:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>info <span class="op">=</span> fibonacci.cache_info()</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(info)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: CacheInfo(hits=33, misses=36, maxsize=128, currsize=36)</span></span></code></pre></div>
+<ul>
+<li><code>hits</code>: Number of times a result was retrieved from
+cache.</li>
+<li><code>misses</code>: Number of times the function had to compute a
+result.</li>
+<li><code>maxsize</code>: The configured upper limit of the cache.</li>
+<li><code>currsize</code>: The current number of stored results.</li>
+</ul></li>
+<li><p><strong><code>cache_clear()</code></strong>: Flushes the cache
+completely, freeing up memory.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fibonacci.cache_clear()</span></code></pre></div></li>
+</ul>
+<hr />
+<h3 id="best-practices-and-limitations">Best Practices and
+Limitations</h3>
+<ul>
+<li><strong>Use Pure Functions Only:</strong> The cached function must
+be deterministic. Given the same inputs, it must always return the same
+output. Never use <code>lru_cache</code> on functions that depend on
+database state, network responses, system time, or global
+variables.</li>
+<li><strong>Avoid Side Effects:</strong> If a function writes to a file,
+logs output, or mutates state, those side effects will not execute
+during a cache hit.</li>
+<li><strong>Be Mindful of Memory:</strong> Setting
+<code>maxsize=None</code> on functions with a vast domain of possible
+inputs can cause uncontrolled memory consumption. Bound the cache with
+an appropriate <code>maxsize</code> in production environments.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

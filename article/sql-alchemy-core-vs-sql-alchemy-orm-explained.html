@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQLAlchemy Core vs SQLAlchemy ORM Explained - python</title>
+    <meta name="description" content="SQLAlchemy is the premier database toolkit for Python, offering two distinct layers for managing relational databases: SQLAlchemy Core and SQLAlchemy ORM. While both facilitate database communication, they operate at different levels of abstraction and c">
+    <link rel="canonical" href="https://salivity.github.io/python/article/sql-alchemy-core-vs-sql-alchemy-orm-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SQLAlchemy Core vs SQLAlchemy ORM Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/sql-alchemy-core-vs-sql-alchemy-orm-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="SQLAlchemy is the premier database toolkit for Python, offering two distinct layers for managing relational databases: SQLAlchemy Core and SQLAlchemy ORM. While both facilitate database communication, they operate at different levels of abstraction and c" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="sqlalchemy-core-vs-sqlalchemy-orm-explained">SQLAlchemy Core vs
+SQLAlchemy ORM Explained</h1>
+<p>SQLAlchemy is the premier database toolkit for Python, offering two
+distinct layers for managing relational databases: SQLAlchemy Core and
+SQLAlchemy ORM. While both facilitate database communication, they
+operate at different levels of abstraction and cater to different
+programming paradigms. This guide provides a direct comparison between
+Core's schema-centric, SQL expression model and the ORM's
+object-centric, domain-driven approach to help you choose the right tool
+for your project.</p>
+<h3 id="what-is-sqlalchemy-core">What is SQLAlchemy Core?</h3>
+<p>SQLAlchemy Core is the foundational data access layer that provides a
+Pythonic abstraction over raw SQL. It is built around database schemas,
+using objects such as <code>Table</code>, <code>Column</code>, and
+<code>MetaData</code> to represent database structures.</p>
+<p>Key characteristics of SQLAlchemy Core include:</p>
+<ul>
+<li><strong>SQL Expression Language:</strong> Core allows developers to
+construct SQL queries using Python expressions (e.g.,
+<code>select(users).where(users.c.id == 1)</code>) without writing raw
+text strings, ensuring syntax safety and backend neutrality.</li>
+<li><strong>Tuple-Based Results:</strong> Queries executed through Core
+return row-like mappings (<code>Row</code> objects) rather than custom
+Python model instances.</li>
+<li><strong>Stateless Operations:</strong> Core does not track object
+identity or changes. It directly executes statements against a database
+connection or engine.</li>
+<li><strong>High Performance:</strong> Because it bypasses the overhead
+of object lifecycle tracking and hydration, Core delivers faster
+execution speeds and uses less memory.</li>
+</ul>
+<h3 id="what-is-sqlalchemy-orm">What is SQLAlchemy ORM?</h3>
+<p>SQLAlchemy ORM (Object-Relational Mapping) is a high-level
+abstraction built directly on top of SQLAlchemy Core. It bridges
+relational database tables and traditional object-oriented programming
+by mapping database tables to custom Python classes.</p>
+<p>Key characteristics of SQLAlchemy ORM include:</p>
+<ul>
+<li><strong>Class-to-Table Mapping:</strong> Database rows are
+represented as instances of user-defined Python classes. Attributes on
+these instances correspond directly to table columns and
+relationships.</li>
+<li><strong>Unit of Work Pattern:</strong> Managed through a
+<code>Session</code>, the ORM tracks changes to mapped objects
+automatically. When flushed, it generates and executes the appropriate
+<code>INSERT</code>, <code>UPDATE</code>, or <code>DELETE</code>
+statements in the correct dependency order.</li>
+<li><strong>Identity Map:</strong> The ORM ensures that each database
+row corresponds to a single, unique in-memory object per session,
+preventing duplicate instances of the same record.</li>
+<li><strong>Relationship Management:</strong> Complex relational
+structures (one-to-many, many-to-many) are exposed as standard Python
+collections (lists, sets), with configurable lazy or eager loading.</li>
+</ul>
+<h3 id="core-differences-compared">Core Differences Compared</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">SQLAlchemy Core</th>
+<th style="text-align: left;">SQLAlchemy ORM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Primary Abstraction</strong></td>
+<td style="text-align: left;">Tables, Columns, SQL expressions</td>
+<td style="text-align: left;">Python classes, instances,
+relationships</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Paradigm</strong></td>
+<td style="text-align: left;">Schema-centric and functional</td>
+<td style="text-align: left;">Domain-centric and object-oriented</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>State Tracking</strong></td>
+<td style="text-align: left;">None; explicitly execute queries</td>
+<td style="text-align: left;">Automatic via the <code>Session</code>
+(Unit of Work)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Output Type</strong></td>
+<td style="text-align: left;">Direct row mappings and tuples</td>
+<td style="text-align: left;">Mapped class instances</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Overhead</strong></td>
+<td style="text-align: left;">Minimal; close to raw driver
+performance</td>
+<td style="text-align: left;">Higher; overhead from object hydration and
+state management</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Query Style</strong></td>
+<td style="text-align: left;">Focuses on columns and relational
+algebra</td>
+<td style="text-align: left;">Focuses on entities and entity graphs</td>
+</tr>
+</tbody>
+</table>
+<h3 id="when-to-use-core-vs-orm">When to Use Core vs. ORM</h3>
+<p><strong>Choose SQLAlchemy Core when:</strong></p>
+<ul>
+<li>You are building data-intensive pipelines, ETL processes, or
+analytical systems where memory usage and raw throughput are
+critical.</li>
+<li>Your database schema does not neatly map to object-oriented domain
+models.</li>
+<li>You need full control over the exact SQL generated, including
+complex joins, subqueries, and database-specific features.</li>
+<li>You prefer explicit transactional boundaries without state-tracking
+mechanisms.</li>
+</ul>
+<p><strong>Choose SQLAlchemy ORM when:</strong></p>
+<ul>
+<li>You are developing web applications, APIs, or CRUD-heavy
+microservices using domain-driven design.</li>
+<li>Your application benefits from encapsulated business logic inside
+Python class methods.</li>
+<li>You want automated change tracking, validation, and relationship
+management to simplify database writes.</li>
+<li>Consistency across object graphs within a request lifecycle is more
+important than raw query micro-benchmarks.</li>
+</ul>
+<p>Because the ORM is built on Core, these tools are not mutually
+exclusive. A common architectural pattern is to use the ORM for standard
+application business logic while dropping down to SQLAlchemy Core for
+complex reporting queries and bulk data processing.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

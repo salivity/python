@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask vs Django: Why Flask is a Microframework - python</title>
+    <meta name="description" content="When building web applications in Python, developers primarily choose between Flask and Django, two frameworks defined by opposite architectural philosophies. Flask is categorized as a microframework because it provides only the bare essentials required">
+    <link rel="canonical" href="https://salivity.github.io/python/article/flask-vs-django-why-flask-is-a-microframework">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Flask vs Django: Why Flask is a Microframework - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/flask-vs-django-why-flask-is-a-microframework" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When building web applications in Python, developers primarily choose between Flask and Django, two frameworks defined by opposite architectural philosophies. Flask is categorized as a microframework because it provides only the bare essentials required" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="flask-vs-django-why-flask-is-a-microframework">Flask vs Django:
+Why Flask is a Microframework</h1>
+<p>When building web applications in Python, developers primarily choose
+between Flask and Django, two frameworks defined by opposite
+architectural philosophies. Flask is categorized as a microframework
+because it provides only the bare essentials required to get a web
+application running, leaving components like database integration,
+authentication, and form validation to third-party extensions. In
+contrast, Django follows a "batteries-included" philosophy, offering a
+comprehensive, integrated suite of built-in tools ready out of the box.
+Understanding this core distinction explains how both frameworks handle
+project architecture, flexibility, and developer control.</p>
+<h3 id="the-minimalist-core-of-flask">The Minimalist Core of Flask</h3>
+<p>Flask earns the title of "microframework" not because it lacks
+capability, but because its core is intentionally small and extensible.
+At its foundation, Flask relies on two primary dependencies: Werkzeug
+for handling the Web Server Gateway Interface (WSGI) routing and
+request/response cycles, and Jinja for template rendering.</p>
+<p>Outside of these fundamental capabilities, Flask provides almost
+nothing else natively. It does not include:</p>
+<ul>
+<li>An Object-Relational Mapper (ORM) for database interactions.</li>
+<li>An integrated authentication or user management system.</li>
+<li>Built-in form handling or validation.</li>
+<li>An administrative dashboard.</li>
+<li>A native database migration tool.</li>
+</ul>
+<p>By omitting these components, Flask remains unopinionated. Developers
+have complete freedom to choose their preferred tools—such as using
+SQLAlchemy, Peewee, or raw SQL for database operations—without having to
+override or disable default framework behavior.</p>
+<h3 id="the-batteries-included-approach-of-django">The
+"Batteries-Included" Approach of Django</h3>
+<p>Django is designed around the principle that common web development
+tasks should not require third-party libraries or reinventing the wheel.
+Its "batteries-included" model delivers a fully equipped, monolithic
+framework designed to take an application from concept to launch
+rapidly.</p>
+<p>Standard installations of Django come pre-configured with:</p>
+<ul>
+<li><strong>Django ORM:</strong> A powerful, native object-relational
+mapper tightly coupled with the framework.</li>
+<li><strong>Django Admin:</strong> An automatically generated,
+production-ready interface for managing database records.</li>
+<li><strong>Authentication System:</strong> Built-in user models,
+session management, permissions, and password hashing.</li>
+<li><strong>Schema Migrations:</strong> Integrated CLI tools to manage
+and apply database schema changes automatically.</li>
+<li><strong>Security Middleware:</strong> Pre-configured protection
+against common vulnerabilities like Cross-Site Scripting (XSS),
+Cross-Site Request Forgery (CSRF), and SQL injection.</li>
+</ul>
+<p>Because these tools are built directly into Django, they work
+together seamlessly without configuration conflicts.</p>
+<h3 id="architecture-and-project-structure">Architecture and Project
+Structure</h3>
+<p>The philosophical difference heavily impacts application
+architecture.</p>
+<p>Flask enforces no strict directory structure. A complete, working
+Flask API can exist entirely within a single Python file. This makes
+Flask ideal for microservices, lightweight web services, and
+applications with unique architectural requirements.</p>
+<p>Django, conversely, is highly opinionated. It relies on the
+Model-View-Template (MVT) pattern and enforces a standardized project
+structure consisting of projects and modular apps. While this structure
+introduces initial boilerplate, it provides consistency across large
+teams and ensures that any Django developer can quickly navigate a
+standard codebase.</p>
+<h3 id="summary-of-differences">Summary of Differences</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Flask (Microframework)</th>
+<th style="text-align: left;">Django (Batteries-Included)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Philosophy</strong></td>
+<td style="text-align: left;">Minimalist, unopinionated, extensible</td>
+<td style="text-align: left;">Comprehensive, opinionated, unified</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Database Support</strong></td>
+<td style="text-align: left;">Requires extensions (e.g.,
+SQLAlchemy)</td>
+<td style="text-align: left;">Native Django ORM</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Admin Panel</strong></td>
+<td style="text-align: left;">None (requires custom build or
+plugins)</td>
+<td style="text-align: left;">Auto-generated built-in admin</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Authentication</strong></td>
+<td style="text-align: left;">Custom or third-party (e.g.,
+Flask-Login)</td>
+<td style="text-align: left;">Built-in user and session management</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Project Structure</strong></td>
+<td style="text-align: left;">Completely flexible</td>
+<td style="text-align: left;">Standardized MVT structure</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Primary Use Cases</strong></td>
+<td style="text-align: left;">Microservices, custom architectures,
+APIs</td>
+<td style="text-align: left;">Monolithic apps, content sites, enterprise
+web systems</td>
+</tr>
+</tbody>
+</table>
+<p>Flask's designation as a microframework reflects its commitment to
+simplicity and modularity. By providing only the foundation and letting
+the developer choose the rest, Flask trades out-of-the-box convenience
+for ultimate architectural flexibility.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

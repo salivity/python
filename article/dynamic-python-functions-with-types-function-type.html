@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Python Functions with types.FunctionType - python</title>
+    <meta name="description" content="This article explains how to programmatically construct and execute Python functions at runtime using the built-in types.FunctionType constructor. Developers will learn the mechanics of compiling Python source into bytecode, binding the required global n">
+    <link rel="canonical" href="https://salivity.github.io/python/article/dynamic-python-functions-with-types-function-type">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Dynamic Python Functions with types.FunctionType - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/dynamic-python-functions-with-types-function-type" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to programmatically construct and execute Python functions at runtime using the built-in types.FunctionType constructor. Developers will learn the mechanics of compiling Python source into bytecode, binding the required global n" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="dynamic-python-functions-with-typesfunctiontype">Dynamic Python
+Functions with types.FunctionType</h1>
+<p>This article explains how to programmatically construct and execute
+Python functions at runtime using the built-in
+<code>types.FunctionType</code> constructor. Developers will learn the
+mechanics of compiling Python source into bytecode, binding the required
+global namespace, configuring optional parameters such as default
+arguments, and invoking the generated function.</p>
+<h2 id="understanding-typesfunctiontype">Understanding
+<code>types.FunctionType</code></h2>
+<p>In Python, user-defined functions are instances of the standard
+<code>function</code> type, which is accessible via the
+<code>types</code> module as <code>types.FunctionType</code>. While
+functions are usually defined using the <code>def</code> keyword or
+<code>lambda</code> expressions, <code>types.FunctionType</code> allows
+direct instantiation of a function object from an underlying code
+object.</p>
+<p>The constructor signature is:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>types.FunctionType(code, <span class="bu">globals</span>, name<span class="op">=</span><span class="va">None</span>, argdefs<span class="op">=</span><span class="va">None</span>, closure<span class="op">=</span><span class="va">None</span>)</span></code></pre></div>
+<ul>
+<li><strong><code>code</code></strong>: A compiled code object
+containing the bytecode to execute.</li>
+<li><strong><code>globals</code></strong>: A dictionary representing the
+global namespace accessible by the function.</li>
+<li><strong><code>name</code></strong> <em>(optional)</em>: A string
+defining the function's <code>__name__</code> attribute.</li>
+<li><strong><code>argdefs</code></strong> <em>(optional)</em>: A tuple
+specifying default values for positional arguments.</li>
+<li><strong><code>closure</code></strong> <em>(optional)</em>: A tuple
+of cell objects if the function references variables from an enclosing
+scope.</li>
+</ul>
+<h2 id="step-by-step-implementation">Step-by-Step Implementation</h2>
+<p>Creating a function dynamically involves generating a bytecode object
+and passing it to the constructor alongside an execution context.</p>
+<h3 id="1-generating-the-code-object">1. Generating the Code Object</h3>
+<p>A code object can be created using Python's built-in
+<code>compile()</code> function. When compiling a function body intended
+for execution, the string must represent a valid expression or an
+execution block.</p>
+<p>To create a callable function with parameters, wrap the logic in a
+standard <code>def</code> structure and extract its code object, or
+compile an expression directly:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> types</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the source code as a string</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>source_code <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="st">def dynamic_add(a, b):</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="st">    return a + b</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Compile the source into a module-level code object</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>compiled_module <span class="op">=</span> <span class="bu">compile</span>(source_code, filename<span class="op">=</span><span class="st">&quot;&lt;dynamic&gt;&quot;</span>, mode<span class="op">=</span><span class="st">&quot;exec&quot;</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract the inner code object representing the function body</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>func_code <span class="op">=</span> [c <span class="cf">for</span> c <span class="kw">in</span> compiled_module.co_consts <span class="cf">if</span> <span class="bu">isinstance</span>(c, types.CodeType)][<span class="dv">0</span>]</span></code></pre></div>
+<h3 id="2-instantiating-the-function">2. Instantiating the Function</h3>
+<p>Once the code object is obtained, instantiate
+<code>types.FunctionType</code> and pass the required execution
+namespace:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a namespace dictionary</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>namespace <span class="op">=</span> {}</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Instantiate the function</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>dynamic_func <span class="op">=</span> types.FunctionType(func_code, namespace, name<span class="op">=</span><span class="st">&quot;dynamic_add&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Execute the function</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> dynamic_func(<span class="dv">10</span>, <span class="dv">25</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)  <span class="co"># Output: 35</span></span></code></pre></div>
+<h2 id="adding-default-arguments-and-metadata">Adding Default Arguments
+and Metadata</h2>
+<p>To specify default arguments, pass a tuple to the
+<code>argdefs</code> parameter. Defaults are assigned to positional
+arguments from right to left:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Provide a default value for &#39;b&#39;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>dynamic_func_with_defaults <span class="op">=</span> types.FunctionType(</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    func_code,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    namespace,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">&quot;dynamic_add_default&quot;</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    argdefs<span class="op">=</span>(<span class="dv">100</span>,)  <span class="co"># b defaults to 100</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(dynamic_func_with_defaults(<span class="dv">5</span>))  <span class="co"># Output: 105</span></span></code></pre></div>
+<p>You can also assign attributes directly to the function instance
+after creation, such as <code>__doc__</code> or
+<code>__annotations__</code>, to ensure standard introspection tools
+work properly.</p>
+<h2 id="when-to-use-typesfunctiontype">When to Use
+<code>types.FunctionType</code></h2>
+<p>Instantiating functions via <code>types.FunctionType</code> is common
+in advanced metaprogramming, such as:</p>
+<ul>
+<li><strong>Dynamic API Generation</strong>: Generating lightweight
+wrapper functions from serialization schemas or remote endpoints.</li>
+<li><strong>Domain-Specific Languages (DSLs)</strong>: Compiling parsed
+syntax trees directly into executable Python callables.</li>
+<li><strong>Custom Deserializers</strong>: Reconstructing serialized or
+modified bytecode back into callable objects without invoking
+<code>exec()</code> directly on arbitrary strings.</li>
+</ul>
+<p>Direct usage of <code>types.FunctionType</code> bypasses standard
+syntax checks and requires manual management of namespaces and closures,
+so code objects must be strictly validated before execution.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

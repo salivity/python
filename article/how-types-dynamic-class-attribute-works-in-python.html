@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How types.DynamicClassAttribute Works in Python - python</title>
+    <meta name="description" content="Python's types.DynamicClassAttribute is a descriptor that routes attribute access differently depending on whether the attribute is read from an instance or from the class itself. While accessing the attribute via an instance invokes a defined getter fun">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-types-dynamic-class-attribute-works-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How types.DynamicClassAttribute Works in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-types-dynamic-class-attribute-works-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's types.DynamicClassAttribute is a descriptor that routes attribute access differently depending on whether the attribute is read from an instance or from the class itself. While accessing the attribute via an instance invokes a defined getter fun" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-typesdynamicclassattribute-works-in-python">How
+types.DynamicClassAttribute Works in Python</h1>
+<p>Python's <code>types.DynamicClassAttribute</code> is a descriptor
+that routes attribute access differently depending on whether the
+attribute is read from an instance or from the class itself. While
+accessing the attribute via an instance invokes a defined getter
+function just like a standard <code>@property</code>, accessing it
+directly from the class raises an <code>AttributeError</code>, allowing
+the lookup to fall back to the metaclass's <code>__getattr__</code>
+method. This article explains the internal mechanics of this descriptor,
+why it is used, and how it enables dynamic class-level behavior in
+Python libraries such as <code>enum</code>.</p>
+<h2 id="the-standard-property-limitation">The Standard Property
+Limitation</h2>
+<p>To understand <code>DynamicClassAttribute</code>, consider how
+Python's built-in <code>@property</code> behaves:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Example:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">@property</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> value(<span class="va">self</span>):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dv">42</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>obj <span class="op">=</span> Example()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(obj.value)      <span class="co"># Returns: 42</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(Example.value)  <span class="co"># Returns: &lt;property object at 0x...&gt;</span></span></code></pre></div>
+<p>When evaluated on an instance, a standard descriptor's
+<code>__get__(instance, owner)</code> receives the instance and returns
+the computed result. When evaluated on the class
+(<code>Example.value</code>), <code>instance</code> is
+<code>None</code>, and the descriptor returns <code>self</code>—the
+property object itself.</p>
+<p>This behavior creates a problem when a class needs to expose an
+attribute on instances while allowing the class itself to handle that
+same attribute name dynamically (for example, through a metaclass).
+Because the property descriptor exists in <code>Example.__dict__</code>,
+Python's lookup rules find it first, preventing any metaclass
+fallback.</p>
+<h2 id="how-dynamicclassattribute-routes-access">How
+DynamicClassAttribute Routes Access</h2>
+<p><code>types.DynamicClassAttribute</code> modifies the descriptor
+protocol (<code>__get__</code>, <code>__set__</code>,
+<code>__delete__</code>) to bifurcate access between instances and
+classes:</p>
+<ol type="1">
+<li><p><strong>Instance Access
+(<code>instance is not None</code>):</strong><br />
+The descriptor acts like a standard <code>@property</code>. It invokes
+the instance getter (<code>self.fget(instance)</code>) and returns the
+resulting value.</p></li>
+<li><p><strong>Class Access
+(<code>instance is None</code>):</strong><br />
+Instead of returning the descriptor object itself,
+<code>DynamicClassAttribute.__get__</code> raises an
+<code>AttributeError</code> (unless a custom class getter is explicitly
+set).</p></li>
+</ol>
+<p>In Python, when a descriptor's <code>__get__</code> method raises an
+<code>AttributeError</code> during class-level attribute lookup
+(<code>Class.attribute</code>), Python catches the exception and falls
+back to searching the metaclass. If the metaclass defines a
+<code>__getattr__</code> method, Python calls it with the attribute
+name.</p>
+<h2 id="the-enum-use-case">The Enum Use Case</h2>
+<p>The primary motivation for <code>types.DynamicClassAttribute</code>
+in Python's standard library is the <code>enum</code> module.</p>
+<p>Every enum member has <code>name</code> and <code>value</code>
+attributes:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> enum <span class="im">import</span> Enum</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Status(Enum):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    PENDING <span class="op">=</span> <span class="st">&quot;pending&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    COMPLETED <span class="op">=</span> <span class="st">&quot;completed&quot;</span></span></code></pre></div>
+<p>Here, <code>Status.PENDING</code> is an instance of
+<code>Status</code>. Accessing <code>Status.PENDING.name</code> returns
+<code>"PENDING"</code>.</p>
+<p>However, what happens if an enum defines a member named
+<code>name</code> or <code>value</code>?</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Fields(Enum):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    name <span class="op">=</span> <span class="st">&quot;Field Name&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    value <span class="op">=</span> <span class="st">&quot;Field Value&quot;</span></span></code></pre></div>
+<p>If <code>name</code> were a standard <code>@property</code>:</p>
+<ul>
+<li><code>Fields.name</code> would return
+<code>&lt;property object&gt;</code>, colliding with the enum member
+named <code>name</code>.</li>
+</ul>
+<p>Because <code>Enum</code> defines <code>name</code> and
+<code>value</code> as <code>DynamicClassAttribute</code> instances:</p>
+<ul>
+<li><code>Fields.name.value</code> evaluates <code>Fields.name</code> on
+the class level.</li>
+<li>The descriptor raises <code>AttributeError</code>.</li>
+<li>Python delegates lookup to <code>EnumType.__getattr__</code>.</li>
+<li><code>EnumType</code> successfully resolves and returns the enum
+member <code>Fields.name</code>.</li>
+<li>On that member instance, <code>.value</code> invokes
+<code>fget(instance)</code> and returns <code>"Field Name"</code>.</li>
+</ul>
+<h2 id="practical-implementation-example">Practical Implementation
+Example</h2>
+<p>You can observe this routing mechanism directly by implementing a
+custom metaclass alongside <code>DynamicClassAttribute</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> types <span class="im">import</span> DynamicClassAttribute</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Meta(<span class="bu">type</span>):</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__getattr__</span>(cls, name):</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f&quot;Metaclass fallback for attribute: </span><span class="sc">{</span>name<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CustomModel(metaclass<span class="op">=</span>Meta):</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, item):</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._item <span class="op">=</span> item</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">@DynamicClassAttribute</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> item(<span class="va">self</span>):</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f&quot;Instance item: </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>_item<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Instance access routes to the getter function</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>instance <span class="op">=</span> CustomModel(<span class="st">&quot;data_payload&quot;</span>)</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(instance.item)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: Instance item: data_payload</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Class access triggers AttributeError in the descriptor and falls back to Meta.__getattr__</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(CustomModel.item)</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: Metaclass fallback for attribute: item</span></span></code></pre></div>
+<p>By purposefully failing class-level descriptor resolution,
+<code>types.DynamicClassAttribute</code> hands control over to the
+metaclass, allowing clean separation between instance-level properties
+and class-level namespace semantics.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

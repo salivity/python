@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Computing and Actors in Python with Ray - python</title>
+    <meta name="description" content="Ray is an open-source framework designed to scale Python applications seamlessly from a single machine to a multi-node cluster. This article explores how Ray facilitates distributed computing through stateless tasks and stateful actor-based parallelism,">
+    <link rel="canonical" href="https://salivity.github.io/python/article/distributed-computing-and-actors-in-python-with-ray">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Distributed Computing and Actors in Python with Ray - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/distributed-computing-and-actors-in-python-with-ray" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Ray is an open-source framework designed to scale Python applications seamlessly from a single machine to a multi-node cluster. This article explores how Ray facilitates distributed computing through stateless tasks and stateful actor-based parallelism," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="distributed-computing-and-actors-in-python-with-ray">Distributed
+Computing and Actors in Python with Ray</h1>
+<p>Ray is an open-source framework designed to scale Python applications
+seamlessly from a single machine to a multi-node cluster. This article
+explores how Ray facilitates distributed computing through stateless
+tasks and stateful actor-based parallelism, examining its underlying
+architecture, the <code>@ray.remote</code> decorator, its distributed
+object store, and how it handles concurrency and scheduling to simplify
+scalable system design.</p>
+<h2 id="the-core-abstractions-tasks-and-actors">The Core Abstractions:
+Tasks and Actors</h2>
+<p>Python's standard concurrency tools often struggle with distributed
+multi-node environments and CPU-bound workloads due to the Global
+Interpreter Lock (GIL) and serialization overhead. Ray resolves this by
+introducing two primary primitives that map cleanly onto distributed
+infrastructure: Tasks and Actors.</p>
+<h3 id="1-ray-tasks-stateless-distributed-functions">1. Ray Tasks
+(Stateless Distributed Functions)</h3>
+<p>Ray tasks represent stateless, asynchronous computations executed
+across worker nodes.</p>
+<ul>
+<li><strong>Implementation:</strong> Any standard Python function is
+converted into a distributed task by decorating it with
+<code>@ray.remote</code>.</li>
+<li><strong>Asynchronous Execution:</strong> Invoking a task using the
+<code>.remote()</code> method immediately returns an
+<code>ObjectRef</code> (a future) rather than blocking for the
+result.</li>
+<li><strong>Dynamic Computation Graphs:</strong> Tasks can spawn other
+tasks dynamically, allowing fine-grained task graphs that scale
+automatically without centralized bottlenecks.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ray</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>ray.init()</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">@ray.remote</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process_data(batch):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> [x <span class="op">*</span> <span class="dv">2</span> <span class="cf">for</span> x <span class="kw">in</span> batch]</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Non-blocking asynchronous execution</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>futures <span class="op">=</span> [process_data.remote([i]) <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">10</span>)]</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> ray.get(futures)</span></code></pre></div>
+<h3 id="2-ray-actors-stateful-distributed-classes">2. Ray Actors
+(Stateful Distributed Classes)</h3>
+<p>While tasks handle stateless data processing, stateful workloads
+require actors. Ray implements the Actor model by wrapping Python
+classes with <code>@ray.remote</code>.</p>
+<ul>
+<li><strong>State Retention:</strong> An actor is an instantiated
+process with dedicated resources that retains state across multiple
+method calls.</li>
+<li><strong>Message Passing:</strong> Invoking a method on an actor
+(<code>actor_handle.method.remote()</code>) submits a message to the
+actor's internal queue.</li>
+<li><strong>Sequential Execution:</strong> Within a single actor
+instance, methods execute sequentially, preventing race conditions on
+internal state without requiring explicit locks.</li>
+<li><strong>Parallel Actor Pools:</strong> Multiple actor instances can
+run concurrently across different cores or nodes, enabling actor-based
+parallelism for simulations, stateful streaming, or machine learning
+model serving.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="at">@ray.remote</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Counter:</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.count <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> increment(<span class="va">self</span>):</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.count <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.count</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>counter <span class="op">=</span> Counter.remote()</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>future <span class="op">=</span> counter.increment.remote()</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(ray.get(future))  <span class="co"># Output: 1</span></span></code></pre></div>
+<h2 id="architectural-enablers-of-rays-performance">Architectural
+Enablers of Ray's Performance</h2>
+<p>Ray's ability to coordinate tasks and actors efficiently relies on
+its distributed engine:</p>
+<h3 id="distributed-object-store-plasma">Distributed Object Store
+(Plasma)</h3>
+<p>Ray runs an in-memory object store on each cluster node using shared
+memory. When tasks return large data structures (such as NumPy arrays),
+the data is stored in the local object store. Other workers on the same
+machine access this data using zero-copy deserialization via Apache
+Arrow, drastically reducing memory overhead. For inter-node operations,
+Ray manages data transfers automatically.</p>
+<h3 id="decentralized-scheduling">Decentralized Scheduling</h3>
+<p>Instead of relying on a single master scheduler that can become
+saturated, Ray uses a two-level distributed scheduling system. Each node
+runs a local scheduler (<code>raylet</code>) that assigns work locally
+when resources allow. If local resources are exhausted, tasks and actor
+placement requests are forwarded to global schedulers, ensuring
+high-throughput task scheduling at scale.</p>
+<h3 id="unified-resource-management">Unified Resource Management</h3>
+<p>Ray permits fine-grained specification of hardware requirements (such
+as CPU, GPU, and custom resources) directly in the decorator:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="at">@ray.remote</span>(num_cpus<span class="op">=</span><span class="dv">2</span>, num_gpus<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> gpu_task():</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<p>The scheduler automatically places the task or actor on a node with
+the required capacity, enabling heterogeneous resource sharing across a
+cluster.</p>
+<h2 id="summary">Summary</h2>
+<p>Ray bridges the gap between simple Python scripting and complex
+distributed engineering. By transforming standard functions into
+asynchronous distributed tasks and classes into stateful distributed
+actors, Ray provides a unified programming model that eliminates the
+boilerplate of distributed systems, allowing developers to scale
+parallel workloads with minimal architectural changes.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

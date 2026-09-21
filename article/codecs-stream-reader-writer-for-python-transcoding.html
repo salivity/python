@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>codecs.StreamReaderWriter for Python Transcoding - python</title>
+    <meta name="description" content="Python's codecs.StreamReaderWriter serves as a bidirectional adapter for stream objects, facilitating seamless, continuous character transcoding by combining an incremental reader and writer into a single interface. This article explains how the class op">
+    <link rel="canonical" href="https://salivity.github.io/python/article/codecs-stream-reader-writer-for-python-transcoding">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="codecs.StreamReaderWriter for Python Transcoding - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/codecs-stream-reader-writer-for-python-transcoding" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's codecs.StreamReaderWriter serves as a bidirectional adapter for stream objects, facilitating seamless, continuous character transcoding by combining an incremental reader and writer into a single interface. This article explains how the class op" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1
+id="codecsstreamreaderwriter-for-python-transcoding">codecs.StreamReaderWriter
+for Python Transcoding</h1>
+<p>Python's <code>codecs.StreamReaderWriter</code> serves as a
+bidirectional adapter for stream objects, facilitating seamless,
+continuous character transcoding by combining an incremental reader and
+writer into a single interface. This article explains how the class
+operates, how it coordinates duplex byte-to-text and text-to-byte
+translations, and how it safely preserves stream state across partial
+character sequences during real-time data streaming.</p>
+<h3 id="the-role-of-codecsstreamreaderwriter">The Role of
+<code>codecs.StreamReaderWriter</code></h3>
+<p>In Python's <code>codecs</code> module, continuous character
+transcoding involves processing an ongoing stream of encoded bytes,
+decoding them into native Unicode strings (<code>str</code>), and
+potentially encoding those strings back into a target byte encoding.</p>
+<p>While unidirectional streams rely solely on <code>StreamReader</code>
+(for decoding during read operations) or <code>StreamWriter</code> (for
+encoding during write operations), bidirectional I/O channels—such as
+network sockets, subprocess pipes, or read/write file
+descriptors—require both operations simultaneously. The
+<code>codecs.StreamReaderWriter</code> class wraps an underlying duplex
+byte stream, binding a specific <code>StreamReader</code> sub-class and
+a <code>StreamWriter</code> sub-class to manage data flow in both
+directions transparently.</p>
+<h3 id="mechanics-during-continuous-transcoding">Mechanics During
+Continuous Transcoding</h3>
+<p>When streaming data continuously, data fragments rarely align with
+character boundaries. Multibyte encodings such as UTF-8, UTF-16, or
+Shift-JIS can have individual characters truncated across separate
+network packets or buffer chunks. <code>StreamReaderWriter</code>
+handles this through distinct functional layers:</p>
+<ol type="1">
+<li><strong>Stateful Read Decoding:</strong> When reading from the
+underlying stream, the class routes calls through its internal
+<code>StreamReader</code>. The reader maintains an internal buffer of
+untranslated bytes. If a read operation ends on an incomplete byte
+sequence of a multibyte character, the reader holds those bytes in
+reserve until the next read delivers the remainder, preventing decoding
+exceptions and data corruption.</li>
+<li><strong>Deterministic Write Encoding:</strong> When writing text
+data, the class routes characters through its internal
+<code>StreamWriter</code>. The writer immediately translates Unicode
+text into the target byte encoding using an incremental encoder and
+pushes the resulting bytes directly to the underlying transport
+stream.</li>
+<li><strong>Transparent Proxying:</strong> The wrapper forwards
+interface methods like <code>readline()</code>,
+<code>readlines()</code>, <code>writelines()</code>, and
+<code>flush()</code> to the appropriate reader or writer component,
+exposing a standard text-mode file-like API over a raw, binary duplex
+medium.</li>
+</ol>
+<h3 id="buffer-and-stream-management">Buffer and Stream Management</h3>
+<p>During continuous processing, managing I/O performance requires
+minimizing memory overhead while maintaining stream integrity.
+<code>StreamReaderWriter</code> achieves this through coordinated stream
+state handling:</p>
+<ul>
+<li><strong>Error Handling Strategies:</strong> It applies designated
+error handling routines (such as <code>strict</code>,
+<code>ignore</code>, or <code>replace</code>) dynamically to both read
+and write operations, isolating read errors from write errors as
+configured.</li>
+<li><strong>Stream Seeking and Resetting:</strong> If the underlying
+stream supports arbitrary seeking (such as a random-access file),
+<code>StreamReaderWriter</code> coordinates seek offsets. It clears the
+internal read buffer when positioning changes to prevent stale bytes
+from mixing with newly sought data.</li>
+<li><strong>Resource Lifecycles:</strong> Calling <code>close()</code>
+on the <code>StreamReaderWriter</code> flushes any pending write buffers
+through the encoder down to the byte stream before safely terminating
+the underlying transport.</li>
+</ul>
+<p>By unifying incremental decoding and encoding around an active I/O
+pipe, <code>codecs.StreamReaderWriter</code> eliminates the need for
+manual buffer tracking and custom chunk reassembly during continuous
+stream transcoding.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

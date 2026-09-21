@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Mutation Testing Guide Using Mutmut - python</title>
+    <meta name="description" content="Mutation testing is an advanced software testing technique designed to evaluate the true effectiveness of your test suite by deliberately injecting bugs into your source code. While standard code coverage metrics only reveal which lines of code executed">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-mutation-testing-guide-using-mutmut">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Mutation Testing Guide Using Mutmut - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-mutation-testing-guide-using-mutmut" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Mutation testing is an advanced software testing technique designed to evaluate the true effectiveness of your test suite by deliberately injecting bugs into your source code. While standard code coverage metrics only reveal which lines of code executed" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-mutation-testing-guide-using-mutmut">Python Mutation
+Testing Guide Using Mutmut</h1>
+<p>Mutation testing is an advanced software testing technique designed
+to evaluate the true effectiveness of your test suite by deliberately
+injecting bugs into your source code. While standard code coverage
+metrics only reveal which lines of code executed during a test run,
+mutation testing measures whether your tests can actually detect
+semantic faults. In Python, <code>mutmut</code> is one of the premier
+tools for this purpose, systematically modifying Python source files and
+executing test suites against these "mutants" to verify that the tests
+catch the introduced errors.</p>
+<h2 id="what-is-mutation-testing">What Is Mutation Testing?</h2>
+<p>Traditional code coverage measures execution, not validation. A test
+suite can achieve 100% line coverage simply by calling functions without
+making a single assertion. Mutation testing solves this blind spot.</p>
+<p>During mutation testing, a tool introduces small, artificial
+modifications—called "mutations"—into your production code. Each altered
+version of your codebase is called a "mutant." The tool then runs your
+automated test suite against each mutant:</p>
+<ul>
+<li><strong>Killed Mutant:</strong> The test suite fails when run
+against the modified code. This is the desired outcome, as it proves
+your tests noticed the bug.</li>
+<li><strong>Survived Mutant:</strong> The test suite passes despite the
+modified code. This highlights a gap in your assertions or missing test
+logic.</li>
+<li><strong>Timed Out / Incompetent:</strong> The mutation caused an
+infinite loop, memory exhaustion, or a syntax error.</li>
+</ul>
+<p>The final quality metric is the mutation score: the percentage of
+generated mutants that your test suite successfully killed.</p>
+<h2 id="the-limitations-of-standard-code-coverage">The Limitations of
+Standard Code Coverage</h2>
+<p>Consider a simple function:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> is_eligible(age: <span class="bu">int</span>) <span class="op">-&gt;</span> <span class="bu">bool</span>:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> age <span class="op">&gt;=</span> <span class="dv">18</span></span></code></pre></div>
+<p>If a test executes <code>is_eligible(20)</code>, the function gets
+100% line coverage. However, if the logic is altered to
+<code>age &gt; 18</code>, that test still passes. The test verified that
+the function ran, but it failed to test boundary conditions. Mutation
+testing exposes these flaws by modifying the <code>&gt;=</code> operator
+to <code>&gt;</code> or <code>&lt;=</code> and checking if any test
+breaks.</p>
+<h2 id="how-mutmut-works-in-python">How <code>mutmut</code> Works in
+Python</h2>
+<p><code>mutmut</code> is a mutation testing framework built
+specifically for Python. It parses Python source code into an Abstract
+Syntax Tree (AST) using <code>parso</code>, applies predefined mutation
+rules, and executes your test runner (such as <code>pytest</code> or
+<code>unittest</code>).</p>
+<h3 id="types-of-mutations-applied">Types of Mutations Applied</h3>
+<p><code>mutmut</code> applies realistic mutations to uncover subtle
+bugs, including:</p>
+<ul>
+<li><strong>Comparison Operators:</strong> Inverting or shifting
+operators, such as changing <code>==</code> to <code>!=</code>, or
+<code>&lt;</code> to <code>&lt;=</code>.</li>
+<li><strong>Arithmetic Operators:</strong> Swapping <code>+</code> with
+<code>-</code>, or <code>*</code> with <code>**</code>.</li>
+<li><strong>Boolean Logic:</strong> Switching <code>True</code> to
+<code>False</code>, <code>and</code> to <code>or</code>, and negating
+conditional checks.</li>
+<li><strong>Literal Values:</strong> Incrementing or decrementing
+integers, altering string contents, or clearing dictionary
+definitions.</li>
+<li><strong>Keyword Arguments:</strong> Removing default arguments or
+altering their assigned values.</li>
+</ul>
+<h2 id="using-mutmut-to-measure-test-suite-efficacy">Using
+<code>mutmut</code> to Measure Test Suite Efficacy</h2>
+<h3 id="1-installation">1. Installation</h3>
+<p>Install <code>mutmut</code> via pip:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install mutmut pytest</span></code></pre></div>
+<h3 id="2-running-mutation-tests">2. Running Mutation Tests</h3>
+<p>Run <code>mutmut</code> across your target codebase:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">mutmut</span> run <span class="at">--paths-to-mutate</span> src/</span></code></pre></div>
+<p>By default, <code>mutmut</code> detects and uses <code>pytest</code>.
+It scans the files in the specified path, generates mutants one at a
+time, runs the test suite against each, and records whether each mutant
+survived or was killed.</p>
+<h3 id="3-analyzing-results">3. Analyzing Results</h3>
+<p>After the run finishes, check the summary:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">mutmut</span> results</span></code></pre></div>
+<p>This output lists mutants organized by ID and status: killed,
+survived, or timed out. To inspect a specific survived mutant and
+determine where your tests fell short, run:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">mutmut</span> show <span class="op">&lt;</span>mutant_id<span class="op">&gt;</span></span></code></pre></div>
+<p>This command outputs a <code>git diff</code> showing the exact
+modification that bypassed your test suite, allowing you to write
+targeted assertions to cover the gap.</p>
+<h2 id="managing-the-cost-of-mutation-testing">Managing the Cost of
+Mutation Testing</h2>
+<p>Because mutation testing runs your test suite repeatedly—potentially
+thousands of times—it is computationally expensive. To use
+<code>mutmut</code> effectively:</p>
+<ul>
+<li><strong>Mutate Critical Modules First:</strong> Focus mutation runs
+on core business logic, financial calculations, or authentication
+modules rather than trivial boilerplate.</li>
+<li><strong>Optimize Test Speed:</strong> Use fast, isolated unit tests
+rather than slow integration tests for mutation runs.</li>
+<li><strong>Prune Equivalent Mutants:</strong> Some mutations do not
+change the program's observable behavior (e.g., modifying a dead-code
+branch). Recognize these to avoid spending time trying to kill
+unkillable mutants.</li>
+</ul>
+<p>Integrating <code>mutmut</code> into your Python development workflow
+ensures that your test suite does not just execute code, but actively
+defends against regressions and design oversights.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

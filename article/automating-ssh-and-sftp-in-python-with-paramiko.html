@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automating SSH and SFTP in Python with Paramiko - python</title>
+    <meta name="description" content="Paramiko is a native Python implementation of the SSHv2 protocol that enables developers to automate interactions with remote servers programmatically. It serves as an essential networking library for establishing encrypted connections, executing shell c">
+    <link rel="canonical" href="https://salivity.github.io/python/article/automating-ssh-and-sftp-in-python-with-paramiko">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Automating SSH and SFTP in Python with Paramiko - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/automating-ssh-and-sftp-in-python-with-paramiko" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Paramiko is a native Python implementation of the SSHv2 protocol that enables developers to automate interactions with remote servers programmatically. It serves as an essential networking library for establishing encrypted connections, executing shell c" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="automating-ssh-and-sftp-in-python-with-paramiko">Automating SSH
+and SFTP in Python with Paramiko</h1>
+<p>Paramiko is a native Python implementation of the SSHv2 protocol that
+enables developers to automate interactions with remote servers
+programmatically. It serves as an essential networking library for
+establishing encrypted connections, executing shell commands remotely,
+and managing secure file transfers via SFTP without requiring native
+OpenSSH client binaries. By abstracting the low-level complexities of
+cryptographic handshakes, authentication, and socket management,
+Paramiko provides a straightforward interface for system administration,
+configuration management, and automated deployment pipelines.</p>
+<h2 id="establishing-secure-sshv2-connections">Establishing Secure SSHv2
+Connections</h2>
+<p>At its core, Paramiko manages the complete SSHv2 protocol lifecycle
+using its <code>SSHClient</code> class. It initiates encrypted transport
+tunnels between the client and remote hosts over TCP port 22, handling
+cryptographic key exchanges and cipher negotiations natively.</p>
+<p>Paramiko supports multiple authentication mechanisms:</p>
+<ul>
+<li><strong>Password Authentication:</strong> Supplying standard
+username and password credentials.</li>
+<li><strong>Public-Key Authentication:</strong> Utilizing RSA, DSS,
+ECDSA, or Ed25519 private keys, including encrypted private keys
+requiring passphrases.</li>
+<li><strong>Agent Forwarding and Key Agents:</strong> Integrating with
+local SSH agents (<code>ssh-agent</code> or Pageant) to source keys
+securely without hardcoding credentials.</li>
+</ul>
+<p>Paramiko also governs host key verification through policies such as
+<code>AutoAddPolicy</code> (convenient for testing environments) or
+<code>RejectPolicy</code> (recommended for production to prevent
+Man-in-the-Middle attacks).</p>
+<h2 id="remote-shell-execution">Remote Shell Execution</h2>
+<p>Paramiko provides two distinct approaches for executing commands on
+remote targets: single command execution and interactive shell
+sessions.</p>
+<h3 id="non-interactive-command-execution-exec_command">Non-Interactive
+Command Execution (<code>exec_command</code>)</h3>
+<p>The <code>exec_command()</code> method opens a new remote channel and
+runs a single command to completion. It returns three file-like streams:
+standard input (<code>stdin</code>), standard output
+(<code>stdout</code>), and standard error (<code>stderr</code>). This
+method is ideal for executing idempotent maintenance tasks, checking
+system status, or launching batch scripts where no back-and-forth user
+interaction is required.</p>
+<h3 id="interactive-shells-invoke_shell">Interactive Shells
+(<code>invoke_shell</code>)</h3>
+<p>For workflows requiring real-time interaction—such as navigating
+menu-driven network equipment or responding to dynamic terminal
+prompts—Paramiko offers <code>invoke_shell()</code>. This method creates
+a pseudo-terminal (pty) channel, allowing scripts to send keystrokes and
+read stream buffers sequentially, mimicking a human user working inside
+a terminal emulator.</p>
+<h2 id="sftp-automation">SFTP Automation</h2>
+<p>Paramiko includes a built-in implementation of the Secure File
+Transfer Protocol (SFTP). By calling the <code>open_sftp()</code> method
+on an authenticated <code>SSHClient</code> instance, users instantiate
+an <code>SFTPClient</code> object capable of managing remote filesystems
+over the existing encrypted SSH tunnel.</p>
+<p>Key SFTP capabilities include:</p>
+<ul>
+<li><strong>File Transfers:</strong> Uploading (<code>put</code>) and
+downloading (<code>get</code>) files with optional callback functions to
+track transfer progress.</li>
+<li><strong>Filesystem Traversal:</strong> Navigating remote directories
+using methods like <code>listdir()</code>, <code>mkdir()</code>, and
+<code>rmdir()</code>.</li>
+<li><strong>File Manipulation:</strong> Renaming, removing, reading, or
+modifying attributes and permissions (<code>chmod</code>,
+<code>chown</code>) on remote files directly.</li>
+</ul>
+<p>Because SFTP operates entirely within the established SSH connection,
+it eliminates the need to expose additional ports or configure
+independent FTP daemons on the host.</p>
+<h2 id="summary">Summary</h2>
+<p>Paramiko acts as the backbone of Python-based network automation. By
+combining SSHv2 encryption, flexible shell execution models, and native
+SFTP capabilities into a single library, it provides the core
+infrastructure necessary to manage infrastructure, deploy software, and
+transfer data securely at scale.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

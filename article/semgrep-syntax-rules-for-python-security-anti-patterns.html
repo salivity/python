@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semgrep Syntax Rules for Python Security Anti-Patterns - python</title>
+    <meta name="description" content="Semgrep identifies static security anti-patterns in Python codebases by matching abstract syntax trees using a human-readable rule syntax that mirrors standard Python code. By combining the ellipsis operator (...), metavariables ($VAR), boolean rule comb">
+    <link rel="canonical" href="https://salivity.github.io/python/article/semgrep-syntax-rules-for-python-security-anti-patterns">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Semgrep Syntax Rules for Python Security Anti-Patterns - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/semgrep-syntax-rules-for-python-security-anti-patterns" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Semgrep identifies static security anti-patterns in Python codebases by matching abstract syntax trees using a human-readable rule syntax that mirrors standard Python code. By combining the ellipsis operator (...), metavariables ($VAR), boolean rule comb" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="semgrep-syntax-rules-for-python-security-anti-patterns">Semgrep
+Syntax Rules for Python Security Anti-Patterns</h1>
+<p>Semgrep identifies static security anti-patterns in Python codebases
+by matching abstract syntax trees using a human-readable rule syntax
+that mirrors standard Python code. By combining the ellipsis operator
+(<code>...</code>), metavariables (<code>$VAR</code>), boolean rule
+combinators, and dedicated taint tracking keys, Semgrep allows security
+engineers to define precise patterns for identifying vulnerabilities
+such as command injection, insecure deserialization, and hardcoded
+credentials without the complexity of traditional compiler-based AST
+queries.</p>
+<h3 id="basic-code-pattern-matching">Basic Code Pattern Matching</h3>
+<p>Semgrep rules use valid Python code fragments as patterns. Unlike
+regular expressions, Semgrep understands Python's abstract syntax,
+meaning whitespace, indentation style, and comment placements do not
+affect matching:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pattern</span><span class="kw">:</span><span class="at"> hashlib.md5()</span></span></code></pre></div>
+<p>This pattern matches any call to <code>hashlib.md5()</code>,
+regardless of whether it is written across multiple lines or surrounded
+by inline comments.</p>
+<h3 id="the-ellipsis-operator-">The Ellipsis Operator
+(<code>...</code>)</h3>
+<p>The ellipsis operator acts as a wildcard for zero or more elements,
+such as arguments, statements, or list items. In Python rules, it
+abstracts away code that is irrelevant to the vulnerability:</p>
+<ul>
+<li><strong>Function Arguments:</strong>
+<code>cursor.execute(...)</code> matches calls to <code>execute</code>
+regardless of the number or type of arguments provided.</li>
+<li><strong>Method Chains:</strong>
+<code>subprocess.Popen(...).communicate()</code> matches invocation
+sequences even if arguments vary.</li>
+<li><strong>Statement Sequences:</strong> Inside code blocks,
+<code>...</code> matches any arbitrary statements between two lines of
+interest:
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pattern</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  $SECRET = &quot;...&quot;</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  ...</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  requests.post(..., headers={&quot;Authorization&quot;: $SECRET})</span></code></pre></div></li>
+</ul>
+<h3 id="metavariables">Metavariables</h3>
+<p>Metavariables represent dynamic code constructs, such as variable
+names, expressions, or function identifiers. They begin with a
+<code>$</code> and consist of uppercase letters:</p>
+<ul>
+<li><strong>Capturing Expressions:</strong> In <code>eval($EXPR)</code>,
+<code>$EXPR</code> binds to whatever argument is passed to
+<code>eval()</code>.</li>
+<li><strong>Enforcing Consistency:</strong> Reusing a metavariable
+within the same pattern forces a semantic match. For example, detecting
+insecure comparisons:
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pattern</span><span class="kw">:</span><span class="at"> $X == $X</span></span></code></pre></div></li>
+<li><strong>Regex Filtering:</strong> Metavariables can be constrained
+using the <code>metavariable-regex</code> clause to filter by naming
+conventions or detect hardcoded tokens (e.g., checking if a variable
+matching <code>.*_KEY</code> is assigned a static string).</li>
+</ul>
+<h3 id="deep-expression-operator--x-">Deep Expression Operator
+(<code>&lt;... $X ...&gt;</code>)</h3>
+<p>The deep expression operator finds an expression nested at any depth
+inside another code structure. For example, detecting user-controlled
+data inside an SQL query string:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pattern</span><span class="kw">:</span><span class="at"> cursor.execute(&lt;... $INPUT ...&gt;)</span></span></code></pre></div>
+<p>This matches <code>$INPUT</code> whether it is passed directly,
+concatenated via <code>+</code>, formatted via <code>.format()</code>,
+or included in an f-string.</p>
+<h3 id="rule-composition-and-context-filters">Rule Composition and
+Context Filters</h3>
+<p>Security rules often require positive and negative conditions to
+eliminate false positives. Semgrep coordinates sub-patterns using
+boolean composition keys:</p>
+<ul>
+<li><strong><code>patterns</code></strong>: A logical AND requiring all
+sub-rules to match.</li>
+<li><strong><code>pattern-either</code></strong>: A logical OR used to
+catch alternative vulnerability vectors (e.g., matching either
+<code>yaml.load($FOO)</code> or
+<code>yaml.unsafe_load($FOO)</code>).</li>
+<li><strong><code>pattern-inside</code> /
+<code>pattern-not-inside</code></strong>: Scopes matches to specific
+execution contexts, such as ensuring a call occurs inside a Flask route
+handler or ensuring it does not occur inside a unit test directory.</li>
+<li><strong><code>pattern-not</code></strong>: Negates a pattern to
+ignore safe implementations, such as checking for
+<code>yaml.load(...)</code> while excluding calls where
+<code>Loader=yaml.SafeLoader</code> is explicitly set.</li>
+</ul>
+<h3 id="taint-mode-syntax">Taint Mode Syntax</h3>
+<p>For vulnerabilities involving data flow—such as Server-Side Request
+Forgery (SSRF) or SQL Injection—Semgrep employs dedicated taint-tracking
+syntax (<code>mode: taint</code>):</p>
+<ul>
+<li><strong><code>pattern-sources</code></strong>: Defines where
+untrusted data originates, such as <code>request.args.get(...)</code> or
+<code>request.json</code>.</li>
+<li><strong><code>pattern-sinks</code></strong>: Defines dangerous
+functions that should not receive untrusted data, such as
+<code>os.system(...)</code> or <code>open(...)</code>.</li>
+<li><strong><code>pattern-sanitizers</code></strong>: Defines functions
+or validation steps (e.g., <code>shlex.quote(...)</code> or
+<code>int(...)</code>) that neutralize the taint, preventing false
+positives if the input is safely handled.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

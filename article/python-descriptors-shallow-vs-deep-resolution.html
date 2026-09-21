@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Descriptors: Shallow vs Deep Resolution - python</title>
+    <meta name="description" content="This article explains the difference between shallow and deep attribute resolution when working with Python descriptors. It covers how Python's attribute lookup mechanism processes descriptor objects, contrasting direct, local namespace inspection (shall">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-descriptors-shallow-vs-deep-resolution">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Descriptors: Shallow vs Deep Resolution - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-descriptors-shallow-vs-deep-resolution" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the difference between shallow and deep attribute resolution when working with Python descriptors. It covers how Python's attribute lookup mechanism processes descriptor objects, contrasting direct, local namespace inspection (shall" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-descriptors-shallow-vs-deep-resolution">Python
+Descriptors: Shallow vs Deep Resolution</h1>
+<p>This article explains the difference between shallow and deep
+attribute resolution when working with Python descriptors. It covers how
+Python's attribute lookup mechanism processes descriptor objects,
+contrasting direct, local namespace inspection (shallow resolution) with
+the full Method Resolution Order (MRO) traversal governed by
+<code>__getattribute__</code> (deep resolution).</p>
+<h3 id="understanding-python-descriptors">Understanding Python
+Descriptors</h3>
+<p>A descriptor is a Python object that defines at least one of the
+protocol methods: <code>__get__()</code>, <code>__set__()</code>, or
+<code>__delete__()</code>. When an attribute defining these methods
+resides on an object's class, accessing the attribute via dotted syntax
+(e.g., <code>obj.attr</code>) invokes the corresponding protocol method
+rather than directly reading or writing a dictionary entry.</p>
+<h3 id="shallow-attribute-resolution">Shallow Attribute Resolution</h3>
+<p>Shallow attribute resolution refers to querying an attribute directly
+from an object's local namespace without invoking the descriptor
+protocol or traversing the inheritance chain.</p>
+<p>In shallow resolution:</p>
+<ul>
+<li>The lookup targets an explicit namespace directly, such as using
+<code>obj.__dict__['attr']</code> or
+<code>Class.__dict__['attr']</code>.</li>
+<li>Descriptor protocol methods like <code>__get__()</code> are not
+executed. Accessing a descriptor via <code>Class.__dict__['attr']</code>
+returns the raw descriptor instance itself rather than its computed
+value.</li>
+<li>Python does not inspect the class hierarchy or the Method Resolution
+Order (MRO). If the key does not exist in the immediate dictionary being
+inspected, a <code>KeyError</code> is raised.</li>
+<li>Shallow resolution is typically used for serialization, dynamic
+introspection, low-level debugging, or intentionally bypassing
+descriptor logic to inspect or modify underlying state.</li>
+</ul>
+<h3 id="deep-attribute-resolution">Deep Attribute Resolution</h3>
+<p>Deep attribute resolution is the standard resolution process
+performed by Python's default <code>object.__getattribute__()</code>
+method whenever dotted notation (<code>obj.attr</code>) or
+<code>getattr(obj, 'attr')</code> is used.</p>
+<p>Deep resolution follows a strict precedence algorithm across multiple
+namespaces:</p>
+<ol type="1">
+<li><strong>Data Descriptors</strong>: Python searches the class and its
+base classes via the MRO for a data descriptor (a descriptor defining
+both <code>__get__()</code> and either <code>__set__()</code> or
+<code>__delete__()</code>). If found, its <code>__get__()</code> method
+is invoked.</li>
+<li><strong>Instance Dictionary</strong>: If no data descriptor is
+found, Python checks the instance namespace (<code>obj.__dict__</code>).
+If present, the stored value is returned directly.</li>
+<li><strong>Non-Data Descriptors and Class Attributes</strong>: If the
+attribute is not in <code>obj.__dict__</code>, Python checks the class
+hierarchy again for non-data descriptors (defining only
+<code>__get__()</code>) or standard class variables. If a non-data
+descriptor is found, its <code>__get__()</code> method is executed.</li>
+<li><strong>Fallback (<code>__getattr__</code>)</strong>: If deep
+resolution fails to locate the attribute through the MRO and instance
+dictionary, Python invokes <code>__getattr__()</code>, if defined.</li>
+</ol>
+<h3 id="key-differences">Key Differences</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Shallow Resolution</th>
+<th style="text-align: left;">Deep Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Lookup Mechanism</strong></td>
+<td style="text-align: left;">Direct mapping access
+(<code>__dict__</code>)</td>
+<td style="text-align: left;"><code>__getattribute__()</code> via dotted
+access (<code>obj.attr</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Descriptor Execution</strong></td>
+<td style="text-align: left;">Does not execute <code>__get__()</code>;
+returns descriptor object</td>
+<td style="text-align: left;">Executes <code>__get__()</code> and
+returns computed result</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Hierarchy Traversal</strong></td>
+<td style="text-align: left;">Restricted to the single queried
+namespace</td>
+<td style="text-align: left;">Traverses the full MRO chain</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Precedence Handling</strong></td>
+<td style="text-align: left;">None; returns the exact key in the given
+dictionary</td>
+<td style="text-align: left;">Prioritizes data descriptors over instance
+dictionaries</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Primary Use Case</strong></td>
+<td style="text-align: left;">Introspection, debugging, bypassing
+handlers</td>
+<td style="text-align: left;">Normal application runtime and property
+evaluation</td>
+</tr>
+</tbody>
+</table>
+<p>Shallow resolution treats attributes as static keys within isolated
+dictionaries, whereas deep resolution enforces descriptor binding
+behavior and inheritance rules across the entire object model.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

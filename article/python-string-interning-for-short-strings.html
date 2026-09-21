@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python String Interning for Short Strings - python</title>
+    <meta name="description" content="String interning is an optimization mechanism in CPython—the standard Python implementation—designed to conserve memory and accelerate comparison operations by storing only one copy of distinct, immutable string values. When Python encounters specifi">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-string-interning-for-short-strings">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python String Interning for Short Strings - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-string-interning-for-short-strings" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="String interning is an optimization mechanism in CPython—the standard Python implementation—designed to conserve memory and accelerate comparison operations by storing only one copy of distinct, immutable string values. When Python encounters specifi" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-string-interning-for-short-strings">Python String
+Interning for Short Strings</h1>
+<p>String interning is an optimization mechanism in CPython—the standard
+Python implementation—designed to conserve memory and accelerate
+comparison operations by storing only one copy of distinct, immutable
+string values. When Python encounters specific string literals,
+identifiers, or single-character strings, it places them in an internal
+lookup table. Subsequent references to identical strings point to the
+existing object in memory rather than allocating a new one. This guide
+explains how Python detects candidate strings, handles identifiers and
+short strings at compile time, and manages this internal caching process
+behind the scenes.</p>
+<h2 id="what-is-string-interning">What Is String Interning?</h2>
+<p>In Python, strings are immutable. Because their values cannot change
+after creation, having multiple identical string objects spread across
+memory is often redundant. String interning resolves this by ensuring
+that identical interned strings share the exact same memory address.</p>
+<p>This provides two primary benefits:</p>
+<ol type="1">
+<li><strong>Reduced Memory Footprint:</strong> Repetitive strings occupy
+memory only once.</li>
+<li><strong>Faster Comparisons:</strong> Comparing two interned strings
+evaluates pointer equality (<code>is</code>) rather than a
+character-by-character check (<code>==</code>). Pointer comparison runs
+in <span class="math inline">\(O(1)\)</span> constant time.</li>
+</ol>
+<h2 id="automatic-interning-of-identifiers">Automatic Interning of
+Identifiers</h2>
+<p>CPython automatically interns strings that resemble valid Python
+identifiers. These are strings consisting exclusively of ASCII letters,
+digits, and underscores (the pattern <code>[a-zA-Z0-9_]*</code>).</p>
+<p>Because Python relies heavily on dictionaries for runtime
+operations—such as attribute lookups (<code>object.__dict__</code>),
+global variables (<code>globals()</code>), and local scopes—variable,
+function, class, and method names are repeatedly compared. Interning
+these identifier-like strings ensures that internal dictionary lookups
+execute as quickly as possible.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Identifier-like strings are automatically interned</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> <span class="st">&quot;python_identifier&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> <span class="st">&quot;python_identifier&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(a <span class="kw">is</span> b)  <span class="co"># True</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Strings with special characters or spaces typically are not</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>c <span class="op">=</span> <span class="st">&quot;not an identifier!&quot;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> <span class="st">&quot;not an identifier!&quot;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(c <span class="kw">is</span> d)  <span class="co"># May evaluate to False depending on the context</span></span></code></pre></div>
+<h2 id="interning-short-strings-and-constants">Interning Short Strings
+and Constants</h2>
+<p>CPython optimizes small or frequently used strings through specific
+internal rules:</p>
+<ul>
+<li><strong>0 and 1-Character Strings:</strong> All single-character
+ASCII strings (length 0 or 1) are interned or statically cached by
+CPython during interpreter initialization.</li>
+<li><strong>Compile-Time Constants:</strong> During the compilation of
+Python source code to bytecode, the compiler's code-optimization stage
+(formerly the peephole optimizer, now integrated into the AST compiler)
+automatically interns constant string literals up to a specific length
+limit (historically 4096 characters in CPython), provided they meet
+identifier criteria.</li>
+</ul>
+<p>Strings generated dynamically at runtime (for example, through
+concatenation or user input) generally bypass automatic interning, even
+if they look like identifiers:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>s1 <span class="op">=</span> <span class="st">&quot;hello&quot;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>s2 <span class="op">=</span> <span class="st">&quot;&quot;</span>.join([<span class="st">&quot;h&quot;</span>, <span class="st">&quot;e&quot;</span>, <span class="st">&quot;l&quot;</span>, <span class="st">&quot;l&quot;</span>, <span class="st">&quot;o&quot;</span>])</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(s1 <span class="op">==</span> s2)  <span class="co"># True (same value)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(s1 <span class="kw">is</span> s2)  <span class="co"># False (different objects in memory)</span></span></code></pre></div>
+<h2 id="under-the-hood-the-cpython-implementation">Under the Hood: The
+CPython Implementation</h2>
+<p>At the C level, CPython tracks interned strings using an internal
+dictionary named <code>interned</code>, which maps string objects to
+themselves.</p>
+<p>When the interpreter processes an internable string:</p>
+<ol type="1">
+<li>It calls the internal C-API function
+<code>PyUnicode_InternInPlace(PyObject **p)</code>.</li>
+<li>The function checks the global <code>interned</code>
+dictionary.</li>
+<li>If the string already exists in the dictionary, <code>*p</code> is
+adjusted to point to the cached string, and the reference count of the
+duplicate is decremented.</li>
+<li>If the string does not exist, it is added to the dictionary.</li>
+</ol>
+<p>Starting in Python 3.12, CPython introduced immortal objects for core
+built-ins and static strings. Immortal strings remain in memory
+permanently without reference counting overhead, eliminating
+modifications to the reference count during lookups.</p>
+<h2 id="manual-interning-with-sysintern">Manual Interning with
+<code>sys.intern()</code></h2>
+<p>Developers can manually intern dynamically generated strings using
+the <code>sys.intern()</code> function. This is particularly useful when
+building large data structures that store recurring string values, such
+as natural language processing vocabularies or database record
+parsers.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Manually interning dynamic strings</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>s1 <span class="op">=</span> sys.<span class="bu">intern</span>(<span class="st">&quot;&quot;</span>.join([<span class="st">&quot;dynamic&quot;</span>, <span class="st">&quot;_&quot;</span>, <span class="st">&quot;token&quot;</span>]))</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>s2 <span class="op">=</span> sys.<span class="bu">intern</span>(<span class="st">&quot;dynamic_token&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(s1 <span class="kw">is</span> s2)  <span class="co"># True</span></span></code></pre></div>
+<p>Once passed through <code>sys.intern()</code>, the string reference
+is registered into CPython's intern table, allowing subsequent lookups
+and comparisons to achieve maximum memory efficiency and <span
+class="math inline">\(O(1)\)</span> equality checks.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

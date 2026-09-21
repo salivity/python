@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How MicroPython Optimizes Memory on Microcontrollers - python</title>
+    <meta name="description" content="MicroPython brings the Python 3 programming language to microcontrollers with only kilobytes of RAM by fundamentally rethinking how Python objects, code execution, and dynamic memory are managed. Standard Python (CPython) relies on large runtimes and hea">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-micro-python-optimizes-memory-on-microcontrollers">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How MicroPython Optimizes Memory on Microcontrollers - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-micro-python-optimizes-memory-on-microcontrollers" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="MicroPython brings the Python 3 programming language to microcontrollers with only kilobytes of RAM by fundamentally rethinking how Python objects, code execution, and dynamic memory are managed. Standard Python (CPython) relies on large runtimes and hea" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-micropython-optimizes-memory-on-microcontrollers">How
+MicroPython Optimizes Memory on Microcontrollers</h1>
+<p>MicroPython brings the Python 3 programming language to
+microcontrollers with only kilobytes of RAM by fundamentally rethinking
+how Python objects, code execution, and dynamic memory are managed.
+Standard Python (CPython) relies on large runtimes and heavy memory
+footprints, but MicroPython achieves efficiency through custom memory
+allocators, pointer tagging, string interning, bytecode execution
+directly from flash storage, and a specialized garbage collection
+mechanism designed to eliminate overhead.</p>
+<h3 id="tagged-pointers-and-immediate-values">Tagged Pointers and
+Immediate Values</h3>
+<p>In standard Python, every number or simple value is a fully allocated
+heap object with metadata overhead. MicroPython avoids this for common
+data types using a technique called pointer tagging. On 32-bit systems,
+memory addresses are typically aligned to 4-byte boundaries, leaving the
+lowest bits unused. MicroPython uses these lower bits to encode metadata
+directly within the pointer word itself. Small integers (typically
+31-bit integers) and interned string identifiers are stored directly
+inside the pointer variable rather than on the heap. This allows basic
+math and variable passing to occur with zero dynamic memory
+allocation.</p>
+<h3 id="string-interning-qstrs">String Interning (QSTRs)</h3>
+<p>MicroPython handles strings through a system called QSTR (Quick
+String). Instead of storing multiple instances of identical strings
+across identifiers, dictionary keys, and code logic, MicroPython interns
+strings into a global lookup table. Each unique string is assigned a
+compact integer ID. At runtime, the engine works with these numeric IDs
+instead of string pointers or character arrays, saving substantial
+memory during dictionary lookups, attribute resolution, and function
+calls. Common strings are baked directly into the firmware binary in
+read-only memory.</p>
+<h3 id="executing-bytecode-from-flash-frozen-modules">Executing Bytecode
+from Flash (Frozen Modules)</h3>
+<p>One of the largest consumers of RAM is the compilation and storage of
+code. Normally, the runtime parses Python source code, compiles it into
+bytecode, and keeps that bytecode in RAM. MicroPython solves this with
+"frozen bytecode." Developers use the cross-compiler tool
+(<code>mpy-cross</code>) to compile Python source code into bytecode
+beforehand. This bytecode is then compiled directly into the
+microcontroller’s flash memory image (ROM). At runtime, the interpreter
+reads instructions directly from flash memory without copying the code
+into RAM, preserving volatile memory strictly for live state and
+variables.</p>
+<h3 id="micro-optimized-bytecode-engine">Micro-Optimized Bytecode
+Engine</h3>
+<p>The MicroPython virtual machine features a custom, highly compact
+instruction set. Opcode encoding is designed to keep bytecode as small
+as possible, often using variable-length encodings to represent
+arguments. Unlike CPython, which optimizes primarily for execution speed
+with larger internal structures, MicroPython prioritizes a minimal cache
+footprint and execution density so that scripts require minimal storage
+in both flash and RAM.</p>
+<h3 id="lightweight-garbage-collection">Lightweight Garbage
+Collection</h3>
+<p>Dynamic memory is managed by a custom mark-and-sweep garbage
+collector built specifically for resource-constrained systems. It
+operates on a flat memory pool divided into small allocation units
+(typically 16 bytes each). The collector does not require complex
+reference counting, which saves the memory overhead of maintaining
+reference count fields on every object. It scans CPU registers, the C
+call stack, and active Python frames to locate live objects. To mitigate
+fragmentation—a major hazard on microcontrollers—MicroPython groups
+smaller objects together and provides APIs like
+<code>gc.collect()</code> and <code>gc.threshold()</code> to allow
+developers to trigger collection proactively.</p>
+<h3 id="ram-reuse-with-the-micropython-buffer-protocol">RAM Reuse with
+the MicroPython Buffer Protocol</h3>
+<p>MicroPython implements a memory-efficient buffer protocol that allows
+peripheral drivers (such as I2C, SPI, or UART) to read and write
+directly to pre-allocated arrays and bytearrays. By reusing the same
+memory buffers during input/output operations, the runtime eliminates
+the need to continuously allocate and deallocate temporary strings or
+byte buffers during continuous sensor polling or network
+communication.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding __main__.py in Python Packages - python</title>
+    <meta name="description" content="This article provides a comprehensive overview of the main.py file in Python, explaining its critical role as the execution entry point when running packages as scripts. You will learn how Python detects and executes this file via the -m switch, the prac">
+    <link rel="canonical" href="https://salivity.github.io/python/article/understanding-main-py-in-python-packages">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding __main__.py in Python Packages - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/understanding-main-py-in-python-packages" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a comprehensive overview of the main.py file in Python, explaining its critical role as the execution entry point when running packages as scripts. You will learn how Python detects and executes this file via the -m switch, the prac" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-mainpy-in-python-packages">Understanding
+<strong>main</strong>.py in Python Packages</h1>
+<p>This article provides a comprehensive overview of the
+<code>__main__.py</code> file in Python, explaining its critical role as
+the execution entry point when running packages as scripts. You will
+learn how Python detects and executes this file via the <code>-m</code>
+switch, the practical benefits it brings to command-line interface
+design, the differences between <code>__main__.py</code> and
+<code>__init__.py</code>, and best practices for implementing clean,
+executable packages.</p>
+<h2 id="what-is-__main__py">What is <code>__main__.py</code>?</h2>
+<p>In Python, <code>__main__.py</code> serves as the predefined entry
+point for a package when it is invoked directly from the command line.
+While <code>__init__.py</code> initializes a package when imported,
+<code>__main__.py</code> dictates what happens when the package itself
+is executed as a standalone script.</p>
+<p>Python executes <code>__main__.py</code> in two primary
+scenarios:</p>
+<ol type="1">
+<li>When running a package using the module flag:
+<code>python -m &lt;package_name&gt;</code></li>
+<li>When passing a directory or a zip file directly to the Python
+interpreter: <code>python &lt;directory_or_zip&gt;</code></li>
+</ol>
+<h2 id="how-package-execution-works">How Package Execution Works</h2>
+<p>When you run <code>python -m package_name</code>, the Python
+interpreter searches <code>sys.path</code> for the specified package.
+Once located, Python imports the package, runs its top-level
+<code>__init__.py</code> file, and then immediately looks for and
+executes <code>__main__.py</code> within that package.</p>
+<p>Inside <code>__main__.py</code>, the special variable
+<code>__name__</code> is automatically set to <code>'__main__'</code>.
+This behavior mirrors what happens when you run a standard standalone
+script directly (<code>python script.py</code>).</p>
+<h3 id="example-structure">Example Structure</h3>
+<p>Consider a project structured as follows:</p>
+<pre class="text"><code>my_tool/
+├── __init__.py
+├── __main__.py
+└── core.py</code></pre>
+<p>In <code>core.py</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run():</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Executing core logic...&quot;</span>)</span></code></pre></div>
+<p>In <code>__main__.py</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> .core <span class="im">import</span> run</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> main():</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    run()</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&quot;__main__&quot;</span>:</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    sys.exit(main())</span></code></pre></div>
+<p>When a user executes <code>python -m my_tool</code>, Python runs
+<code>__main__.py</code>, triggering the <code>main()</code> function
+and executing the tool's core logic.</p>
+<h2 id="key-significance-and-benefits">Key Significance and
+Benefits</h2>
+<h3 id="1-seamless-command-line-interfaces-clis">1. Seamless
+Command-Line Interfaces (CLIs)</h3>
+<p>The primary advantage of <code>__main__.py</code> is enabling a clean
+user experience for tools distributed as packages. Standard library
+modules leverage this pattern extensively. For example,
+<code>python -m venv myenv</code>, <code>python -m http.server</code>,
+and <code>python -m pip install</code> all rely on
+<code>__main__.py</code> to provide immediate command-line utility
+without requiring separate runner scripts.</p>
+<h3 id="2-standalone-directory-and-zip-execution">2. Standalone
+Directory and Zip Execution</h3>
+<p>Python allows developers to execute directories or <code>.zip</code>
+archives directly if they contain a <code>__main__.py</code> file at
+their root. This functionality powers Python's <code>zipapp</code>
+module, enabling the distribution of entire applications as single,
+executable files (<code>.pyz</code>).</p>
+<h3 id="3-clear-separation-of-concerns">3. Clear Separation of
+Concerns</h3>
+<p>Using <code>__main__.py</code> separates regular library usage from
+command-line execution:</p>
+<ul>
+<li><strong><code>__init__.py</code></strong> exposes the package API
+intended for other Python modules via <code>import my_tool</code>.</li>
+<li><strong><code>__main__.py</code></strong> encapsulates command-line
+argument parsing, exit codes, and execution logic meant strictly for
+terminal users.</li>
+</ul>
+<p>This separation prevents CLI-specific overhead, such as importing
+<code>argparse</code>, from running when a user only wants to import a
+single function from your library.</p>
+<h2 id="best-practices-for-__main__py">Best Practices for
+<code>__main__.py</code></h2>
+<ul>
+<li><strong>Keep It Thin:</strong> Avoid writing heavy business logic
+directly inside <code>__main__.py</code>. Instead, import functions or
+classes from other modules within the package and call them.</li>
+<li><strong>Wrap Execution in Functions:</strong> Encapsulate startup
+logic inside a <code>main()</code> function to prevent polluting the
+global namespace.</li>
+<li><strong>Handle Return Codes:</strong> Use
+<code>sys.exit(main())</code> to ensure proper exit codes are passed
+back to the operating system or shell environment upon termination.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Redis Caching: Database Queries and Pages - python</title>
+    <meta name="description" content="Caching with Redis is one of the most effective ways to scale Python web applications, drastically reducing database load and network latency. This article covers the essential strategies for caching expensive database query results and web page response">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-redis-caching-database-queries-and-pages">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Redis Caching: Database Queries and Pages - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-redis-caching-database-queries-and-pages" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Caching with Redis is one of the most effective ways to scale Python web applications, drastically reducing database load and network latency. This article covers the essential strategies for caching expensive database query results and web page response" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-redis-caching-database-queries-and-pages">Python Redis
+Caching: Database Queries and Pages</h1>
+<p>Caching with Redis is one of the most effective ways to scale Python
+web applications, drastically reducing database load and network
+latency. This article covers the essential strategies for caching
+expensive database query results and web page responses using Redis in
+Python. You will learn practical implementation approaches, including
+the Cache-Aside pattern, automated response middleware, serialization
+techniques, and cache invalidation strategies to maintain data
+consistency.</p>
+<hr />
+<h2 id="1-strategies-for-caching-database-queries">1. Strategies for
+Caching Database Queries</h2>
+<p>Database operations, particularly complex joins and aggregations, are
+frequently the primary bottleneck in web applications. Caching query
+results in Redis stores precomputed datasets in memory for microsecond
+retrieval.</p>
+<h3 id="the-cache-aside-pattern-lazy-loading">The Cache-Aside Pattern
+(Lazy Loading)</h3>
+<p>The Cache-Aside pattern is the most common strategy for database
+query caching. The application handles both the data store and the
+cache:</p>
+<ol type="1">
+<li>The application receives a request for data.</li>
+<li>It checks Redis for a matching key.</li>
+<li><strong>Cache Hit:</strong> If present, the application returns the
+cached data immediately.</li>
+<li><strong>Cache Miss:</strong> If absent, the application queries the
+primary database, stores the result in Redis with a defined Time-To-Live
+(TTL), and then returns the data.</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> redis</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> redis.Redis(host<span class="op">=</span><span class="st">&#39;localhost&#39;</span>, port<span class="op">=</span><span class="dv">6379</span>, db<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_user_profile(user_id):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    cache_key <span class="op">=</span> <span class="ss">f&quot;user:</span><span class="sc">{</span>user_id<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 1. Check Redis</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    cached_data <span class="op">=</span> r.get(cache_key)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> cached_data:</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> json.loads(cached_data)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 2. Cache Miss: Fetch from Database (mock)</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    db_data <span class="op">=</span> fetch_user_from_db(user_id)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 3. Store in Redis with TTL (e.g., 3600 seconds)</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> db_data:</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        r.setex(cache_key, <span class="dv">3600</span>, json.dumps(db_data))</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> db_data</span></code></pre></div>
+<h3 id="deterministic-key-generation">Deterministic Key Generation</h3>
+<p>To cache complex queries or ORM calls, generate deterministic keys
+based on the query parameters or raw SQL:</p>
+<ul>
+<li><strong>Hash-based keys:</strong> Hash the raw SQL string and its
+bound parameters using <code>hashlib.sha256</code> to create a
+fixed-length key (e.g., <code>query:sha256_hash</code>).</li>
+<li><strong>Normalized namespacing:</strong> Use semantic prefixes such
+as <code>products:category:12:page:2</code> for easy identification and
+bulk invalidation.</li>
+</ul>
+<h3 id="write-through-and-invalidation">Write-Through and
+Invalidation</h3>
+<p>Stale data is prevented by invalidating or updating the cache upon
+data mutation:</p>
+<ul>
+<li><strong>Direct Eviction:</strong> When a database record updates or
+deletes, call <code>r.delete(cache_key)</code>. The next read will
+automatically fetch the fresh record.</li>
+<li><strong>Write-Through:</strong> Update both the primary database and
+the Redis key simultaneously during write operations.</li>
+</ul>
+<hr />
+<h2 id="2-strategies-for-caching-page-responses">2. Strategies for
+Caching Page Responses</h2>
+<p>Page caching bypasses template rendering, business logic, and
+database access entirely by storing complete HTTP responses (HTML or
+JSON payloads).</p>
+<h3 id="full-page-caching">Full Page Caching</h3>
+<p>Full page caching works best on static or semi-static content that is
+identical for all visitors, such as public blog posts, product detail
+pages, or landing pages.</p>
+<ul>
+<li><strong>FastAPI / Flask Decorator Pattern:</strong> Implement a
+Python decorator or middleware that inspects incoming requests.</li>
+<li>The request URL path and query parameters serve as the cache key
+(e.g., <code>page:/products?page=1</code>).</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functools <span class="im">import</span> wraps</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> flask <span class="im">import</span> request, Response</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> redis</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> redis.Redis(host<span class="op">=</span><span class="st">&#39;localhost&#39;</span>, port<span class="op">=</span><span class="dv">6379</span>, db<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cache_page(timeout<span class="op">=</span><span class="dv">300</span>):</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> decorator(f):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="at">@wraps</span>(f)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">def</span> decorated_function(<span class="op">*</span>args, <span class="op">**</span>kwargs):</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>            cache_key <span class="op">=</span> <span class="ss">f&quot;view:</span><span class="sc">{</span>request<span class="sc">.</span>full_path<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Check for cached response</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>            cached_page <span class="op">=</span> r.get(cache_key)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> cached_page:</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span> Response(cached_page, content_type<span class="op">=</span><span class="st">&quot;text/html&quot;</span>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Execute the actual route handler</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>            response <span class="op">=</span> f(<span class="op">*</span>args, <span class="op">**</span>kwargs)</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Cache the response content</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> response.status_code <span class="op">==</span> <span class="dv">200</span>:</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>                r.setex(cache_key, timeout, response.get_data())</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>                </span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> response</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> decorated_function</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> decorator</span></code></pre></div>
+<h3 id="fragment-caching-partial-page-caching">Fragment Caching (Partial
+Page Caching)</h3>
+<p>When dynamic, authenticated pages contain both user-specific and
+static components (e.g., an e-commerce page with a universal product
+description alongside a personalized shopping cart):</p>
+<ul>
+<li>Do not cache the full response.</li>
+<li>Cache the computationally heavy, static fragments in Redis (such as
+navigation menus or product descriptions) while rendering user-specific
+sections dynamically.</li>
+</ul>
+<h3 id="framework-level-redis-integration">Framework-Level Redis
+Integration</h3>
+<p>Most major Python frameworks offer built-in Redis integrations for
+page caching:</p>
+<ul>
+<li><strong>Django:</strong> Use <code>django-redis</code> as the
+default cache backend. Configure <code>UpdateCacheMiddleware</code> and
+<code>FetchFromCacheMiddleware</code> to automate site-wide or per-view
+response caching.</li>
+<li><strong>FastAPI:</strong> Use libraries like
+<code>fastapi-cache2</code> with a Redis backend to cache serialized
+JSON endpoints with minimal configuration.</li>
+</ul>
+<hr />
+<h2 id="3-best-practices-for-production-caching">3. Best Practices for
+Production Caching</h2>
+<ol type="1">
+<li><strong>Always Set a TTL:</strong> Always attach an expiration time
+(<code>EX</code> or <code>setex</code>) to prevent Redis from running
+out of memory due to abandoned keys.</li>
+<li><strong>Handle Cache Stampedes:</strong> When a heavily requested
+key expires, hundreds of concurrent requests may hit the database at
+once. Mitigate this by using distributed locks (<code>r.lock()</code>)
+or probabilistic early expiration algorithms (XFetch).</li>
+<li><strong>Configure Eviction Policies:</strong> Set
+<code>maxmemory-policy</code> in Redis (such as <code>allkeys-lru</code>
+or <code>volatile-lru</code>) to automatically drop the least recently
+used keys if physical memory limits are reached.</li>
+<li><strong>Serialize Efficiently:</strong> Use <code>orjson</code> or
+<code>msgpack</code> instead of standard <code>json</code> or
+<code>pickle</code> for significantly faster serialization and smaller
+memory footprints in Python.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>
