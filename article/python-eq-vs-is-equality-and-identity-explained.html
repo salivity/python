@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python __eq__ vs is: Equality and Identity Explained - python</title>
+    <meta name="description" content="In Python, comparing data relies on two fundamental concepts: value equality and object identity. The == operator evaluates equality by invoking an object's eq magic method to determine if two distinct objects hold equivalent values. In contrast, the is">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-eq-vs-is-equality-and-identity-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python __eq__ vs is: Equality and Identity Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-eq-vs-is-equality-and-identity-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, comparing data relies on two fundamental concepts: value equality and object identity. The == operator evaluates equality by invoking an object's eq magic method to determine if two distinct objects hold equivalent values. In contrast, the is" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-eq-vs-is-equality-and-identity-explained">Python
+<strong>eq</strong> vs is: Equality and Identity Explained</h1>
+<p>In Python, comparing data relies on two fundamental concepts: value
+equality and object identity. The <code>==</code> operator evaluates
+equality by invoking an object's <code>__eq__</code> magic method to
+determine if two distinct objects hold equivalent values. In contrast,
+the <code>is</code> keyword checks identity, verifying whether two
+variables reference the exact same memory location. Understanding the
+internal mechanics of <code>__eq__</code> versus <code>is</code> is
+critical for writing bug-free code and avoiding unexpected behavior when
+comparing objects.</p>
+<h2 id="object-identity-the-is-keyword">Object Identity: The
+<code>is</code> Keyword</h2>
+<p>The <code>is</code> keyword compares the memory addresses of two
+objects. It evaluates to <code>True</code> if and only if both operands
+point to the exact same object in memory. Under the hood, Python checks
+the internal pointer of the objects, which corresponds to comparing
+their memory addresses via the built-in <code>id()</code> function:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>a <span class="kw">is</span> b  <span class="co"># Equivalent to: id(a) == id(b)</span></span></code></pre></div>
+<p>Because <code>is</code> operates at the C-pointer level in CPython,
+it cannot be overridden or customized by user-defined classes. This
+makes identity checks exceptionally fast.</p>
+<p>The primary use case for <code>is</code> is comparing against
+singletons, most commonly <code>None</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> result <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Handle missing value</span></span></code></pre></div>
+<p>You should avoid using <code>is</code> to compare literals like
+integers or strings. While CPython caches small integers (typically from
+-5 to 256) and interns certain strings—making <code>a is b</code>
+evaluate to <code>True</code> for these cached values—this is an
+implementation detail and not guaranteed behavior across different
+Python implementations or execution contexts.</p>
+<h2 id="value-equality-the-__eq__-method">Value Equality: The
+<code>__eq__</code> Method</h2>
+<p>The <code>==</code> operator evaluates whether two objects represent
+the same data, regardless of where they reside in memory. When you
+execute <code>a == b</code>, Python translates this expression into a
+call to the left operand's <code>__eq__</code> dunder method:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>a.<span class="fu">__eq__</span>(b)</span></code></pre></div>
+<p>If the left operand's <code>__eq__</code> method returns
+<code>NotImplemented</code>, Python automatically attempts the reverse
+operation by calling the right operand's method:
+<code>b.__eq__(a)</code>. If neither object implements a comparison that
+returns a boolean, Python falls back to identity comparison
+(<code>is</code>).</p>
+<p>By default, user-defined classes inherit <code>object.__eq__</code>,
+which defaults to identity comparison. You can override
+<code>__eq__</code> to implement custom equality logic:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Point:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, x, y):</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.x <span class="op">=</span> x</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.y <span class="op">=</span> y</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__eq__</span>(<span class="va">self</span>, other):</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(other, Point):</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">NotImplemented</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.x <span class="op">==</span> other.x <span class="kw">and</span> <span class="va">self</span>.y <span class="op">==</span> other.y</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>p1 <span class="op">=</span> Point(<span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>p2 <span class="op">=</span> Point(<span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(p1 <span class="op">==</span> p2)  <span class="co"># True (same values via __eq__)</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(p1 <span class="kw">is</span> p2)  <span class="co"># False (distinct memory locations)</span></span></code></pre></div>
+<h2 id="practical-comparison">Practical Comparison</h2>
+<p>Consider how standard mutable collections behave:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>list1 <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>]</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>list2 <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>]</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>list3 <span class="op">=</span> list1</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Comparing list1 and list2</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(list1 <span class="op">==</span> list2)  <span class="co"># True: Both contain equivalent elements</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(list1 <span class="kw">is</span> list2)  <span class="co"># False: Distinct list instances in memory</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Comparing list1 and list3</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(list1 <span class="op">==</span> list3)  <span class="co"># True: Both contain equivalent elements</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(list1 <span class="kw">is</span> list3)  <span class="co"># True: Both point to the exact same list instance</span></span></code></pre></div>
+<p>Modifying <code>list1</code> will also alter <code>list3</code>
+because they share an identity, but <code>list2</code> remains
+unaffected.</p>
+<h2 id="key-rules-of-thumb">Key Rules of Thumb</h2>
+<ul>
+<li><strong>Use <code>==</code></strong> when you care about the
+content, structure, or numeric equivalence of data (e.g., comparing
+numbers, strings, dictionaries, or custom data structures).</li>
+<li><strong>Use <code>is</code></strong> only when you need to verify
+that two references point to the exact same instance in memory, most
+notably when checking for <code>None</code>, <code>True</code>,
+<code>False</code>, or custom sentinel objects.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statsmodels OLS Regression and Tests in Python - python</title>
+    <meta name="description" content="The Python statsmodels library provides a comprehensive framework for estimating Ordinary Least Squares (OLS) regression models and conducting rigorous statistical tests. By coupling linear algebra solvers with classical inferential statistics, statsmode">
+    <link rel="canonical" href="https://salivity.github.io/python/article/statsmodels-ols-regression-and-tests-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Statsmodels OLS Regression and Tests in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/statsmodels-ols-regression-and-tests-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Python statsmodels library provides a comprehensive framework for estimating Ordinary Least Squares (OLS) regression models and conducting rigorous statistical tests. By coupling linear algebra solvers with classical inferential statistics, statsmode" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="statsmodels-ols-regression-and-tests-in-python">Statsmodels OLS
+Regression and Tests in Python</h1>
+<p>The Python <code>statsmodels</code> library provides a comprehensive
+framework for estimating Ordinary Least Squares (OLS) regression models
+and conducting rigorous statistical tests. By coupling linear algebra
+solvers with classical inferential statistics, <code>statsmodels</code>
+allows practitioners to fit linear models, estimate parameters, and
+automatically generate detailed summary outputs containing p-values,
+standard errors, and confidence intervals. Beyond basic model fitting,
+the library includes a suite of diagnostic tests to evaluate core
+regression assumptions, such as residual normality, homoscedasticity,
+and independence.</p>
+<h3 id="setting-up-ols-regression-in-statsmodels">Setting Up OLS
+Regression in Statsmodels</h3>
+<p>To perform OLS regression, <code>statsmodels</code> requires the
+dependent variable (<span class="math inline">\(y\)</span>) and
+independent variables (<span class="math inline">\(X\)</span>) formatted
+as NumPy arrays or pandas DataFrames. Unlike libraries such as
+scikit-learn, <code>statsmodels</code> does not include an intercept
+term by default. You must explicitly add a constant column using
+<code>sm.add_constant()</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> statsmodels.api <span class="im">as</span> sm</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Sample data</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>np.random.seed(<span class="dv">42</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> np.random.rand(<span class="dv">100</span>, <span class="dv">2</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> <span class="dv">2</span> <span class="op">+</span> <span class="dv">3</span> <span class="op">*</span> X[:, <span class="dv">0</span>] <span class="op">+</span> <span class="fl">1.5</span> <span class="op">*</span> X[:, <span class="dv">1</span>] <span class="op">+</span> np.random.normal(<span class="dv">0</span>, <span class="fl">0.5</span>, <span class="dv">100</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Add an intercept (constant term)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>X_with_const <span class="op">=</span> sm.add_constant(X)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Define and fit the OLS model</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> sm.OLS(y, X_with_const)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> model.fit()</span></code></pre></div>
+<p>The <code>fit()</code> method uses standard matrix
+operations—specifically solving the normal equations via QR
+decomposition or singular value decomposition (SVD)—to calculate the
+coefficient estimates that minimize the sum of squared residuals.</p>
+<h3 id="interpreting-the-statistical-summary">Interpreting the
+Statistical Summary</h3>
+<p>Calling <code>results.summary()</code> produces a structured report
+divided into three main components:</p>
+<ol type="1">
+<li><strong>Model Fit Metrics:</strong> Displays the coefficient of
+determination (<span class="math inline">\(R^2\)</span>), Adjusted <span
+class="math inline">\(R^2\)</span>, the overall <span
+class="math inline">\(F\)</span>-statistic, and its corresponding
+p-value (<code>Prob (F-statistic)</code>), which evaluates whether any
+independent variable significantly predicts the outcome.</li>
+<li><strong>Parameter Estimates:</strong> Details the estimated
+coefficients (<code>coef</code>), standard errors
+(<code>std err</code>), <span
+class="math inline">\(t\)</span>-statistics (<code>t</code>), two-tailed
+p-values (<code>P&gt;|t|</code>), and 95% confidence intervals for each
+predictor.</li>
+<li><strong>Residual Diagnostics:</strong> Provides baseline metrics on
+error behavior, including the Omnibus test, the Jarque-Bera test, and
+the Durbin-Watson statistic.</li>
+</ol>
+<h3 id="hypothesis-testing-on-coefficients">Hypothesis Testing on
+Coefficients</h3>
+<p>To test linear hypotheses about parameters, <code>statsmodels</code>
+provides dedicated methods on the fitted results object:</p>
+<ul>
+<li><strong>t-tests (<code>t_test</code>):</strong> Tests individual
+linear combinations of coefficients (e.g., whether a coefficient equals
+a specific non-zero value or whether two coefficients are equal).</li>
+<li><strong>F-tests (<code>f_test</code>):</strong> Tests multiple
+linear restrictions simultaneously, such as testing whether a subset of
+coefficients jointly equals zero.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Test if the first predictor equals 3</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>t_test_res <span class="op">=</span> results.t_test(<span class="st">&quot;x1 = 3&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Joint hypothesis test (F-test)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>f_test_res <span class="op">=</span> results.f_test(<span class="st">&quot;x1 = 3, x2 = 1.5&quot;</span>)</span></code></pre></div>
+<h3 id="residual-diagnostic-tests">Residual Diagnostic Tests</h3>
+<p>Validating the Gauss-Markov assumptions is essential for ensuring
+that OLS estimators remain the Best Linear Unbiased Estimators (BLUE).
+The <code>statsmodels.stats</code> module includes tests for these
+assumptions:</p>
+<h4 id="1-autocorrelation">1. Autocorrelation</h4>
+<p>The <strong>Durbin-Watson</strong> statistic tests for first-order
+autocorrelation in residuals and is printed in the standard summary. A
+value near 2 indicates no autocorrelation, while values approaching 0 or
+4 indicate positive or negative autocorrelation, respectively. For
+higher-order autocorrelation, the Breusch-Godfrey test is available via
+<code>sm.stats.acorr_breusch_godfrey(results)</code>.</p>
+<h4 id="2-heteroscedasticity">2. Heteroscedasticity</h4>
+<p>When the variance of residuals is non-constant, standard errors are
+biased. <code>statsmodels</code> provides tests to detect
+heteroscedasticity:</p>
+<ul>
+<li><strong>Breusch-Pagan Test:</strong>
+<code>sm.stats.het_breuschpagan(results.resid, results.model.exog)</code>
+tests whether residual variance depends on the independent
+variables.</li>
+<li><strong>White Test:</strong>
+<code>sm.stats.het_white(results.resid, results.model.exog)</code>
+includes cross-products and squared terms for a more general check.</li>
+</ul>
+<p>If heteroscedasticity is detected, robust standard errors (such as
+HC1, HC2, or HC3) can be calculated directly by refitting with
+<code>model.fit(cov_type='HC3')</code>.</p>
+<h4 id="3-normality-of-residuals">3. Normality of Residuals</h4>
+<p>Normality is required for valid hypothesis testing in small samples.
+The summary output includes:</p>
+<ul>
+<li><strong>Omnibus Test:</strong> Measures skewness and kurtosis
+jointly.</li>
+<li><strong>Jarque-Bera Test:</strong> Evaluates whether sample skewness
+and kurtosis match a normal distribution.</li>
+</ul>
+<p>Both tests can be run explicitly using
+<code>sm.stats.jarque_bera(results.resid)</code>.</p>
+<h4 id="4-multicollinearity">4. Multicollinearity</h4>
+<p>High correlation between predictors inflates standard errors. The
+Variance Inflation Factor (VIF) measures this inflation:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> statsmodels.stats.outliers_influence <span class="im">import</span> variance_inflation_factor</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>vifs <span class="op">=</span> [</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    variance_inflation_factor(X_with_const, i)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(X_with_const.shape[<span class="dv">1</span>])</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>]</span></code></pre></div>
+<p>A VIF greater than 5 or 10 typically suggests problematic
+multicollinearity.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

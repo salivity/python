@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Brython Runs Python in the Browser DOM - python</title>
+    <meta name="description" content="Brython (Browser Python) is an open-source implementation of Python 3 tailored for client-side web development, designed to allow developers to write Python code that runs natively in web browsers instead of JavaScript. This article explains the mechanic">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-brython-runs-python-in-the-browser-dom">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Brython Runs Python in the Browser DOM - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-brython-runs-python-in-the-browser-dom" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Brython (Browser Python) is an open-source implementation of Python 3 tailored for client-side web development, designed to allow developers to write Python code that runs natively in web browsers instead of JavaScript. This article explains the mechanic" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-brython-runs-python-in-the-browser-dom">How Brython Runs
+Python in the Browser DOM</h1>
+<p>Brython (Browser Python) is an open-source implementation of Python 3
+tailored for client-side web development, designed to allow developers
+to write Python code that runs natively in web browsers instead of
+JavaScript. This article explains the mechanics of how Brython
+transcompiles Python code on the fly into native JavaScript, exposes the
+Document Object Model (DOM) through built-in standard modules, and binds
+browser events directly to Python functions.</p>
+<h3 id="the-client-side-execution-engine">The Client-Side Execution
+Engine</h3>
+<p>Brython operates entirely within the user's browser without requiring
+a server-side Python runtime. Integration begins by including the
+<code>brython.js</code> script in an HTML file and initializing it on
+page load, typically by adding <code>onload="brython()"</code> to the
+<code>&lt;body&gt;</code> tag.</p>
+<p>When the page loads, the Brython engine scans the document for script
+tags with the custom MIME type
+<code>&lt;script type="text/python"&gt;</code>. The engine reads the
+Python source code contained within these tags, passes it through an
+in-browser lexer and parser, and transcompiles the Abstract Syntax Tree
+(AST) into equivalent JavaScript instructions. Because the output is
+native JavaScript, the browser's JavaScript V8 or SpiderMonkey engine
+executes the generated code directly, ensuring full integration with
+native browser APIs.</p>
+<h3 id="the-browser-module-and-dom-abstraction">The <code>browser</code>
+Module and DOM Abstraction</h3>
+<p>Brython interfaces with the web page through a dedicated client
+library centered around the <code>browser</code> module. This module
+bridges Python's object model and the browser's DOM structure.</p>
+<p>Key submodules include:</p>
+<ul>
+<li><strong><code>browser.document</code></strong>: Represents the
+current web page (the JavaScript <code>window.document</code> object).
+It allows developers to query, inspect, and update nodes using Python
+expressions.</li>
+<li><strong><code>browser.html</code></strong>: Provides a Python class
+for every standard HTML5 tag (such as <code>html.DIV</code>,
+<code>html.BUTTON</code>, <code>html.P</code>). Instantiating these
+classes creates new DOM elements.</li>
+<li><strong><code>browser.window</code></strong>: Directly exposes the
+global browser environment, allowing access to standard APIs like
+<code>localStorage</code>, <code>fetch</code>, and custom JavaScript
+objects.</li>
+</ul>
+<h3 id="manipulating-the-dom-with-python-syntax">Manipulating the DOM
+with Python Syntax</h3>
+<p>Brython simplifies DOM manipulation by translating standard Python
+operations into DOM mutations:</p>
+<ol type="1">
+<li><strong>Element Selection</strong>: Developers can query elements
+using dictionary-like key access or methods. For example,
+<code>document["main-container"]</code> retrieves an element by its ID,
+while <code>document.select(".item")</code> uses standard CSS selector
+syntax.</li>
+<li><strong>Element Creation and Nesting</strong>: Instead of calling
+methods like <code>appendChild()</code>, Brython overloads the Python
+<code>&lt;=</code> operator. Writing
+<code>container &lt;= html.P("Hello, World!")</code> creates a new
+paragraph element and appends it as a child of <code>container</code>.
+Elements can also be nested inside constructors:
+<code>html.DIV(html.H1("Title") + html.P("Description"))</code>.</li>
+<li><strong>Modifying Attributes and Styles</strong>: DOM attributes and
+inline CSS styles are modified via direct attribute assignments or
+mapping syntax. For instance, setting
+<code>element.style.color = "blue"</code> or
+<code>element.attrs["disabled"] = True</code> immediately alters the
+rendered element.</li>
+</ol>
+<h3 id="event-handling">Event Handling</h3>
+<p>Brython maps the standard browser event loop directly to Python
+callables. Elements feature a <code>bind</code> method (usable directly
+or as a decorator) to link browser events—such as clicks, keyboard
+input, or form submissions—to standard Python functions.</p>
+<p>When an event triggers:</p>
+<ol type="1">
+<li>The browser generates a native JavaScript <code>Event</code>
+object.</li>
+<li>Brython wraps this object in a Python-compatible wrapper.</li>
+<li>The assigned Python function is invoked with the wrapped event
+passed as an argument.</li>
+</ol>
+<p>Inside the handler, developers can access event attributes such as
+<code>event.target</code>, prevent default browser actions using
+<code>event.preventDefault()</code>, and update application state using
+standard Python logic.</p>
+<h3 id="javascript-interoperability">JavaScript Interoperability</h3>
+<p>Because Brython runs within the JavaScript virtual machine, it
+maintains full bidirectional interoperability with existing JavaScript
+libraries. Through the <code>browser.window</code> namespace, Python
+code can call third-party JavaScript functions, initialize JavaScript
+objects using <code>window.MyLibrary.new()</code>, and pass Python
+functions as callbacks. This enables developers to use popular
+JavaScript graphics or UI libraries while writing their primary
+application logic and DOM manipulation in Python.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

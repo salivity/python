@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python multiprocessing.cpu_count in Containers - python</title>
+    <meta name="description" content="In containerized environments such as Docker and Kubernetes, Python's multiprocessing.cpucount() often reports inaccurate core counts by querying the physical host rather than the container's assigned limits. This article explains the internal mechanisms">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-multiprocessing-cpu-count-in-containers">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python multiprocessing.cpu_count in Containers - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-multiprocessing-cpu-count-in-containers" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In containerized environments such as Docker and Kubernetes, Python's multiprocessing.cpucount() often reports inaccurate core counts by querying the physical host rather than the container's assigned limits. This article explains the internal mechanisms" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-multiprocessingcpu_count-in-containers">Python
+multiprocessing.cpu_count in Containers</h1>
+<p>In containerized environments such as Docker and Kubernetes, Python's
+<code>multiprocessing.cpu_count()</code> often reports inaccurate core
+counts by querying the physical host rather than the container's
+assigned limits. This article explains the internal mechanisms Python
+uses to detect CPUs, why these mechanisms fail to account for container
+resource constraints, the performance risks involved, and how to
+reliably determine actual core availability.</p>
+<h3 id="how-multiprocessingcpu_count-works">How
+<code>multiprocessing.cpu_count()</code> Works</h3>
+<p>Under the hood, <code>multiprocessing.cpu_count()</code> is an alias
+for <code>os.cpu_count()</code>. On Linux systems, this function relies
+on standard POSIX C library calls, specifically:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>sysconf<span class="op">(</span>_SC_NPROCESSORS_ONLN<span class="op">);</span></span></code></pre></div>
+<p>This system call queries the Linux kernel to determine the number of
+physical or logical CPU cores currently online and available to the
+operating system kernel. It does not inspect user-space process limits,
+virtualization boundaries, or control group configurations.</p>
+<h3 id="why-container-limits-are-ignored">Why Container Limits Are
+Ignored</h3>
+<p>Containers are not virtual machines; they share the host kernel.
+Resource restrictions in containers are enforced via Linux Control
+Groups (cgroups), specifically through two main mechanisms:</p>
+<ol type="1">
+<li><strong>Completely Fair Scheduler (CFS) Quotas:</strong> When you
+allocate fractional or fixed CPUs (e.g., <code>--cpus="2.0"</code> in
+Docker or <code>resources.limits.cpu: "2"</code> in Kubernetes), the
+kernel does not hide host cores. Instead, it enforces a time quota over
+a period (typically 100ms). If a container has a 2-core limit, it is
+granted 200ms of CPU time across every 100ms window.</li>
+<li><strong>CPU Pinning (<code>cpuset</code>):</strong> When you
+explicitly assign cores (e.g., <code>--cpuset-cpus="0,1"</code>), the
+kernel restricts the container processes to run only on designated
+physical cores.</li>
+</ol>
+<p>Because <code>sysconf(_SC_NPROCESSORS_ONLN)</code> only checks total
+online host cores, <code>multiprocessing.cpu_count()</code> completely
+ignores CFS quotas. For example, if a container runs on a 64-core host
+but is limited to 2 CPUs via Kubernetes,
+<code>multiprocessing.cpu_count()</code> will still return
+<code>64</code>.</p>
+<h3 id="consequences-of-inaccurate-core-detection">Consequences of
+Inaccurate Core Detection</h3>
+<p>Assuming host-level core counts inside a constrained container leads
+to severe performance degradation:</p>
+<ul>
+<li><strong>Excessive Worker Spawning:</strong> Libraries like Celery,
+Gunicorn, or data-processing frameworks default their worker pools to
+<code>multiprocessing.cpu_count()</code>. A container restricted to 2
+cores might spawn 64 or 128 workers.</li>
+<li><strong>CPU Throttling:</strong> Spawning dozens of threads or
+processes competing for limited CFS runtime causes aggressive kernel
+throttling, where processes are repeatedly paused mid-execution.</li>
+<li><strong>Context Switching Overhead:</strong> The CPU spends
+significant time switching execution contexts rather than executing
+instructions.</li>
+<li><strong>Out-Of-Memory (OOM) Errors:</strong> More processes consume
+more baseline memory, increasing the likelihood that the container
+exceeds its memory limit and gets terminated by the Linux OOM
+killer.</li>
+</ul>
+<h3 id="handling-cpuset-vs-cfs-quota">Handling <code>cpuset</code> vs.
+CFS Quota</h3>
+<p>If a container uses CPU pinning (<code>cpuset</code>), Python's
+<code>os.sched_getaffinity(0)</code> can detect the assigned cores:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Returns the number of pinned cores if cpuset is applied</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>available_cpus <span class="op">=</span> <span class="bu">len</span>(os.sched_getaffinity(<span class="dv">0</span>))</span></code></pre></div>
+<p>However, if the container uses CFS quotas (which is the standard
+implementation in Kubernetes and most Docker deployments),
+<code>os.sched_getaffinity(0)</code> still returns the total host
+count.</p>
+<h3 id="correctly-determining-cpu-availability">Correctly Determining
+CPU Availability</h3>
+<p>To accurately find available compute capacity, applications must read
+the container's cgroup configuration files directly.</p>
+<h4 id="for-cgroups-v1">For cgroups v1:</h4>
+<p>CFS quota settings reside in <code>/sys/fs/cgroup/cpu/</code>:</p>
+<ul>
+<li><code>cpu.cfs_quota_us</code>: The allowed run time in microseconds
+per period (returns <code>-1</code> if unlimited).</li>
+<li><code>cpu.cfs_period_us</code>: The length of the period in
+microseconds (typically <code>100000</code>).</li>
+</ul>
+<h4 id="for-cgroups-v2">For cgroups v2:</h4>
+<p>Settings reside in <code>/sys/fs/cgroup/cpu.max</code>:</p>
+<ul>
+<li>Contains two values: <code>quota</code> and <code>period</code>
+(e.g., <code>200000 100000</code> for 2 cores, or
+<code>max 100000</code> if unlimited).</li>
+</ul>
+<h4 id="implementation-example">Implementation Example:</h4>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_container_cpu_limit():</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 1. Check cgroups v2</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    cgroup_v2 <span class="op">=</span> Path(<span class="st">&quot;/sys/fs/cgroup/cpu.max&quot;</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> cgroup_v2.exists():</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        quota, period <span class="op">=</span> cgroup_v2.read_text().split()</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> quota <span class="op">!=</span> <span class="st">&quot;max&quot;</span>:</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> math.ceil(<span class="bu">int</span>(quota) <span class="op">/</span> <span class="bu">int</span>(period))</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 2. Check cgroups v1</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    quota_v1 <span class="op">=</span> Path(<span class="st">&quot;/sys/fs/cgroup/cpu/cpu.cfs_quota_us&quot;</span>)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    period_v1 <span class="op">=</span> Path(<span class="st">&quot;/sys/fs/cgroup/cpu/cpu.cfs_period_us&quot;</span>)</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> quota_v1.exists() <span class="kw">and</span> period_v1.exists():</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        quota <span class="op">=</span> <span class="bu">int</span>(quota_v1.read_text().strip())</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        period <span class="op">=</span> <span class="bu">int</span>(period_v1.read_text().strip())</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> quota <span class="op">&gt;</span> <span class="dv">0</span>:</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> math.ceil(quota <span class="op">/</span> period)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 3. Fallback to process affinity (e.g., cpuset)</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">hasattr</span>(os, <span class="st">&quot;sched_getaffinity&quot;</span>):</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">len</span>(os.sched_getaffinity(<span class="dv">0</span>))</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 4. Final fallback to host CPU count</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> os.cpu_count()</span></code></pre></div>
+<h3 id="improvements-in-python-313">Improvements in Python 3.13</h3>
+<p>Recognizing this common issue, Python 3.13 introduced
+<code>os.process_cpu_count()</code>. Unlike <code>os.cpu_count()</code>
+and <code>multiprocessing.cpu_count()</code>,
+<code>os.process_cpu_count()</code> is designed to return the number of
+logical CPUs that the calling process is restricted to, taking into
+account thread affinity and system limits where supported by the
+platform.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

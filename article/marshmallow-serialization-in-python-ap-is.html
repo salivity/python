@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marshmallow Serialization in Python APIs - python</title>
+    <meta name="description" content="Marshmallow is a Python library that bridges the gap between complex object models and basic data types required for web APIs. It handles serialization (converting Python objects to formats like JSON), deserialization (transforming incoming request paylo">
+    <link rel="canonical" href="https://salivity.github.io/python/article/marshmallow-serialization-in-python-ap-is">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Marshmallow Serialization in Python APIs - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/marshmallow-serialization-in-python-ap-is" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Marshmallow is a Python library that bridges the gap between complex object models and basic data types required for web APIs. It handles serialization (converting Python objects to formats like JSON), deserialization (transforming incoming request paylo" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="marshmallow-serialization-in-python-apis">Marshmallow
+Serialization in Python APIs</h1>
+<p>Marshmallow is a Python library that bridges the gap between complex
+object models and basic data types required for web APIs. It handles
+serialization (converting Python objects to formats like JSON),
+deserialization (transforming incoming request payloads into Python
+objects), and data validation. By decoupling data transformation and
+validation logic from specific web frameworks and databases, Marshmallow
+provides a clean, reusable architecture for handling API inputs and
+outputs.</p>
+<h3 id="defining-schemas">Defining Schemas</h3>
+<p>At the core of Marshmallow is the <code>Schema</code> class. A schema
+acts as a blueprint that declares the structure of the data, specifying
+field types, validation rules, and default behaviors.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> marshmallow <span class="im">import</span> Schema, fields, validate</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> UserSchema(Schema):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">id</span> <span class="op">=</span> fields.Int(dump_only<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    username <span class="op">=</span> fields.Str(required<span class="op">=</span><span class="va">True</span>, validate<span class="op">=</span>validate.Length(<span class="bu">min</span><span class="op">=</span><span class="dv">3</span>))</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    email <span class="op">=</span> fields.Email(required<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    created_at <span class="op">=</span> fields.DateTime(dump_only<span class="op">=</span><span class="va">True</span>)</span></code></pre></div>
+<p>Fields can be configured with specific attributes, such as
+<code>dump_only</code> (only used during serialization) or
+<code>load_only</code> (only used during deserialization), ensuring
+fine-grained control over what data is exposed or accepted.</p>
+<h3 id="object-serialization-dumping">Object Serialization
+(Dumping)</h3>
+<p>Serialization in Marshmallow is the process of converting
+application-level objects—such as SQLAlchemy models, Django querysets,
+or custom class instances—into native Python data structures like
+dictionaries and lists. These standard structures can then be encoded
+into JSON or other formats for API responses.</p>
+<p>Using the <code>dump()</code> method for single objects or
+<code>dump(many=True)</code> for collections, Marshmallow extracts the
+relevant attributes specified in the schema. This eliminates the need to
+manually construct dictionaries from ORM models, reducing boilerplate
+code and ensuring that sensitive attributes (like password hashes) are
+omitted from outgoing responses.</p>
+<h3 id="input-deserialization-and-validation-loading">Input
+Deserialization and Validation (Loading)</h3>
+<p>Deserialization is the reverse process, where raw input data from an
+HTTP request (typically parsed JSON) is validated and converted into
+Python data types. Using the <code>load()</code> method, Marshmallow
+checks the incoming payload against the schema definition:</p>
+<ol type="1">
+<li><strong>Type Checking:</strong> Ensures fields match expected data
+types (e.g., converting ISO date strings to Python <code>datetime</code>
+objects).</li>
+<li><strong>Constraint Validation:</strong> Applies built-in or custom
+validators to check for constraints like string lengths, regex patterns,
+or numerical ranges.</li>
+<li><strong>Error Handling:</strong> If validation fails, Marshmallow
+raises a <code>ValidationError</code> containing a dictionary of
+specific field errors, which can be returned directly to API clients
+with a <code>400 Bad Request</code> status code.</li>
+</ol>
+<h3 id="framework-agnosticism">Framework Agnosticism</h3>
+<p>Unlike serialization systems built directly into specific frameworks
+(such as Django REST Framework's serializers), Marshmallow is
+framework-agnostic. It integrates easily with microframeworks like Flask
+and Bottle, standalone asynchronous servers, or background worker tasks
+(such as Celery). It can also be paired with ORM integrations like
+<code>marshmallow-sqlalchemy</code> to automatically generate schemas
+directly from database models, maintaining consistency across the API
+lifecycle.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

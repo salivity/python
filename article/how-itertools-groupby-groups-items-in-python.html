@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How itertools.groupby() Groups Items in Python - python</title>
+    <meta name="description" content="Python's itertools.groupby() creates consecutive chunks of elements from an iterable based on a shared key or identity. This article explains the core mechanism behind groupby(), why pre-sorting your dataset is critical, how to utilize the key parameter,">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-itertools-groupby-groups-items-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How itertools.groupby() Groups Items in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-itertools-groupby-groups-items-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's itertools.groupby() creates consecutive chunks of elements from an iterable based on a shared key or identity. This article explains the core mechanism behind groupby(), why pre-sorting your dataset is critical, how to utilize the key parameter," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-itertoolsgroupby-groups-items-in-python">How
+itertools.groupby() Groups Items in Python</h1>
+<p>Python's <code>itertools.groupby()</code> creates consecutive chunks
+of elements from an iterable based on a shared key or identity. This
+article explains the core mechanism behind <code>groupby()</code>, why
+pre-sorting your dataset is critical, how to utilize the
+<code>key</code> parameter, and how to avoid the common pitfalls
+associated with lazy evaluation.</p>
+<h2 id="the-core-mechanism-consecutive-grouping">The Core Mechanism:
+Consecutive Grouping</h2>
+<p>Unlike the <code>GROUP BY</code> clause in SQL, Python's
+<code>itertools.groupby()</code> does not look across the entire
+iterable to gather matching elements into single buckets. Instead, it
+processes items sequentially and splits the stream whenever the
+calculated key changes.</p>
+<p>When <code>itertools.groupby()</code> iterates through a sequence, it
+evaluates each element using an optional key function. If the current
+item has the same key as the previous item, it appends the item to the
+current group. As soon as an element with a different key is
+encountered, the current group is closed, and a new group is
+started.</p>
+<h2 id="the-requirement-to-sort">The Requirement to Sort</h2>
+<p>Because grouping only occurs over consecutive matches, non-adjacent
+identical keys will produce separate, duplicate groups. To group all
+identical elements together across an entire collection, you must first
+sort the iterable using the same key function.</p>
+<p>Consider this unsorted list:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> itertools</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> [<span class="st">&quot;apple&quot;</span>, <span class="st">&quot;apricot&quot;</span>, <span class="st">&quot;banana&quot;</span>, <span class="st">&quot;avocado&quot;</span>]</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> key, group <span class="kw">in</span> itertools.groupby(data, key<span class="op">=</span><span class="kw">lambda</span> x: x[<span class="dv">0</span>]):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(key, <span class="bu">list</span>(group))</span></code></pre></div>
+<p><strong>Output:</strong></p>
+<pre class="text"><code>a [&#39;apple&#39;, &#39;apricot&#39;]
+b [&#39;banana&#39;]
+a [&#39;avocado&#39;]</code></pre>
+<p>Because <code>"banana"</code> interrupted the sequence, the letter
+<code>'a'</code> appears twice as a group key. To ensure all items
+starting with <code>'a'</code> reside in a single group, sort the list
+first:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> itertools</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> [<span class="st">&quot;apple&quot;</span>, <span class="st">&quot;apricot&quot;</span>, <span class="st">&quot;banana&quot;</span>, <span class="st">&quot;avocado&quot;</span>]</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>sorted_data <span class="op">=</span> <span class="bu">sorted</span>(data, key<span class="op">=</span><span class="kw">lambda</span> x: x[<span class="dv">0</span>])</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> key, group <span class="kw">in</span> itertools.groupby(sorted_data, key<span class="op">=</span><span class="kw">lambda</span> x: x[<span class="dv">0</span>]):</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(key, <span class="bu">list</span>(group))</span></code></pre></div>
+<p><strong>Output:</strong></p>
+<pre class="text"><code>a [&#39;apple&#39;, &#39;apricot&#39;, &#39;avocado&#39;]
+b [&#39;banana&#39;]</code></pre>
+<h2 id="syntax-and-key-functions">Syntax and Key Functions</h2>
+<p>The syntax for the function is:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>itertools.groupby(iterable, key<span class="op">=</span><span class="va">None</span>)</span></code></pre></div>
+<ul>
+<li><strong><code>iterable</code></strong>: Any Python iterable (list,
+tuple, generator, string).</li>
+<li><strong><code>key</code></strong>: A function that accepts an
+element and returns the value to group by. If omitted or set to
+<code>None</code>, the element itself is used as the key.</li>
+</ul>
+<h3 id="grouping-complex-objects">Grouping Complex Objects</h3>
+<p>The <code>key</code> parameter is frequently used with dictionary
+items, tuples, or object attributes:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> itertools <span class="im">import</span> groupby</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> operator <span class="im">import</span> itemgetter</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>users <span class="op">=</span> [</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    {<span class="st">&quot;name&quot;</span>: <span class="st">&quot;Alice&quot;</span>, <span class="st">&quot;role&quot;</span>: <span class="st">&quot;Admin&quot;</span>},</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    {<span class="st">&quot;name&quot;</span>: <span class="st">&quot;Bob&quot;</span>, <span class="st">&quot;role&quot;</span>: <span class="st">&quot;User&quot;</span>},</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    {<span class="st">&quot;name&quot;</span>: <span class="st">&quot;Charlie&quot;</span>, <span class="st">&quot;role&quot;</span>: <span class="st">&quot;Admin&quot;</span>},</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    {<span class="st">&quot;name&quot;</span>: <span class="st">&quot;David&quot;</span>, <span class="st">&quot;role&quot;</span>: <span class="st">&quot;User&quot;</span>}</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Sort by the role first</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>sorted_users <span class="op">=</span> <span class="bu">sorted</span>(users, key<span class="op">=</span>itemgetter(<span class="st">&quot;role&quot;</span>))</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Group by role</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>grouped_users <span class="op">=</span> {}</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> role, group <span class="kw">in</span> groupby(sorted_users, key<span class="op">=</span>itemgetter(<span class="st">&quot;role&quot;</span>)):</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    grouped_users[role] <span class="op">=</span> <span class="bu">list</span>(group)</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(grouped_users)</span></code></pre></div>
+<h2 id="lazy-iteration-and-pitfalls">Lazy Iteration and Pitfalls</h2>
+<p><code>itertools.groupby()</code> operates lazily to remain
+memory-efficient with large datasets. It yields a 2-tuple on each
+iteration: <code>(key, group_iterator)</code>.</p>
+<p>The <code>group_iterator</code> shares the underlying iterator of the
+<code>groupby</code> object. Consequently, when the main
+<code>groupby</code> loop advances to the next group, the previous
+<code>group_iterator</code> is exhausted.</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Problematic: Trying to read groups after the loop advances</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>groups <span class="op">=</span> [group <span class="cf">for</span> key, group <span class="kw">in</span> itertools.groupby(sorted_data, key<span class="op">=</span><span class="kw">lambda</span> x: x[<span class="dv">0</span>])]</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># All sub-iterators except the last one will be empty</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>([<span class="bu">list</span>(g) <span class="cf">for</span> g <span class="kw">in</span> groups])</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: [[], [&#39;banana&#39;]]</span></span></code></pre></div>
+<p>To retain group members for later use, convert each
+<code>group</code> iterator into a concrete collection, such as a
+<code>list</code>, during each iteration of the loop:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Correct approach</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>saved_groups <span class="op">=</span> {key: <span class="bu">list</span>(group) <span class="cf">for</span> key, group <span class="kw">in</span> itertools.groupby(sorted_data, key<span class="op">=</span><span class="kw">lambda</span> x: x[<span class="dv">0</span>])}</span></code></pre></div></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

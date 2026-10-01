@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parameters Passed to __exit__ in Python Exceptions - python</title>
+    <meta name="description" content="When an exception occurs inside a Python with statement block, the context manager's exit method is invoked to handle the cleanup and control the error flow. In this scenario, Python automatically passes three specific arguments to exit: the exception ty">
+    <link rel="canonical" href="https://salivity.github.io/python/article/parameters-passed-to-exit-in-python-exceptions">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Parameters Passed to __exit__ in Python Exceptions - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/parameters-passed-to-exit-in-python-exceptions" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When an exception occurs inside a Python with statement block, the context manager's exit method is invoked to handle the cleanup and control the error flow. In this scenario, Python automatically passes three specific arguments to exit: the exception ty" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="parameters-passed-to-exit-in-python-exceptions">Parameters
+Passed to <strong>exit</strong> in Python Exceptions</h1>
+<p>When an exception occurs inside a Python <code>with</code> statement
+block, the context manager's <code>__exit__</code> method is invoked to
+handle the cleanup and control the error flow. In this scenario, Python
+automatically passes three specific arguments to <code>__exit__</code>:
+the exception type, the exception instance, and the traceback object.
+Understanding these parameters enables developers to inspect, log, or
+suppress errors dynamically at runtime.</p>
+<h3 id="the-three-exception-parameters">The Three Exception
+Parameters</h3>
+<p>The standard signature for the <code>__exit__</code> method is:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> <span class="fu">__exit__</span>(<span class="va">self</span>, exc_type, exc_val, exc_tb):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<p>When an exception is raised, these parameters receive the following
+values:</p>
+<ol type="1">
+<li><p><strong><code>exc_type</code> (Exception Type):</strong><br />
+This is the class of the exception that was raised (for example,
+<code>ValueError</code>, <code>KeyError</code>, or
+<code>ZeroDivisionError</code>). It represents the category of the
+error, rather than the error object itself.</p></li>
+<li><p><strong><code>exc_val</code> (Exception Value):</strong><br />
+This is the actual instance of the exception that was raised (e.g.,
+<code>ValueError("invalid literal")</code>). It contains the error
+message and any custom attributes attached to the error object.</p></li>
+<li><p><strong><code>exc_tb</code> (Traceback):</strong><br />
+This is a <code>traceback</code> object containing the execution call
+stack at the point where the exception was triggered. It can be
+formatted or analyzed using Python’s standard <code>traceback</code>
+module.</p></li>
+</ol>
+<p>If the block inside the <code>with</code> statement completes
+successfully without any errors, all three arguments
+(<code>exc_type</code>, <code>exc_val</code>, and <code>exc_tb</code>)
+are set to <code>None</code>.</p>
+<h3 id="code-example">Code Example</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ErrorInspector:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__enter__</span>(<span class="va">self</span>):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__exit__</span>(<span class="va">self</span>, exc_type, exc_val, exc_tb):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> exc_type <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Type: </span><span class="sc">{</span>exc_type<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Value: </span><span class="sc">{</span>exc_val<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Traceback: </span><span class="sc">{</span>exc_tb<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">True</span>  <span class="co"># Suppress the exception</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> ErrorInspector():</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">&quot;Something went wrong inside the block.&quot;</span>)</span></code></pre></div>
+<h3 id="controlling-exception-propagation">Controlling Exception
+Propagation</h3>
+<p>The return value of <code>__exit__</code> dictates what happens to
+the exception after the method finishes executing:</p>
+<ul>
+<li><strong>Returning <code>True</code>:</strong> Suppresses the
+exception. The execution continues normally outside the
+<code>with</code> block without raising the error to the calling
+scope.</li>
+<li><strong>Returning <code>False</code> or <code>None</code>:</strong>
+Allows the exception to propagate normally. Python will re-raise the
+exception after <code>__exit__</code> completes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

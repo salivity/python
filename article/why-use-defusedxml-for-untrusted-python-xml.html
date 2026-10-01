@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why Use defusedxml for Untrusted Python XML - python</title>
+    <meta name="description" content="Python’s built-in XML processing libraries are inherently unsafe when handling input from untrusted sources, exposing applications to denial-of-service attacks and unauthorized data disclosure. The third-party defusedxml package is widely recommended b">
+    <link rel="canonical" href="https://salivity.github.io/python/article/why-use-defusedxml-for-untrusted-python-xml">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Why Use defusedxml for Untrusted Python XML - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/why-use-defusedxml-for-untrusted-python-xml" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s built-in XML processing libraries are inherently unsafe when handling input from untrusted sources, exposing applications to denial-of-service attacks and unauthorized data disclosure. The third-party defusedxml package is widely recommended b" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="why-use-defusedxml-for-untrusted-python-xml">Why Use defusedxml
+for Untrusted Python XML</h1>
+<p>Python’s built-in XML processing libraries are inherently unsafe when
+handling input from untrusted sources, exposing applications to
+denial-of-service attacks and unauthorized data disclosure. The
+third-party <code>defusedxml</code> package is widely recommended
+because it acts as a secure, drop-in replacement that alters parser
+behaviors to neutralize standard XML-based vulnerabilities. By enforcing
+strict parsing limits and disabling hazardous features by default,
+<code>defusedxml</code> protects systems from exploitation without
+requiring complex manual parser configurations.</p>
+<h3 id="inherent-risks-of-pythons-standard-parsers">Inherent Risks of
+Python's Standard Parsers</h3>
+<p>Python’s standard library modules—including
+<code>xml.etree.ElementTree</code>, <code>xml.dom.minidom</code>,
+<code>xml.sax</code>, and <code>xmlrpc</code>—prioritize performance and
+backward compatibility over defensive parsing. The official Python
+documentation explicitly warns that these modules are not secure against
+maliciously crafted data.</p>
+<p>When processing untrusted XML, built-in parsers are vulnerable to
+several severe attack vectors:</p>
+<ul>
+<li><strong>XML Entity Expansion (Billion Laughs / Exponential
+Expansion):</strong> Attackers define nested entities that multiply
+exponentially when parsed. A tiny payload (under 1 KB) can expand to
+gigabytes of data in memory, instantly causing out-of-memory errors and
+crashing the application host.</li>
+<li><strong>Quadratic Blowup Attacks:</strong> Similar to the Billion
+Laughs attack, this vector abuses entity definitions without deep
+nesting, defining massive strings within a single entity repeatedly to
+exhaust CPU cycles and RAM.</li>
+<li><strong>XML External Entity (XXE) Injection:</strong> Standard
+parsers may attempt to resolve external resource identifiers (URIs).
+Malicious XML payloads can exploit this to read arbitrary local files
+(such as <code>/etc/passwd</code>), perform Server-Side Request Forgery
+(SSRF) against internal services, or trigger remote code execution
+depending on the environment.</li>
+<li><strong>DTD Retrieval Exploits:</strong> Parsers configured to fetch
+Document Type Definitions (DTDs) from external URLs can be used to scan
+internal network ports or freeze parsing threads through intentionally
+slow HTTP connections.</li>
+</ul>
+<h3 id="how-defusedxml-solves-security-flaws">How defusedxml Solves
+Security Flaws</h3>
+<p>The <code>defusedxml</code> package re-implements Python's standard
+XML interfaces on top of the existing parsers, wrapping them in
+defensive validation layers. It eliminates risks through several
+mechanisms:</p>
+<ol type="1">
+<li><strong>Denial of Dangerous Features by Default:</strong>
+<code>defusedxml</code> strictly forbids entity declarations, DTD
+retrieval, and external resource loading. Attempting to parse documents
+containing these triggers an explicit exception (such as
+<code>EntitiesForbidden</code> or <code>DTDForbidden</code>) rather than
+executing the payload.</li>
+<li><strong>Defensive Parsing Limits:</strong> If entity resolution is
+explicitly required, <code>defusedxml</code> allows developers to set
+granular limits on max entity expansions, max text size, and recursion
+depth to prevent denial of service.</li>
+<li><strong>Drop-in Compatibility:</strong> The library is designed to
+mirror the standard library APIs. Migrating existing code typically
+requires changing only the import statements. For example, replacing
+<code>import xml.etree.ElementTree as ET</code> with
+<code>import defusedxml.ElementTree as ET</code> secures the parsing
+flow with zero modifications to downstream processing logic.</li>
+</ol>
+<h3 id="when-to-use-defusedxml">When to Use defusedxml</h3>
+<p>Any application that processes XML files uploaded by users, delivered
+via external webhooks, received from third-party APIs, or ingested from
+public message queues must treat the payload as untrusted. In all these
+scenarios, using Python's standard XML modules introduces significant
+security vulnerabilities, making <code>defusedxml</code> the
+industry-standard requirement for defensive XML parsing in Python.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

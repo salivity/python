@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Difference Between str() and repr() in Python - python</title>
+    <meta name="description" content="In Python, both str() and repr() convert objects into string representations, but they serve two distinct audiences and purposes. The primary difference is that str() produces an informal, human-readable output intended for end users, while repr() genera">
+    <link rel="canonical" href="https://salivity.github.io/python/article/difference-between-str-and-repr-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Difference Between str() and repr() in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/difference-between-str-and-repr-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, both str() and repr() convert objects into string representations, but they serve two distinct audiences and purposes. The primary difference is that str() produces an informal, human-readable output intended for end users, while repr() genera" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="difference-between-str-and-repr-in-python">Difference Between
+str() and repr() in Python</h1>
+<p>In Python, both <code>str()</code> and <code>repr()</code> convert
+objects into string representations, but they serve two distinct
+audiences and purposes. The primary difference is that
+<code>str()</code> produces an informal, human-readable output intended
+for end users, while <code>repr()</code> generates a formal, unambiguous
+representation designed for developers and debugging. When designing
+classes, implementing both methods properly ensures that your objects
+are easy to display in user interfaces and straightforward to inspect
+during development.</p>
+<h3 id="purpose-and-audience">Purpose and Audience</h3>
+<p>The goal of <code>str()</code> is readability. It formats an object
+into a clean, intuitive string suitable for display in terminal outputs,
+logs, or user-facing text. It is automatically called by the built-in
+<code>print()</code> and <code>format()</code> functions.</p>
+<p>The goal of <code>repr()</code> is precision and unambiguity. It
+reveals the underlying data types and structures, often formatted so
+that passing the result to <code>eval()</code> recreates the original
+object (though this is not an absolute rule). The Python interactive
+shell uses <code>repr()</code> to display values.</p>
+<h3 id="a-concrete-example-strings-and-dates">A Concrete Example:
+Strings and Dates</h3>
+<p>The distinction is most noticeable with built-in types such as
+strings and <code>datetime</code> objects:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> datetime</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>today <span class="op">=</span> datetime.datetime.now()</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># str() focuses on clean presentation</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">str</span>(today))  </span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: 2024-05-17 14:30:00.123456</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># repr() provides the exact representation for developers</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">repr</span>(today)) </span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: datetime.datetime(2024, 5, 17, 14, 30, 0, 123456)</span></span></code></pre></div>
+<p>With plain strings, <code>str()</code> drops the enclosing quotes,
+whereas <code>repr()</code> retains quotes and explicitly displays
+escape characters:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>text <span class="op">=</span> <span class="st">&quot;Hello</span><span class="ch">\n</span><span class="st">World&quot;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">str</span>(text))</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Output:</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Hello</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># World</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">repr</span>(text))</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: &#39;Hello\nWorld&#39;</span></span></code></pre></div>
+<h3 id="fallback-behavior-in-python-classes">Fallback Behavior in Python
+Classes</h3>
+<p>When creating custom classes, Python looks for the special methods
+<code>__str__()</code> and <code>__repr__()</code>:</p>
+<ol type="1">
+<li>If you call <code>repr(obj)</code>, Python looks exclusively for
+<code>__repr__()</code>.</li>
+<li>If you call <code>str(obj)</code>, Python looks for
+<code>__str__()</code>. If <code>__str__()</code> is not defined, it
+falls back to <code>__repr__()</code>.</li>
+<li>If neither is explicitly defined, Python falls back to the default
+implementation inherited from <code>object</code>, which prints the
+object's class name and memory address (e.g.,
+<code>&lt;__main__.Car object at 0x1045...&gt;</code>).</li>
+</ol>
+<p>Because of this fallback mechanism, the best practice is to always
+define <code>__repr__()</code> first to ensure useful debugging
+information, and then define <code>__str__()</code> only if a more
+user-friendly representation is required.</p>
+<h3 id="custom-class-implementation">Custom Class Implementation</h3>
+<p>Here is how both methods are typically implemented together:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> User:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, username, user_id):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.username <span class="op">=</span> username</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.user_id <span class="op">=</span> user_id</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__str__</span>(<span class="va">self</span>):</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="co"># User-friendly string</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f&quot;User: </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>username<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__repr__</span>(<span class="va">self</span>):</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Unambiguous, code-like string</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f&quot;User(username=&#39;</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>username<span class="sc">}</span><span class="ss">&#39;, user_id=</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>user_id<span class="sc">}</span><span class="ss">)&quot;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>user <span class="op">=</span> User(<span class="st">&quot;alice&quot;</span>, <span class="dv">42</span>)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">str</span>(user))   <span class="co"># Output: User: alice</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">repr</span>(user))  <span class="co"># Output: User(username=&#39;alice&#39;, user_id=42)</span></span></code></pre></div>
+<h3 id="summary-of-differences">Summary of Differences</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>str()</code></th>
+<th style="text-align: left;"><code>repr()</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Primary Audience</strong></td>
+<td style="text-align: left;">End users</td>
+<td style="text-align: left;">Developers / Debuggers</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Goal</strong></td>
+<td style="text-align: left;">Readability</td>
+<td style="text-align: left;">Unambiguity and precision</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Underlying Method</strong></td>
+<td style="text-align: left;"><code>__str__()</code></td>
+<td style="text-align: left;"><code>__repr__()</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Fallback</strong></td>
+<td style="text-align: left;">Calls <code>__repr__()</code> if
+<code>__str__()</code> is absent</td>
+<td style="text-align: left;">Default <code>object</code>
+implementation</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Interactive Shell</strong></td>
+<td style="text-align: left;">Used when calling <code>print()</code>
+explicitly</td>
+<td style="text-align: left;">Used automatically by the REPL</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

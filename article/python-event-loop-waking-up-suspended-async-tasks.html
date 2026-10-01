@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Event Loop: Waking Up Suspended Async Tasks - python</title>
+    <meta name="description" content="In Python's asyncio, asynchronous tasks pause execution at await expressions, yielding control back to the central event loop. This article details the low-level mechanics of how the event loop registers callbacks, monitors operating system notifications">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-event-loop-waking-up-suspended-async-tasks">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Event Loop: Waking Up Suspended Async Tasks - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-event-loop-waking-up-suspended-async-tasks" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python's asyncio, asynchronous tasks pause execution at await expressions, yielding control back to the central event loop. This article details the low-level mechanics of how the event loop registers callbacks, monitors operating system notifications" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-event-loop-waking-up-suspended-async-tasks">Python Event
+Loop: Waking Up Suspended Async Tasks</h1>
+<p>In Python's <code>asyncio</code>, asynchronous tasks pause execution
+at <code>await</code> expressions, yielding control back to the central
+event loop. This article details the low-level mechanics of how the
+event loop registers callbacks, monitors operating system notifications,
+and ultimately wakes up and resumes suspended coroutines when their
+operations complete.</p>
+<h3 id="coroutines-tasks-and-the-role-of-futures">Coroutines, Tasks, and
+the Role of Futures</h3>
+<p>When a coroutine yields control via <code>await</code>, it typically
+awaits a <code>Task</code> or a lower-level <code>Future</code> object.
+A <code>Future</code> acts as an empty container for a result that has
+not yet been computed.</p>
+<p>When a task awaits a future, it registers its own resumption
+method—internally referred to as <code>Task._step()</code>—as a callback
+on that future using the <code>Future.add_done_callback()</code> method.
+The coroutine then suspends execution, unrolling its call stack and
+returning execution directly to the event loop's main iteration
+cycle.</p>
+<h3 id="the-io-selector-bridge">The I/O Selector Bridge</h3>
+<p>To handle asynchronous network and disk I/O, the Python event loop
+relies on the standard library's <code>selectors</code> module.
+Depending on the operating system, this module abstracts
+high-performance I/O multiplexing primitives such as <code>epoll</code>
+on Linux, <code>kqueue</code> on macOS/BSD, or I/O Completion Ports
+(IOCP) on Windows.</p>
+<p>When an operation requires waiting for a socket (for example, reading
+data from an incoming network stream):</p>
+<ol type="1">
+<li>The event loop creates a <code>Future</code> for the operation.</li>
+<li>The loop registers the socket's underlying file descriptor with the
+OS selector, configuring it to trigger on specific events (such as read
+or write readiness).</li>
+<li>The event loop associates an internal callback handler with that
+file descriptor registration.</li>
+</ol>
+<h3 id="the-polling-and-notification-cycle">The Polling and Notification
+Cycle</h3>
+<p>The event loop continuously cycles through an execution loop. When
+there are no tasks actively running, the loop calls
+<code>selector.select(timeout)</code>. This call blocks until one of two
+conditions occurs:</p>
+<ul>
+<li>The specified timeout expires (often calculated based on the next
+scheduled timer or sleep event).</li>
+<li>The operating system signals that one or more registered file
+descriptors are ready for I/O.</li>
+</ul>
+<p>Once the kernel signals readiness, <code>select()</code> unblocks and
+returns a list of ready file descriptors along with their associated
+internal event loop callbacks.</p>
+<h3 id="triggering-the-wake-up-pipeline">Triggering the Wake-up
+Pipeline</h3>
+<p>Once the event loop receives notification that an I/O event is ready,
+it initiates a sequential chain of callbacks to resume the task:</p>
+<ol type="1">
+<li><strong>Execute I/O Callback:</strong> The event loop calls the
+handler mapped to the ready file descriptor. This handler performs the
+actual non-blocking read or write operation on the socket.</li>
+<li><strong>Resolve the Future:</strong> Upon successfully receiving
+data or finishing the operation, the handler calls
+<code>future.set_result(data)</code> on the associated
+<code>Future</code>.</li>
+<li><strong>Execute Done Callbacks:</strong> Setting the result
+automatically triggers all callbacks attached to the future via
+<code>add_done_callback()</code>. Among these callbacks is the suspended
+task’s <code>_step()</code> method.</li>
+<li><strong>Queue Task for Resumption:</strong> Rather than executing
+the task immediately within the I/O callback, <code>Task._step()</code>
+places itself onto the event loop’s internal <code>_ready</code> FIFO
+queue.</li>
+</ol>
+<h3 id="resuming-coroutine-execution">Resuming Coroutine Execution</h3>
+<p>In the next iteration of the loop, the event loop pops items from the
+<code>_ready</code> queue. When the task's turn arrives, the loop
+invokes <code>Task._step()</code>.</p>
+<p>Under the hood, this method calls
+<code>coroutine.send(result)</code>, passing the resolved future's data
+directly into the coroutine. Python's generator mechanism resumes the
+coroutine at the exact bytecode instruction following the
+<code>await</code> keyword, allowing the program to continue executing
+seamlessly until it either finishes or hits another suspension
+point.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

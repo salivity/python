@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetworkX Centrality and Shortest Path Algorithms - python</title>
+    <meta name="description" content="NetworkX provides a robust suite of algorithms for analyzing complex networks in Python, specifically for identifying critical nodes and discovering optimal routes between vertices. This article outlines the primary centrality measures and shortest path">
+    <link rel="canonical" href="https://salivity.github.io/python/article/network-x-centrality-and-shortest-path-algorithms">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="NetworkX Centrality and Shortest Path Algorithms - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/network-x-centrality-and-shortest-path-algorithms" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="NetworkX provides a robust suite of algorithms for analyzing complex networks in Python, specifically for identifying critical nodes and discovering optimal routes between vertices. This article outlines the primary centrality measures and shortest path" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="networkx-centrality-and-shortest-path-algorithms">NetworkX
+Centrality and Shortest Path Algorithms</h1>
+<p>NetworkX provides a robust suite of algorithms for analyzing complex
+networks in Python, specifically for identifying critical nodes and
+discovering optimal routes between vertices. This article outlines the
+primary centrality measures and shortest path algorithms available in
+NetworkX, detailing their specific functions, computational
+characteristics, and practical use cases.</p>
+<h2 id="graph-centrality-algorithms-in-networkx">Graph Centrality
+Algorithms in NetworkX</h2>
+<p>Centrality metrics determine the relative importance or influence of
+nodes (and sometimes edges) within a graph. NetworkX implements several
+mathematical frameworks to evaluate this structural importance.</p>
+<h3 id="degree-centrality">Degree Centrality</h3>
+<p>Degree centrality quantifies importance based on the number of
+incident edges a node possesses.</p>
+<ul>
+<li><strong><code>nx.degree_centrality(G)</code></strong>: Computes the
+fraction of nodes each node is connected to.</li>
+<li><strong><code>nx.in_degree_centrality(G)</code></strong> and
+<strong><code>nx.out_degree_centrality(G)</code></strong>: Specialized
+for directed graphs (<code>DiGraph</code>), assessing incoming and
+outgoing connections independently.</li>
+</ul>
+<h3 id="closeness-centrality">Closeness Centrality</h3>
+<p>Closeness centrality evaluates how near a node is to all other nodes
+in the network based on shortest path distances.</p>
+<ul>
+<li><strong><code>nx.closeness_centrality(G)</code></strong>: Calculates
+the reciprocal of the sum of shortest path distances from a target node
+to all other reachable nodes. Nodes with high closeness can rapidly
+disseminate information across the network.</li>
+<li><strong><code>nx.incremental_closeness_centrality(G)</code></strong>:
+Allows faster recalculations for dynamic graphs where edges or nodes are
+added incrementally.</li>
+</ul>
+<h3 id="betweenness-centrality">Betweenness Centrality</h3>
+<p>Betweenness measures how often a node or edge sits on the shortest
+path between pairs of other nodes.</p>
+<ul>
+<li><strong><code>nx.betweenness_centrality(G)</code></strong>: Uses
+Brandes’ algorithm to calculate the fraction of all-pairs shortest paths
+passing through each node. It also supports an approximate calculation
+via the <code>k</code> parameter for large graphs.</li>
+<li><strong><code>nx.edge_betweenness_centrality(G)</code></strong>:
+Computes betweenness for edges rather than vertices, essential for
+community detection algorithms like Girvan-Newman.</li>
+</ul>
+<h3 id="spectral-and-walk-based-centralities">Spectral and Walk-Based
+Centralities</h3>
+<p>These algorithms measure influence by considering both the quantity
+and quality of a node's neighbors.</p>
+<ul>
+<li><strong><code>nx.eigenvector_centrality(G)</code></strong>: Assigns
+scores based on the principle that connections to high-scoring nodes
+contribute more to the score of the node in question.</li>
+<li><strong><code>nx.pagerank(G)</code></strong>: Implements the Google
+PageRank algorithm, utilizing random walks with a damping factor to
+distribute rank values across directed networks.</li>
+<li><strong><code>nx.katz_centrality(G)</code></strong>: Extends
+eigenvector centrality by adding an attenuation factor and a baseline
+score to handle directed graphs with sink nodes.</li>
+</ul>
+<hr />
+<h2 id="shortest-path-algorithms-in-networkx">Shortest Path Algorithms
+in NetworkX</h2>
+<p>Shortest path algorithms locate paths of minimal length or weight
+between pairs of vertices. NetworkX automatically selects the
+appropriate underlying algorithm based on graph properties (e.g.,
+weighted versus unweighted).</p>
+<h3 id="generic-interfaces">Generic Interfaces</h3>
+<ul>
+<li><strong><code>nx.shortest_path(G, source, target, weight)</code></strong>:
+A unified wrapper. If <code>weight</code> is <code>None</code>, it runs
+Breadth-First Search (BFS); if <code>weight</code> is provided, it
+defaults to Dijkstra’s algorithm.</li>
+<li><strong><code>nx.shortest_path_length(G, source, target, weight)</code></strong>:
+Returns only the cost or hop count rather than the full list of nodes in
+the path.</li>
+</ul>
+<h3 id="single-source-and-target-algorithms">Single-Source and Target
+Algorithms</h3>
+<ul>
+<li><strong>Dijkstra's Algorithm (<code>nx.dijkstra_path</code>,
+<code>nx.single_source_dijkstra</code>)</strong>: Finds optimal paths in
+graphs with non-negative edge weights. Variants like
+<code>nx.multi_source_dijkstra</code> allow searches from a set of
+starting nodes.</li>
+<li><strong>Bellman-Ford Algorithm (<code>nx.bellman_ford_path</code>,
+<code>nx.single_source_bellman_ford</code>)</strong>: Capable of
+handling graphs with negative edge weights and detecting negative weight
+cycles, which cause infinite loops in Dijkstra's method.</li>
+<li><em><em>A</em> (A-Star) Algorithm
+(<code>nx.astar_path</code>)</em>*: A heuristic-driven pathfinding
+algorithm that accelerates search times on weighted graphs when spatial
+or custom distance estimates are available.</li>
+</ul>
+<h3 id="all-pairs-shortest-path-algorithms">All-Pairs Shortest Path
+Algorithms</h3>
+<ul>
+<li><strong>Floyd-Warshall Algorithm
+(<code>nx.floyd_warshall</code>)</strong>: Calculates the shortest path
+distances between every pair of nodes, suitable for dense graphs and
+capable of handling negative weights.</li>
+<li><strong>Johnson’s Algorithm (<code>nx.johnson</code>)</strong>:
+Efficiently finds all-pairs shortest paths on sparse graphs with
+potential negative edge weights by combining Bellman-Ford reweighting
+with Dijkstra’s algorithm.</li>
+<li><strong><code>nx.all_pairs_shortest_path(G)</code></strong> and
+<strong><code>nx.all_pairs_dijkstra_path(G)</code></strong>: Generators
+yielding shortest paths across all node pairs for unweighted and
+non-negative weighted graphs, respectively.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

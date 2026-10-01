@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python bytes.decode() and str.encode() Guide - python</title>
+    <meta name="description" content="In Python, transferring or storing text requires translating between human-readable Unicode strings and machine-readable binary payloads. This article explains how Python handles this conversion using str.encode() to serialize text into byte sequences an">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-bytes-decode-and-str-encode-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python bytes.decode() and str.encode() Guide - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-bytes-decode-and-str-encode-guide" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, transferring or storing text requires translating between human-readable Unicode strings and machine-readable binary payloads. This article explains how Python handles this conversion using str.encode() to serialize text into byte sequences an" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-bytesdecode-and-strencode-guide">Python bytes.decode()
+and str.encode() Guide</h1>
+<p>In Python, transferring or storing text requires translating between
+human-readable Unicode strings and machine-readable binary payloads.
+This article explains how Python handles this conversion using
+<code>str.encode()</code> to serialize text into byte sequences and
+<code>bytes.decode()</code> to parse binary payloads back into text. You
+will learn the mechanics behind standard text encodings, how character
+maps function under the hood, and how to handle malformed data using
+error handlers.</p>
+<h2 id="the-distinction-between-str-and-bytes">The Distinction Between
+<code>str</code> and <code>bytes</code></h2>
+<p>Python separates text from raw data:</p>
+<ul>
+<li><strong><code>str</code></strong>: A sequence of abstract Unicode
+code points. It represents text independently of how that text is stored
+in memory or on disk.</li>
+<li><strong><code>bytes</code></strong>: An immutable sequence of single
+bytes (integers ranging from 0 to 255). This represents raw data as it
+travels across network sockets, files, or hardware interfaces.</li>
+</ul>
+<p>Because computers only understand binary data, any <code>str</code>
+must be converted into <code>bytes</code> before transmission or
+storage, and incoming binary payloads must be interpreted back into
+<code>str</code> for text processing.</p>
+<h2 id="serializing-text-to-binary-strencode">Serializing Text to
+Binary: <code>str.encode()</code></h2>
+<p>The <code>str.encode()</code> method transforms a Unicode string into
+a <code>bytes</code> object using a specified character encoding
+algorithm.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">str</span>.encode(encoding<span class="op">=</span><span class="st">&quot;utf-8&quot;</span>, errors<span class="op">=</span><span class="st">&quot;strict&quot;</span>)</span></code></pre></div>
+<h3 id="how-it-works">How It Works</h3>
+<p>When you invoke <code>str.encode()</code>:</p>
+<ol type="1">
+<li>Python inspects each character in the string to find its Unicode
+code point (for example, the letter <code>"A"</code> is
+<code>U+0041</code>, while the euro sign <code>"€"</code> is
+<code>U+20AC</code>).</li>
+<li>The chosen codec maps these code points to a specific pattern of
+bytes.</li>
+<li>If using a variable-length encoding like UTF-8, ASCII characters
+(<code>U+0000</code> to <code>U+007F</code>) map to a single byte, while
+characters with higher code points map to two, three, or four
+bytes.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>text <span class="op">=</span> <span class="st">&quot;Data: €25&quot;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>payload <span class="op">=</span> text.encode(<span class="st">&quot;utf-8&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(payload)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: b&#39;Data: \xe2\x82\xac25&#39;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">type</span>(payload))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: &lt;class &#39;bytes&#39;&gt;</span></span></code></pre></div>
+<p>In the example above, <code>"€"</code> is encoded into the three-byte
+sequence <code>\xe2\x82\xac</code>.</p>
+<h2 id="deserializing-binary-to-text-bytesdecode">Deserializing Binary
+to Text: <code>bytes.decode()</code></h2>
+<p>The <code>bytes.decode()</code> method reverses the process,
+reconstructing an abstract Unicode string from a sequence of raw
+bytes.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">bytes</span>.decode(encoding<span class="op">=</span><span class="st">&quot;utf-8&quot;</span>, errors<span class="op">=</span><span class="st">&quot;strict&quot;</span>)</span></code></pre></div>
+<h3 id="how-it-works-1">How It Works</h3>
+<p>When you invoke <code>bytes.decode()</code>:</p>
+<ol type="1">
+<li>Python reads the binary payload according to the structural rules of
+the specified encoding.</li>
+<li>In UTF-8, the leading bits of each byte tell the decoder whether the
+byte stands alone or is part of a multibyte sequence.</li>
+<li>The codec groups the bytes, translates them into Unicode code
+points, and constructs the resulting <code>str</code> object.</li>
+</ol>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>payload <span class="op">=</span> <span class="st">b&#39;Data: </span><span class="ch">\xe2\x82\xac</span><span class="st">25&#39;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>text <span class="op">=</span> payload.decode(<span class="st">&quot;utf-8&quot;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(text)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: Data: €25</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">type</span>(text))</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: &lt;class &#39;str&#39;&gt;</span></span></code></pre></div>
+<h2 id="handling-malformed-payloads-with-the-errors-parameter">Handling
+Malformed Payloads with the <code>errors</code> Parameter</h2>
+<p>If a byte sequence does not conform to the specified encoding rules,
+or if a string contains characters unsupported by a narrow codec (such
+as ASCII), Python raises an exception (<code>UnicodeDecodeError</code>
+or <code>UnicodeEncodeError</code>). You can alter this behavior using
+the <code>errors</code> argument.</p>
+<ul>
+<li><strong><code>"strict"</code> (default)</strong>: Raises an
+exception on any invalid byte or unmappable character.</li>
+<li><strong><code>"ignore"</code></strong>: Drops invalid bytes or
+unmappable characters silently.</li>
+<li><strong><code>"replace"</code></strong>: Substitutes invalid bytes
+with a replacement marker (such as <code>?</code> in ASCII or the
+official Unicode Replacement Character <code>\ufffd</code> / `` in
+UTF-8).</li>
+<li><strong><code>"surrogateescape"</code></strong>: Encodes invalid
+bytes into private surrogate code points on decode, allowing them to be
+restored to their original invalid byte values on encode. This is common
+in low-level OS operations.</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>corrupt_payload <span class="op">=</span> <span class="st">b&#39;Temperature: 20</span><span class="ch">\xb0</span><span class="st">C&#39;</span>  <span class="co"># \xb0 is valid in Latin-1, invalid in UTF-8</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Strict decoding fails</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># corrupt_payload.decode(&quot;utf-8&quot;) -&gt; Raises UnicodeDecodeError</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Replacing invalid bytes</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>clean_text <span class="op">=</span> corrupt_payload.decode(<span class="st">&quot;utf-8&quot;</span>, errors<span class="op">=</span><span class="st">&quot;replace&quot;</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(clean_text)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: Temperature: 20C</span></span></code></pre></div>
+<h2 id="practical-guidelines">Practical Guidelines</h2>
+<ol type="1">
+<li><strong>Always specify the encoding</strong>: Do not rely on
+Python's default system encoding, which may vary across operating
+systems. Explicitly provide <code>encoding="utf-8"</code> in both
+<code>encode()</code> and <code>decode()</code> calls.</li>
+<li><strong>Follow the Unicode Sandwich pattern</strong>: Decode raw
+binary input at the boundary of your program, perform all business logic
+using native <code>str</code> types, and encode back to
+<code>bytes</code> only when writing output to networks or disk.</li>
+<li><strong>Use matching encodings</strong>: A payload encoded with one
+scheme (e.g., <code>utf-16</code>) cannot be parsed properly by another
+(e.g., <code>utf-8</code>), which will lead to either
+<code>UnicodeDecodeError</code> or mojibake (garbled text).</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

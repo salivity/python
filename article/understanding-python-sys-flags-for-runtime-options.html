@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding Python sys.flags for Runtime Options - python</title>
+    <meta name="description" content="Python's sys.flags struct sequence provides programmatic, read-only access to the command-line flags and runtime environment variables passed to the interpreter upon startup. This article explains how sys.flags works, breaks down the key interpreter opti">
+    <link rel="canonical" href="https://salivity.github.io/python/article/understanding-python-sys-flags-for-runtime-options">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding Python sys.flags for Runtime Options - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/understanding-python-sys-flags-for-runtime-options" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's sys.flags struct sequence provides programmatic, read-only access to the command-line flags and runtime environment variables passed to the interpreter upon startup. This article explains how sys.flags works, breaks down the key interpreter opti" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-python-sysflags-for-runtime-options">Understanding
+Python sys.flags for Runtime Options</h1>
+<p>Python's <code>sys.flags</code> struct sequence provides
+programmatic, read-only access to the command-line flags and runtime
+environment variables passed to the interpreter upon startup. This
+article explains how <code>sys.flags</code> works, breaks down the key
+interpreter options it exposes, and demonstrates how to inspect these
+runtime configurations inside your Python scripts.</p>
+<h2 id="what-is-sysflags">What Is sys.flags?</h2>
+<p>When the Python interpreter initializes, it parses command-line
+arguments (such as <code>-O</code>, <code>-v</code>, or <code>-B</code>)
+and runtime environment variables (such as <code>PYTHONOPTIMIZE</code>
+or <code>PYTHONDONTWRITEBYTECODE</code>). The resulting state of these
+interpreter configurations is stored in <code>sys.flags</code>, which is
+an instance of a read-only <code>structseq</code> (a named tuple-like
+object) defined in the standard <code>sys</code> module.</p>
+<p>Each attribute in <code>sys.flags</code> corresponds to a specific
+flag or setting. The attributes are integers, usually representing
+either a boolean state (0 for disabled, 1 for enabled) or an integer
+level representing how many times a flag was passed.</p>
+<h2 id="accessing-sysflags">Accessing sys.flags</h2>
+<p>You can inspect the entire structure or access individual fields
+directly:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># View all flags and their current values</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(sys.flags)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Access a specific flag</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;Optimization level:&quot;</span>, sys.flags.optimize)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;Bytecode suppression:&quot;</span>, sys.flags.dont_write_bytecode)</span></code></pre></div>
+<p>If you start Python with <code>python -O -B script.py</code>,
+<code>sys.flags.optimize</code> will return <code>1</code>, and
+<code>sys.flags.dont_write_bytecode</code> will return
+<code>1</code>.</p>
+<h2 id="common-attributes-exposed-by-sysflags">Common Attributes Exposed
+by sys.flags</h2>
+<p>Here are the primary attributes provided by <code>sys.flags</code>
+and what they reveal about the execution environment:</p>
+<ul>
+<li><strong><code>optimize</code></strong>: Represents bytecode
+optimization levels set via <code>-O</code> or
+<code>PYTHONOPTIMIZE</code>. A value of <code>0</code> means standard
+execution, <code>1</code> removes <code>assert</code> statements
+(<code>-O</code>), and <code>2</code> removes both <code>assert</code>
+statements and docstrings (<code>-OO</code>).</li>
+<li><strong><code>dont_write_bytecode</code></strong>: Set to
+<code>1</code> when <code>-B</code> or
+<code>PYTHONDONTWRITEBYTECODE</code> is active, indicating that Python
+will not write <code>.pyc</code> files to disk upon importing
+modules.</li>
+<li><strong><code>verbose</code></strong>: Corresponds to the
+<code>-v</code> flag or <code>PYTHONVERBOSE</code>. It counts how many
+times <code>-v</code> was passed, signaling the level of verbosity for
+import statements and cleanup processes.</li>
+<li><strong><code>interactive</code></strong>: Set to <code>1</code>
+when the <code>-i</code> flag is used, forcing an interactive prompt
+after running a script.</li>
+<li><strong><code>inspect</code></strong>: Reflects the <code>-i</code>
+flag or <code>PYTHONINSPECT</code>, determining whether the interpreter
+enters interactive inspection mode on unhandled exceptions.</li>
+<li><strong><code>debug</code></strong>: Set to <code>1</code> if Python
+was run with the <code>-d</code> flag or <code>PYTHONDEBUG</code>
+environment variable, enabling parser debugging output (requires a debug
+build of Python).</li>
+<li><strong><code>no_user_site</code></strong>: Set to <code>1</code>
+when the <code>-s</code> flag or <code>PYTHONNOUSERSITE</code> prevents
+the <code>user-site</code> directory from being added to
+<code>sys.path</code>.</li>
+<li><strong><code>no_site</code></strong>: Set to <code>1</code> when
+<code>-S</code> is used to disable the automatic import of the
+<code>site</code> module during initialization.</li>
+<li><strong><code>ignore_environment</code></strong>: Set to
+<code>1</code> when <code>-E</code> is used, indicating that Python
+ignored all <code>PYTHON*</code> environment variables during
+startup.</li>
+<li><strong><code>isolated</code></strong>: Set to <code>1</code> when
+the <code>-I</code> flag is passed, which enables isolated mode
+(combining <code>-E</code> and <code>-s</code>).</li>
+<li><strong><code>bytes_warning</code></strong>: Reflects
+<code>-b</code> (value <code>1</code>, issues warnings for implicit
+byte-string comparisons) or <code>-bb</code> (value <code>2</code>,
+raises errors for implicit byte-string comparisons).</li>
+<li><strong><code>quiet</code></strong>: Set to <code>1</code> when the
+<code>-q</code> flag is supplied, suppressing copyright and version
+banners in interactive sessions.</li>
+<li><strong><code>dev_mode</code></strong>: Available in Python 3.7+,
+this boolean flag indicates whether the Python Development Mode
+(<code>-X dev</code> or <code>PYTHONDEVMODE=1</code>) is active.</li>
+<li><strong><code>utf8_mode</code></strong>: Available in Python 3.7+,
+reveals whether UTF-8 mode (<code>-X utf8</code> or
+<code>PYTHONUTF8</code>) is enabled (<code>1</code>), disabled
+(<code>0</code>), or set to explicit.</li>
+</ul>
+<h2 id="practical-use-cases">Practical Use Cases</h2>
+<p>Relying on <code>sys.flags</code> allows scripts and libraries to
+adapt dynamically to their execution environment:</p>
+<ol type="1">
+<li><strong>Conditional Logic Based on Optimization</strong>: Library
+authors can verify if <code>sys.flags.optimize == 2</code> before
+relying on <code>__doc__</code> attributes at runtime, preventing errors
+caused by stripped docstrings.</li>
+<li><strong>Security and Isolation Audits</strong>: Diagnostic utilities
+can verify that <code>sys.flags.isolated</code> or
+<code>sys.flags.ignore_environment</code> is set to ensure reproducible
+and secure execution in production containers.</li>
+<li><strong>Debug Tooling</strong>: Developer tools can check
+<code>sys.flags.dev_mode</code> to automatically enable extra runtime
+checks and warnings without requiring separate configuration files.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

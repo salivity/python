@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How dataclasses.asdict() Converts Nested Dataclasses - python</title>
+    <meta name="description" content="Python's dataclasses.asdict() converts dataclass instances into standard Python dictionaries through a recursive traversal mechanism. This article breaks down how asdict() inspects object trees, recursively unpacks nested dataclass instances and standard">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-dataclasses-asdict-converts-nested-dataclasses">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How dataclasses.asdict() Converts Nested Dataclasses - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-dataclasses-asdict-converts-nested-dataclasses" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's dataclasses.asdict() converts dataclass instances into standard Python dictionaries through a recursive traversal mechanism. This article breaks down how asdict() inspects object trees, recursively unpacks nested dataclass instances and standard" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-dataclassesasdict-converts-nested-dataclasses">How
+dataclasses.asdict() Converts Nested Dataclasses</h1>
+<p>Python's <code>dataclasses.asdict()</code> converts dataclass
+instances into standard Python dictionaries through a recursive
+traversal mechanism. This article breaks down how <code>asdict()</code>
+inspects object trees, recursively unpacks nested dataclass instances
+and standard collection types, uses <code>copy.deepcopy</code> on leaf
+values, and reconstructs complex nested data structures into plain
+dictionaries and lists.</p>
+<h2 id="the-core-traversal-mechanism-_asdict_inner">The Core Traversal
+Mechanism: <code>_asdict_inner()</code></h2>
+<p>Under the hood,
+<code>dataclasses.asdict(obj, *, dict_factory=dict)</code> acts as a
+public entry point to an internal recursive helper function named
+<code>_asdict_inner()</code>.</p>
+<p>The function inspects the data type of the passed object at every
+level of the object hierarchy and branches execution based on four
+distinct structural categories:</p>
+<ol type="1">
+<li>Dataclass instances</li>
+<li>Standard mapping types (such as <code>dict</code>)</li>
+<li>Sequence and iterable collections (such as <code>list</code> and
+<code>tuple</code>)</li>
+<li>Atomic types and other objects</li>
+</ol>
+<h2 id="step-by-step-transformation-process">Step-by-Step Transformation
+Process</h2>
+<h3 id="1-detecting-nested-dataclasses">1. Detecting Nested
+Dataclasses</h3>
+<p>When <code>_asdict_inner()</code> encounters an object, it first
+checks whether it is a dataclass instance using
+<code>_is_dataclass_instance()</code>. If the check returns
+<code>True</code>, the function retrieves all defined fields using
+<code>dataclasses.fields(obj)</code>.</p>
+<p>Instead of reading the <code>__dict__</code> attribute directly, it
+iterates through each <code>Field</code> definition and extracts the
+corresponding value using <code>getattr(obj, f.name)</code>. It then
+passes each attribute back into <code>_asdict_inner()</code>. The
+resulting key-value pairs are instantiated using the specified
+<code>dict_factory</code> (which defaults to Python's standard
+<code>dict</code>).</p>
+<h3 id="2-traversing-collections-and-iterables">2. Traversing
+Collections and Iterables</h3>
+<p>If an attribute is not a dataclass, <code>_asdict_inner()</code>
+checks if it is a container:</p>
+<ul>
+<li><strong>Dictionaries:</strong> If the object is a dictionary or an
+instance of <code>dict</code>, it recursively calls
+<code>_asdict_inner()</code> on every key and value, preserving
+dictionary-based nesting.</li>
+<li><strong>Tuples:</strong> If the object is an instance of a
+<code>tuple</code> (including <code>namedtuple</code> subclasses), it
+runs <code>_asdict_inner()</code> on each element and constructs a new
+tuple of the same type using <code>type(obj)(...)</code>.</li>
+<li><strong>Lists:</strong> If the object is a <code>list</code>, it
+returns a new list populated by running <code>_asdict_inner()</code> on
+every item via a list comprehension.</li>
+</ul>
+<p>This step ensures that if a dataclass contains a list of nested
+dataclasses (e.g., <code>list[ChildData]</code>), every nested instance
+within that collection is unpacked down to its primitive components.</p>
+<h3 id="3-handling-leaf-values-with-deepcopy">3. Handling Leaf Values
+with Deepcopy</h3>
+<p>When <code>_asdict_inner()</code> encounters a value that is neither
+a dataclass instance nor a supported container type (such as integers,
+strings, floats, custom non-dataclass classes, or <code>None</code>), it
+does not simply assign the reference. Instead, it calls
+<code>copy.deepcopy(obj)</code>.</p>
+<p>This guarantees that the resulting dictionary is completely decoupled
+from the original dataclass instance, preventing mutations in the
+dictionary from altering the state of the original objects.</p>
+<h2 id="practical-example">Practical Example</h2>
+<p>Consider the following nested structure:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dataclasses <span class="im">import</span> dataclass, asdict</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Address:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    city: <span class="bu">str</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    zip_code: <span class="bu">str</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> User:</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    name: <span class="bu">str</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    addresses: <span class="bu">list</span>[Address]</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>user <span class="op">=</span> User(</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">&quot;Alice&quot;</span>, </span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    addresses<span class="op">=</span>[Address(city<span class="op">=</span><span class="st">&quot;New York&quot;</span>, zip_code<span class="op">=</span><span class="st">&quot;10001&quot;</span>)]</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> asdict(user)</span></code></pre></div>
+<p>Execution proceeds in this order:</p>
+<ol type="1">
+<li><code>asdict()</code> calls <code>_asdict_inner(user)</code>.</li>
+<li><code>user</code> is recognized as a dataclass. It iterates over
+fields: <code>name</code> and <code>addresses</code>.</li>
+<li><code>name</code> is a string; <code>copy.deepcopy("Alice")</code>
+returns <code>"Alice"</code>.</li>
+<li><code>addresses</code> is a <code>list</code>. It iterates over the
+items inside the list.</li>
+<li>The element <code>Address(...)</code> is recognized as a dataclass.
+It iterates over <code>city</code> and <code>zip_code</code>.</li>
+<li><code>city</code> and <code>zip_code</code> are copied as primitives
+and converted into a <code>dict</code> via
+<code>dict_factory</code>.</li>
+<li>The reconstructed items are returned up the call stack,
+yielding:</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;name&quot;</span>: <span class="st">&quot;Alice&quot;</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;addresses&quot;</span>: [</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;city&quot;</span>: <span class="st">&quot;New York&quot;</span>, </span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;zip_code&quot;</span>: <span class="st">&quot;10001&quot;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    ]</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="customizing-dictionary-creation">Customizing Dictionary
+Creation</h2>
+<p>The <code>dict_factory</code> parameter allows developers to control
+how dictionaries are instantiated during the recursive process. Passing
+an alternative factory like <code>collections.OrderedDict</code> will
+cause every nested dataclass in the hierarchy to convert into that
+specific dictionary type instead of the standard <code>dict</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

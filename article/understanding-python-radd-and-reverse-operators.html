@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding Python __radd__ and Reverse Operators - python</title>
+    <meta name="description" content="Reverse operator dunder methods—such as radd, rsub, and rmul—serve as Python's fallback mechanism for binary operations. When an expression like x + y is evaluated, Python first attempts to call the left-hand operand's method (x.add(y)). If the left-">
+    <link rel="canonical" href="https://salivity.github.io/python/article/understanding-python-radd-and-reverse-operators">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding Python __radd__ and Reverse Operators - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/understanding-python-radd-and-reverse-operators" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Reverse operator dunder methods—such as radd, rsub, and rmul—serve as Python's fallback mechanism for binary operations. When an expression like x + y is evaluated, Python first attempts to call the left-hand operand's method (x.add(y)). If the left-" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-python-radd-and-reverse-operators">Understanding
+Python <strong>radd</strong> and Reverse Operators</h1>
+<p>Reverse operator dunder methods—such as <code>__radd__</code>,
+<code>__rsub__</code>, and <code>__rmul__</code>—serve as Python's
+fallback mechanism for binary operations. When an expression like
+<code>x + y</code> is evaluated, Python first attempts to call the
+left-hand operand's method (<code>x.__add__(y)</code>). If the left-hand
+operand does not implement this method or returns the special
+<code>NotImplemented</code> singleton, Python delegates the operation to
+the right-hand operand by calling its reflected counterpart
+(<code>y.__radd__(x)</code>). This article explains how this mechanism
+ensures interoperability between built-in types and custom user-defined
+classes.</p>
+<h2 id="the-problem-of-asymmetric-knowledge">The Problem of Asymmetric
+Knowledge</h2>
+<p>Built-in types like <code>int</code>, <code>float</code>, and
+<code>list</code> are precompiled and have no knowledge of custom
+classes written later. If you create a custom class representing a
+vector, matrix, or currency, you can easily define <code>__add__</code>
+to handle addition with an integer:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Money:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, amount):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.amount <span class="op">=</span> amount</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__add__</span>(<span class="va">self</span>, other):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(other, (<span class="bu">int</span>, <span class="bu">float</span>)):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> Money(<span class="va">self</span>.amount <span class="op">+</span> other)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">NotImplemented</span></span></code></pre></div>
+<p>With only <code>__add__</code> defined, <code>Money(10) + 5</code>
+succeeds because <code>Money.__add__</code> knows how to handle an
+<code>int</code>. However, the reverse expression,
+<code>5 + Money(10)</code>, will fail. The built-in integer class's
+<code>__add__</code> method does not know how to add a
+<code>Money</code> instance, so it returns <code>NotImplemented</code>.
+Without a fallback, Python would raise a <code>TypeError</code>.</p>
+<h2 id="how-reverse-methods-resolve-the-failure">How Reverse Methods
+Resolve the Failure</h2>
+<p>To resolve this issue, Python checks whether the right-hand operand
+implements the corresponding reverse dunder method. By implementing
+<code>__radd__</code>, the right-hand operand is given a chance to
+handle the operation:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Money:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, amount):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.amount <span class="op">=</span> amount</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__add__</span>(<span class="va">self</span>, other):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(other, (<span class="bu">int</span>, <span class="bu">float</span>)):</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> Money(<span class="va">self</span>.amount <span class="op">+</span> other)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">NotImplemented</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__radd__</span>(<span class="va">self</span>, other):</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Delegate directly to __add__ since addition is commutative</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.<span class="fu">__add__</span>(other)</span></code></pre></div>
+<p>Now, when Python evaluates <code>5 + Money(10)</code>:</p>
+<ol type="1">
+<li>Python executes <code>(5).__add__(Money(10))</code>.</li>
+<li>The integer's method returns <code>NotImplemented</code>.</li>
+<li>Python identifies that the right-hand operand provides
+<code>__radd__</code>.</li>
+<li>Python executes <code>Money(10).__radd__(5)</code>.</li>
+<li>The operation completes successfully and returns
+<code>Money(15)</code>.</li>
+</ol>
+<p>If the right-hand operand also returns <code>NotImplemented</code> or
+does not implement the reverse method, Python halts the execution and
+raises a <code>TypeError: unsupported operand type(s)</code>.</p>
+<h2 id="non-commutative-operations">Non-Commutative Operations</h2>
+<p>While addition and multiplication are typically commutative (where
+<code>a + b == b + a</code>), operations like subtraction
+(<code>__sub__</code> / <code>__rsub__</code>) and division
+(<code>__truediv__</code> / <code>__rtruediv__</code>) are
+order-dependent. In reverse methods for non-commutative operations, the
+operands retain their semantic positions:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CustomNumber:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, value):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.value <span class="op">=</span> value</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__rsub__</span>(<span class="va">self</span>, other):</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="co"># &#39;other&#39; is the left operand, &#39;self&#39; is the right operand</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="co"># This handles: other - self</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> CustomNumber(other <span class="op">-</span> <span class="va">self</span>.value)</span></code></pre></div>
+<p>When evaluating <code>10 - CustomNumber(3)</code>, the call becomes
+<code>CustomNumber(3).__rsub__(10)</code>, correctly preserving the
+order of subtraction as <code>10 - 3</code>.</p>
+<h2 id="subclass-precedence-rule">Subclass Precedence Rule</h2>
+<p>Python includes an exception to the left-to-right evaluation order
+for inheritance hierarchies. If the right-hand operand is an instance of
+a distinct subclass of the left-hand operand's class, Python invokes the
+subclass's reverse method <em>before</em> the base class's forward
+method. This guarantees that specialized subclass implementations can
+override the behavior of their parent classes, maintaining standard
+object-oriented polymorphism.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

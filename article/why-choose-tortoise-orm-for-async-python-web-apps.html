@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why Choose Tortoise-ORM for Async Python Web Apps - python</title>
+    <meta name="description" content="Tortoise-ORM is a modern, asyncio-native Object-Relational Mapper (ORM) designed to bring relational database modeling to asynchronous Python web applications. Inspired by the ergonomics of the Django ORM, it allows developers to build high-concurrency a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/why-choose-tortoise-orm-for-async-python-web-apps">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Why Choose Tortoise-ORM for Async Python Web Apps - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/why-choose-tortoise-orm-for-async-python-web-apps" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Tortoise-ORM is a modern, asyncio-native Object-Relational Mapper (ORM) designed to bring relational database modeling to asynchronous Python web applications. Inspired by the ergonomics of the Django ORM, it allows developers to build high-concurrency a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="why-choose-tortoise-orm-for-async-python-web-apps">Why Choose
+Tortoise-ORM for Async Python Web Apps</h1>
+<p>Tortoise-ORM is a modern, asyncio-native Object-Relational Mapper
+(ORM) designed to bring relational database modeling to asynchronous
+Python web applications. Inspired by the ergonomics of the Django ORM,
+it allows developers to build high-concurrency applications without
+sacrificing the simplicity and developer experience of familiar
+declarative modeling. This article explores the core features,
+architectural advantages, and practical benefits that make Tortoise-ORM
+an ideal database toolkit for modern async Python frameworks.</p>
+<h3 id="built-specifically-for-asyncio">Built Specifically for
+Asyncio</h3>
+<p>Unlike traditional Python ORMs that were originally synchronous and
+later retrofitted with asynchronous adapters, Tortoise-ORM was
+engineered from scratch around Python’s <code>asyncio</code> paradigm.
+Every database call is inherently a non-blocking coroutine, using native
+<code>await</code> syntax. This native design prevents thread pool
+exhaustion and context-switching overhead, ensuring an event loop
+remains responsive under high loads of concurrent I/O requests.</p>
+<h3 id="familiar-django-inspired-api">Familiar, Django-Inspired API</h3>
+<p>For developers transitioning from synchronous Django backends to
+asynchronous microservices, Tortoise-ORM eliminates the steep learning
+curve often associated with complex alternatives like SQLAlchemy. It
+adopts clean, readable QuerySet semantics, intuitive relationship
+definitions (such as <code>ForeignKeyField</code> and
+<code>ManyToManyField</code>), and familiar filtering operations like
+<code>filter()</code>, <code>exclude()</code>, and
+<code>values()</code>. This design reduces boilerplate code and
+maintains predictable modeling patterns across teams.</p>
+<h3 id="high-performance-native-drivers">High-Performance Native
+Drivers</h3>
+<p>Tortoise-ORM integrates directly with the ecosystem's fastest
+asynchronous database drivers. It supports PostgreSQL via
+<code>asyncpg</code>, MySQL via <code>aiomysql</code>, and SQLite via
+<code>aiosqlite</code>. Because it leverages high-speed drivers like
+<code>asyncpg</code> natively, database query latency is minimized,
+directly translating to higher throughput in I/O-bound web services.</p>
+<h3 id="seamless-pydantic-and-fastapi-integration">Seamless Pydantic and
+FastAPI Integration</h3>
+<p>A major strength in modern application development is Tortoise-ORM's
+native synergy with Pydantic and web frameworks like FastAPI. Using
+utility functions such as <code>pydantic_model_creator</code>,
+developers can automatically generate Pydantic validation and
+serialization schemas directly from their database models. This removes
+the redundancy of defining dual schemas for database entities and API
+request/response payloads, while maintaining strict type hints
+throughout the codebase.</p>
+<h3 id="schema-management-and-migrations">Schema Management and
+Migrations</h3>
+<p>Fast prototyping is enabled through built-in schema generation
+methods like <code>generate_schemas()</code>, which is particularly
+useful during automated testing and initial development. For
+production-grade maintenance, Tortoise-ORM integrates with Aerich, a
+dedicated migration tool designed explicitly for tracking and applying
+schema alterations reliably over time.</p>
+<h3 id="conclusion">Conclusion</h3>
+<p>Tortoise-ORM balances developer ergonomics with the raw performance
+requirements of modern asynchronous systems. By pairing a familiar
+declarative syntax with native async execution, fast driver support, and
+tight integration with tools like FastAPI and Pydantic, it serves as an
+efficient, reliable ORM choice for Python asynchronous web apps.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

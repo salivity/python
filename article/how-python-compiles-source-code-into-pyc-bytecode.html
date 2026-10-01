@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Compiles Source Code into PYC Bytecode - python</title>
+    <meta name="description" content="When Python runs a script, it automatically translates human-readable source code into an intermediate format known as bytecode, which is cached in .pyc files within a pycache directory. This article covers how Python parses source code into an Abstract">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-compiles-source-code-into-pyc-bytecode">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Compiles Source Code into PYC Bytecode - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-compiles-source-code-into-pyc-bytecode" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When Python runs a script, it automatically translates human-readable source code into an intermediate format known as bytecode, which is cached in .pyc files within a pycache directory. This article covers how Python parses source code into an Abstract" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-compiles-source-code-into-pyc-bytecode">How Python
+Compiles Source Code into PYC Bytecode</h1>
+<p>When Python runs a script, it automatically translates human-readable
+source code into an intermediate format known as bytecode, which is
+cached in <code>.pyc</code> files within a <code>__pycache__</code>
+directory. This article covers how Python parses source code into an
+Abstract Syntax Tree (AST), generates bytecode, serializes it using the
+internal marshal format, and creates <code>.pyc</code> files to
+accelerate future program startups.</p>
+<h2 id="1-parsing-source-code-into-an-abstract-syntax-tree">1. Parsing
+Source Code into an Abstract Syntax Tree</h2>
+<p>Before producing bytecode, Python must analyze the syntax of your
+<code>.py</code> file. This process occurs in two primary stages:</p>
+<ol type="1">
+<li><strong>Tokenization:</strong> The lexical analyzer scans the raw
+text of the Python source file and breaks it down into a stream of
+tokens, such as keywords, identifiers, operators, and literals.</li>
+<li><strong>Parsing:</strong> The parser processes the token stream and
+verifies that it adheres to Python's grammatical rules. It then
+constructs an Abstract Syntax Tree (AST), a hierarchical tree
+representation of the code's logical structure.</li>
+</ol>
+<h2 id="2-emitting-bytecode">2. Emitting Bytecode</h2>
+<p>Once the AST is constructed, Python's compiler transforms the tree
+into bytecode. Bytecode consists of compact, platform-independent
+numeric instructions designed for execution by the Python Virtual
+Machine (PVM).</p>
+<p>Each bytecode instruction corresponds to an opcode (operation code),
+such as <code>LOAD_CONST</code>, <code>STORE_FAST</code>, or
+<code>BINARY_OP</code>, often followed by an argument. Python bundles
+these instructions into a <code>code</code> object. A <code>code</code>
+object contains the raw bytecode along with essential execution
+metadata, including variable names, constant values, line number
+mappings, and required stack depth.</p>
+<h2 id="3-structure-of-a-pyc-file">3. Structure of a <code>.pyc</code>
+File</h2>
+<p>To avoid recompiling the source code on subsequent runs, Python
+writes the <code>code</code> object to disk as a <code>.pyc</code> file.
+A modern <code>.pyc</code> file contains four distinct components in its
+binary header followed by the payload:</p>
+<ul>
+<li><strong>Magic Number (4 bytes):</strong> A unique identifier
+representing the Python interpreter version. If the interpreter changes,
+Python knows the cached bytecode is incompatible.</li>
+<li><strong>Bit Field / Flags (4 bytes):</strong> Specifies how cache
+validation is handled (e.g., whether it relies on timestamps or
+cryptographic hashes).</li>
+<li><strong>Validation Data (8 bytes):</strong>
+<ul>
+<li>In timestamp-based invalidation (default), this holds the 4-byte
+modification timestamp of the source <code>.py</code> file, followed by
+the 4-byte source file size.</li>
+<li>In hash-based invalidation (PEP 552), this stores a 64-bit
+cryptographic hash of the source code.</li>
+</ul></li>
+<li><strong>Marshalled Code Object:</strong> The serialized
+representation of the compiled <code>code</code> object, generated using
+Python’s internal <code>marshal</code> module.</li>
+</ul>
+<h2 id="4-writing-to-the-__pycache__-directory">4. Writing to the
+<code>__pycache__</code> Directory</h2>
+<p>Python does not place <code>.pyc</code> files directly alongside
+<code>.py</code> files. Instead, it stores them in a subdirectory named
+<code>__pycache__</code>.</p>
+<p>The compiled file follows a standardized naming convention:
+<code>&lt;module_name&gt;.&lt;interpreter-tag&gt;.pyc</code> (for
+example, <code>utils.cpython-311.pyc</code>). This format ensures that
+multiple Python versions and implementations can run in the same
+environment without overwriting each other's cached files.</p>
+<p>Python generally writes <code>.pyc</code> files only for imported
+modules, not for the top-level script executed directly from the command
+line, unless explicitly instructed via command-line flags or the
+<code>py_compile</code> module.</p>
+<h2 id="5-cache-validation-and-recompilation">5. Cache Validation and
+Recompilation</h2>
+<p>When Python imports a module, it checks the <code>__pycache__</code>
+folder to see if a matching <code>.pyc</code> file already exists.</p>
+<p>If found, Python reads the header:</p>
+<ul>
+<li>For timestamp-based validation, it compares the timestamp and file
+size in the <code>.pyc</code> header against the filesystem metadata of
+the <code>.py</code> source file.</li>
+<li>For hash-based validation, it compares the stored hash against the
+hash of the current source file.</li>
+</ul>
+<p>If the validation data matches, Python skips the compilation step
+entirely, unmarshals the cached <code>code</code> object directly into
+memory, and passes it to the PVM for execution. If the source file is
+newer, modified, or missing a compiled counterpart, Python recompiles
+the source code and updates the <code>.pyc</code> file.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

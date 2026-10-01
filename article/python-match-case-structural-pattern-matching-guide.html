@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Match Case: Structural Pattern Matching Guide - python</title>
+    <meta name="description" content="Structural pattern matching, introduced in Python 3.10 via PEP 634, provides a powerful and expressive mechanism to evaluate expressions against specific patterns, extract data, and execute conditional logic based on an object's structure. This article e">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-match-case-structural-pattern-matching-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Match Case: Structural Pattern Matching Guide - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-match-case-structural-pattern-matching-guide" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Structural pattern matching, introduced in Python 3.10 via PEP 634, provides a powerful and expressive mechanism to evaluate expressions against specific patterns, extract data, and execute conditional logic based on an object's structure. This article e" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-match-case-structural-pattern-matching-guide">Python
+Match Case: Structural Pattern Matching Guide</h1>
+<p>Structural pattern matching, introduced in Python 3.10 via PEP 634,
+provides a powerful and expressive mechanism to evaluate expressions
+against specific patterns, extract data, and execute conditional logic
+based on an object's structure. This article explains how the
+<code>match</code> and <code>case</code> statements operate, exploring
+basic literal matching, sequence and mapping destructuring, class
+instance extraction, and pattern guards.</p>
+<h2 id="the-basic-syntax">The Basic Syntax</h2>
+<p>At its core, structural pattern matching compares a subject
+expression against one or more patterns defined in <code>case</code>
+blocks. Unlike standard <code>switch</code>/<code>case</code> statements
+found in languages like C or JavaScript, Python's implementation matches
+both values and data shapes.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process_command(command: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">match</span> command:</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="st">&quot;start&quot;</span>:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="st">&quot;System starting...&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="st">&quot;stop&quot;</span>:</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="st">&quot;System stopping...&quot;</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> _:</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Unknown command: </span><span class="sc">{</span>command<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>The underscore <code>_</code> acts as a wildcard pattern that matches
+any value, functioning as the default fallback branch. Unlike some
+languages, execution does not "fall through" from one case to the next;
+once a pattern succeeds, its block executes, and matching
+terminates.</p>
+<h2 id="sequence-destructuring">Sequence Destructuring</h2>
+<p>Structural pattern matching shines when unpacking sequences such as
+lists and tuples. You can check both the length of a sequence and bind
+its individual elements to variables.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process_coordinates(point: <span class="bu">tuple</span> <span class="op">|</span> <span class="bu">list</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">match</span> point:</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        case (<span class="dv">0</span>, <span class="dv">0</span>):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="st">&quot;Origin&quot;</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        case (<span class="dv">0</span>, y):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;On the Y-axis at </span><span class="sc">{</span>y<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        case (x, <span class="dv">0</span>):</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;On the X-axis at </span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        case (x, y):</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Point at (</span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">, </span><span class="sc">{</span>y<span class="sc">}</span><span class="ss">)&quot;</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        case (x, y, <span class="op">*</span>rest):</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;3D+ Point starting at (</span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">, </span><span class="sc">{</span>y<span class="sc">}</span><span class="ss">) with extra dimensions: </span><span class="sc">{</span>rest<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> _:</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="st">&quot;Not a valid coordinate&quot;</span>)</span></code></pre></div>
+<p>Variable names inside a pattern act as capture targets. If the
+structure matches, Python assigns the corresponding parts of the subject
+to those variables.</p>
+<h2 id="mapping-destructuring">Mapping Destructuring</h2>
+<p>Patterns can match dictionary keys and bind their values. A
+dictionary pattern matches even if the dictionary contains additional
+keys not specified in the case, checking only for the presence of the
+specified keys.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> handle_event(event: <span class="bu">dict</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">match</span> event:</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> {<span class="st">&quot;type&quot;</span>: <span class="st">&quot;click&quot;</span>, <span class="st">&quot;x&quot;</span>: x, <span class="st">&quot;y&quot;</span>: y}:</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Click at position (</span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">, </span><span class="sc">{</span>y<span class="sc">}</span><span class="ss">)&quot;</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> {<span class="st">&quot;type&quot;</span>: <span class="st">&quot;keypress&quot;</span>, <span class="st">&quot;key&quot;</span>: key}:</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Key pressed: </span><span class="sc">{</span>key<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> _:</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="st">&quot;Unrecognized event structure&quot;</span>)</span></code></pre></div>
+<p>To capture extra key-value pairs, the <code>**rest</code> syntax can
+be used.</p>
+<h2 id="class-and-object-matching">Class and Object Matching</h2>
+<p>You can match against class instances by specifying the class name
+followed by positional or keyword patterns. This inspects object
+attributes directly.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Point:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, x: <span class="bu">int</span>, y: <span class="bu">int</span>):</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.x <span class="op">=</span> x</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.y <span class="op">=</span> y</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> inspect_point(obj: <span class="bu">object</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">match</span> obj:</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> Point(x<span class="op">=</span><span class="dv">0</span>, y<span class="op">=</span><span class="dv">0</span>):</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="st">&quot;Point is at the origin&quot;</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> Point(x<span class="op">=</span>x, y<span class="op">=</span>y):</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Point instance at (</span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">, </span><span class="sc">{</span>y<span class="sc">}</span><span class="ss">)&quot;</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> _:</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="st">&quot;Not a Point instance&quot;</span>)</span></code></pre></div>
+<p>If a class defines <code>__match_args__</code>, positional arguments
+can be used directly within the pattern without naming the attributes
+explicitly.</p>
+<h2 id="pattern-guards-and-combined-patterns">Pattern Guards and
+Combined Patterns</h2>
+<p>Patterns can be combined using the <code>|</code> (OR) operator, and
+they can include conditional expressions called "guards" using an
+<code>if</code> clause.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> validate_response(status: <span class="bu">int</span>, payload: <span class="bu">dict</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">match</span> status, payload:</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        case (<span class="dv">200</span> <span class="op">|</span> <span class="dv">201</span>, {<span class="st">&quot;data&quot;</span>: data}):</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Success with data: </span><span class="sc">{</span>data<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        case (<span class="dv">400</span> <span class="op">|</span> <span class="dv">404</span> <span class="op">|</span> <span class="dv">500</span>, {<span class="st">&quot;error&quot;</span>: error}) <span class="cf">if</span> <span class="bu">len</span>(error) <span class="op">&gt;</span> <span class="dv">0</span>:</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Failed with detailed error: </span><span class="sc">{</span>error<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        case (status_code, _):</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Unhandled status: </span><span class="sc">{</span>status_code<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>A guard evaluates only after the structural pattern matches. If the
+guard evaluates to <code>False</code>, matching continues to the next
+case.</p>
+<h2 id="key-differences-from-ifelifelse">Key Differences from
+<code>if/elif/else</code></h2>
+<p>Structural pattern matching is not a direct replacement for simple
+conditional chains. Use <code>match</code>/<code>case</code> when:</p>
+<ol type="1">
+<li><strong>Destructuring is required</strong>: When you need to unpack
+values from sequences, dictionaries, or objects while verifying their
+types and shapes.</li>
+<li><strong>Handling polymorphic data</strong>: When managing varying
+input formats like parsed JSON payloads or abstract syntax trees.</li>
+<li><strong>Readability is improved</strong>: When deeply nested
+<code>isinstance()</code> checks and dictionary lookups clutter the
+control flow.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

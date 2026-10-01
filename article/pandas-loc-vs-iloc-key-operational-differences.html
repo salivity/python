@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pandas loc vs iloc: Key Operational Differences - python</title>
+    <meta name="description" content="Understanding the operational differences between .loc and .iloc is fundamental to effective data manipulation in Python's Pandas library. While both indexers are used to extract, filter, and modify subsets of data in a DataFrame or Series, they rely on">
+    <link rel="canonical" href="https://salivity.github.io/python/article/pandas-loc-vs-iloc-key-operational-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pandas loc vs iloc: Key Operational Differences - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/pandas-loc-vs-iloc-key-operational-differences" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Understanding the operational differences between .loc and .iloc is fundamental to effective data manipulation in Python's Pandas library. While both indexers are used to extract, filter, and modify subsets of data in a DataFrame or Series, they rely on" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pandas-loc-vs-iloc-key-operational-differences">Pandas loc vs
+iloc: Key Operational Differences</h1>
+<p>Understanding the operational differences between <code>.loc</code>
+and <code>.iloc</code> is fundamental to effective data manipulation in
+Python's Pandas library. While both indexers are used to extract,
+filter, and modify subsets of data in a DataFrame or Series, they rely
+on entirely different indexing mechanisms. This guide explains how
+<code>.loc</code> operates as a label-based indexer, how
+<code>.iloc</code> functions as an integer-position indexer, and how
+their slicing, filtering, and indexing rules diverge in practice.</p>
+<hr />
+<h3 id="the-fundamental-rule-labels-vs-positions">The Fundamental Rule:
+Labels vs. Positions</h3>
+<p>The core distinction between the two indexers comes down to how they
+identify elements:</p>
+<ul>
+<li><strong><code>.loc</code> is label-based:</strong> It selects rows
+and columns using their explicitly defined index names or column
+labels.</li>
+<li><strong><code>.iloc</code> is integer position-based:</strong> It
+selects rows and columns using their 0-indexed numerical positions,
+regardless of what the actual index labels are.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.DataFrame(</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    {<span class="st">&quot;City&quot;</span>: [<span class="st">&quot;New York&quot;</span>, <span class="st">&quot;Paris&quot;</span>, <span class="st">&quot;Tokyo&quot;</span>], <span class="st">&quot;Population&quot;</span>: [<span class="fl">8.4</span>, <span class="fl">2.1</span>, <span class="fl">14.0</span>]},</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    index<span class="op">=</span>[<span class="st">&quot;a&quot;</span>, <span class="st">&quot;b&quot;</span>, <span class="st">&quot;c&quot;</span>],</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>In this DataFrame:</p>
+<ul>
+<li><code>df.loc['a', 'City']</code> retrieves <code>'New York'</code>
+by specifying the row label <code>'a'</code> and column label
+<code>'City'</code>.</li>
+<li><code>df.iloc[0, 0]</code> retrieves <code>'New York'</code> by
+specifying the 0th row position and 0th column position.</li>
+</ul>
+<hr />
+<h3 id="key-operational-differences">Key Operational Differences</h3>
+<h4 id="1-slicing-endpoints-inclusion-vs-exclusion">1. Slicing Endpoints
+(Inclusion vs. Exclusion)</h4>
+<p>A major operational difference lies in how Python range slicing
+behaves:</p>
+<ul>
+<li><strong><code>.loc</code> includes the stop bound:</strong> When
+using label ranges like <code>'a':'c'</code>, the stop label
+<code>'c'</code> is <strong>included</strong> in the result.</li>
+<li><strong><code>.iloc</code> excludes the stop bound:</strong>
+Following standard Python list-slicing conventions, <code>0:2</code>
+includes positions <code>0</code> and <code>1</code>, while excluding
+position <code>2</code>.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Returns rows &#39;a&#39; and &#39;b&#39; (inclusive of &#39;b&#39;)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>df.loc[<span class="st">&quot;a&quot;</span>:<span class="st">&quot;b&quot;</span>]</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Returns rows at index positions 0 and 1 (excludes position 2)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>df.iloc[<span class="dv">0</span>:<span class="dv">2</span>]</span></code></pre></div>
+<h4 id="2-handling-numeric-indices">2. Handling Numeric Indices</h4>
+<p>Confusion often arises when a DataFrame uses integer labels that do
+not match their default order (e.g., after sorting, filtering, or custom
+assignment).</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>df_num <span class="op">=</span> pd.DataFrame({<span class="st">&quot;Score&quot;</span>: [<span class="dv">10</span>, <span class="dv">20</span>, <span class="dv">30</span>]}, index<span class="op">=</span>[<span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">1</span>])</span></code></pre></div>
+<ul>
+<li><code>df_num.loc[0]</code> looks for the label <code>0</code> and
+returns <code>20</code>.</li>
+<li><code>df_num.iloc[0]</code> looks for the 0th physical row in memory
+and returns <code>10</code>.</li>
+</ul>
+<p>Using <code>.loc</code> with integers queries the explicit label
+values; using <code>.iloc</code> always queries the row's physical
+offset from <code>0</code> to <code>n - 1</code>.</p>
+<h4 id="3-boolean-masking">3. Boolean Masking</h4>
+<p>Both accessors support conditional selections, but with different
+constraints:</p>
+<ul>
+<li><strong><code>.loc</code> accepts aligned Boolean Series:</strong>
+You can pass conditional expressions directly because <code>.loc</code>
+aligns the Boolean Series by index labels:
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>df.loc[df[<span class="st">&quot;Population&quot;</span>] <span class="op">&gt;</span> <span class="dv">5</span>]</span></code></pre></div></li>
+<li><strong><code>.iloc</code> requires positional Boolean
+arrays:</strong> <code>.iloc</code> cannot automatically align an
+indexed Series. It requires an array-like sequence of booleans or a list
+with the exact length of the axis:
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>df.iloc[(df[<span class="st">&quot;Population&quot;</span>] <span class="op">&gt;</span> <span class="dv">5</span>).to_numpy()]</span></code></pre></div></li>
+</ul>
+<h4 id="4-callable-functions">4. Callable Functions</h4>
+<p>Both <code>.loc</code> and <code>.iloc</code> accept callable
+functions (such as lambda functions) that take the calling DataFrame or
+Series as their sole argument:</p>
+<ul>
+<li><code>df.loc[lambda x: x['Population'] &gt; 5]</code> filters rows
+based on a label-oriented condition.</li>
+<li><code>df.iloc[lambda x: [0, 2]]</code> selects specific rows by
+numerical position.</li>
+</ul>
+<hr />
+<h3 id="quick-reference-comparison">Quick Reference Comparison</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>.loc</code></th>
+<th style="text-align: left;"><code>.iloc</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Input Type</strong></td>
+<td style="text-align: left;">Labels, names, or Boolean Series</td>
+<td style="text-align: left;">Integers, integer lists, or slices</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Slicing Behavior</strong></td>
+<td style="text-align: left;">Closed interval: <code>start:stop</code>
+includes <code>stop</code></td>
+<td style="text-align: left;">Half-open interval:
+<code>start:stop</code> excludes <code>stop</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Out-of-Bounds
+Handling</strong></td>
+<td style="text-align: left;">Raises <code>KeyError</code> if label is
+not found</td>
+<td style="text-align: left;">Raises <code>IndexError</code> if integer
+position is invalid</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Primary Use Case</strong></td>
+<td style="text-align: left;">Querying by meaningful IDs, dates, or
+column names</td>
+<td style="text-align: left;">Positional operations, splitting data
+(e.g., train/test splits)</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

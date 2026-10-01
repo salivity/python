@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Circular Imports: Load Time vs Deferred Scope - python</title>
+    <meta name="description" content="In Python, circular dependencies occur when two or more modules depend on each other, causing execution challenges during import resolution. When circular imports execute at module load time, they frequently fail with an ImportError or AttributeError bec">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-circular-imports-load-time-vs-deferred-scope">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Circular Imports: Load Time vs Deferred Scope - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-circular-imports-load-time-vs-deferred-scope" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, circular dependencies occur when two or more modules depend on each other, causing execution challenges during import resolution. When circular imports execute at module load time, they frequently fail with an ImportError or AttributeError bec" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-circular-imports-load-time-vs-deferred-scope">Python
+Circular Imports: Load Time vs Deferred Scope</h1>
+<p>In Python, circular dependencies occur when two or more modules
+depend on each other, causing execution challenges during import
+resolution. When circular imports execute at module load time, they
+frequently fail with an <code>ImportError</code> or
+<code>AttributeError</code> because one module attempts to access
+attributes from another that has not finished initializing. Conversely,
+deferring imports inside function scopes bypasses this initialization
+bottleneck by delaying the import execution until runtime, after both
+modules have fully populated their respective namespaces in Python’s
+module registry.</p>
+<h3 id="how-module-load-time-imports-work">How Module Load Time Imports
+Work</h3>
+<p>When Python encounters an <code>import</code> statement at the top
+level of a file, it checks the <code>sys.modules</code> dictionary to
+see if the module has already been imported. If the module is not
+present:</p>
+<ol type="1">
+<li>Python creates a new, empty module object and adds it to
+<code>sys.modules</code>.</li>
+<li>Python executes the module's code sequentially from top to bottom,
+defining functions, classes, and variables.</li>
+<li>Once execution finishes, the module is considered fully
+initialized.</li>
+</ol>
+<p>When a circular import occurs at load time—for instance, Module A
+imports Module B, and Module B imports Module A—the process stalls.
+Module A begins execution and immediately requests Module B. Python
+pauses Module A and starts loading Module B. When Module B encounters
+the statement importing Module A, it queries <code>sys.modules</code>,
+finds Module A already registered, and retrieves the reference.</p>
+<p>However, Module A has not finished executing. If Module B uses
+<code>from module_a import some_function</code>, Python looks for
+<code>some_function</code> on an uncompleted module object. Because the
+attribute has not yet been parsed, Python raises:</p>
+<pre class="text"><code>ImportError: cannot import name &#39;some_function&#39; from partially initialized module &#39;module_a&#39;</code></pre>
+<p>If the standard <code>import module_a</code> syntax is used instead,
+the import statement itself may succeed, but subsequent top-level code
+attempting to access <code>module_a.some_function</code> will fail with
+an <code>AttributeError</code>.</p>
+<h3 id="how-deferred-function-scope-imports-work">How Deferred Function
+Scope Imports Work</h3>
+<p>Deferred imports, also known as lazy imports, move the
+<code>import</code> statement from the module's global scope into the
+local scope of a function or method.</p>
+<p>Under this pattern:</p>
+<ol type="1">
+<li>Both Module A and Module B finish their initial top-level execution
+without attempting to resolve the shared dependency immediately.</li>
+<li>Both modules are fully executed, and their complete namespaces are
+registered in <code>sys.modules</code>.</li>
+<li>When a specific function in Module A is eventually called during
+application runtime, its local <code>import</code> statement
+executes.</li>
+<li>Python checks <code>sys.modules</code>, finds Module B fully
+initialized, and retrieves the requested object without error.</li>
+</ol>
+<p>By deferring the import to the moment of actual usage, the execution
+order is decoupled from the module loading phase.</p>
+<h3 id="key-behavioral-differences">Key Behavioral Differences</h3>
+<ul>
+<li><strong>Resolution Timing:</strong> Load-time imports resolve during
+application startup or initial module discovery. Deferred imports
+resolve dynamically when the enclosing function is invoked.</li>
+<li><strong>Failure Modes:</strong> Load-time circular imports fail
+deterministically at startup with <code>ImportError</code> or
+<code>AttributeError</code>. Deferred imports avoid load-time failure,
+though any underlying import errors (such as
+<code>ModuleNotFoundError</code>) are postponed until runtime.</li>
+<li><strong>Performance Impact:</strong> Load-time imports execute once.
+Deferred imports inside frequently executed functions perform a
+dictionary lookup in <code>sys.modules</code> on every call, introducing
+a negligible but measurable overhead unless guarded or cached.</li>
+<li><strong>Code Maintainability:</strong> Load-time imports clearly
+declare all dependencies at the top of the file as recommended by PEP 8.
+Deferred imports hide dependencies inside functions, which can make the
+module architecture harder to trace, but they serve as an effective
+localized patch when refactoring shared dependencies into a separate
+module is impractical.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

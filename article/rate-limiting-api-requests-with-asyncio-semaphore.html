@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate Limiting API Requests with asyncio.Semaphore - python</title>
+    <meta name="description" content="This article explains how Python's asyncio.Semaphore functions as an essential concurrency control mechanism for managing outbound API requests. You will learn the mechanics behind the semaphore, why it is necessary to prevent API rate limit violations a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/rate-limiting-api-requests-with-asyncio-semaphore">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Rate Limiting API Requests with asyncio.Semaphore - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/rate-limiting-api-requests-with-asyncio-semaphore" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how Python's asyncio.Semaphore functions as an essential concurrency control mechanism for managing outbound API requests. You will learn the mechanics behind the semaphore, why it is necessary to prevent API rate limit violations a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="rate-limiting-api-requests-with-asynciosemaphore">Rate Limiting
+API Requests with asyncio.Semaphore</h1>
+<p>This article explains how Python's <code>asyncio.Semaphore</code>
+functions as an essential concurrency control mechanism for managing
+outbound API requests. You will learn the mechanics behind the
+semaphore, why it is necessary to prevent API rate limit violations and
+server overload, and how to implement it cleanly using an asynchronous
+context manager to bound concurrent network tasks.</p>
+<h2 id="what-is-an-asynciosemaphore">What is an
+<code>asyncio.Semaphore</code>?</h2>
+<p>An <code>asyncio.Semaphore</code> is a synchronization primitive
+built on an internal counter. When you instantiate a semaphore, you
+assign it an integer value representing the maximum number of tasks
+allowed to access a shared resource simultaneously:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>sem <span class="op">=</span> asyncio.Semaphore(<span class="dv">10</span>)  <span class="co"># Allows up to 10 concurrent operations</span></span></code></pre></div>
+<p>Each time a coroutine calls <code>acquire()</code> (or enters an
+<code>async with sem:</code> block), the counter decreases by one. If
+the counter reaches zero, any subsequent coroutine attempting to acquire
+the semaphore suspends execution without blocking the event loop. When a
+running coroutine completes its work and calls <code>release()</code>
+(or exits the context block), the counter increments by one, immediately
+allowing the next waiting coroutine in line to proceed.</p>
+<h2 id="the-role-of-semaphore-in-api-rate-limiting">The Role of
+Semaphore in API Rate Limiting</h2>
+<p>Asynchronous HTTP libraries like <code>aiohttp</code> or
+<code>httpx</code> allow Python programs to dispatch thousands of
+requests in seconds. However, sending unconstrained traffic causes
+critical issues:</p>
+<ul>
+<li><strong>HTTP 429 (Too Many Requests):</strong> APIs enforce rate
+limits to protect infrastructure. Exceeding these limits leads to
+rejected calls, temporary blocks, or permanent IP bans.</li>
+<li><strong>Socket and Memory Exhaustion:</strong> Firing thousands of
+concurrent connections exhausts local operating system resources and
+file descriptors.</li>
+<li><strong>Server-Side Degradation:</strong> Flooding a backend service
+with concurrent queries can trigger cascading failures.</li>
+</ul>
+<p><code>asyncio.Semaphore</code> prevents these issues by enforcing a
+strict ceiling on the number of <strong>in-flight</strong> requests.
+While it controls <em>concurrency</em> (simultaneous connections) rather
+than a strict <em>rate-over-time</em> (such as requests per minute),
+concurrency capping is often the first and most critical defense against
+overwhelming APIs.</p>
+<h2 id="implementing-asynciosemaphore">Implementing
+<code>asyncio.Semaphore</code></h2>
+<p>The safest way to use <code>asyncio.Semaphore</code> is via the
+asynchronous context manager (<code>async with</code>), which guarantees
+that the acquired permit is automatically released even if an exception
+occurs during the HTTP request.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> httpx</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>MAX_CONCURRENT_REQUESTS <span class="op">=</span> <span class="dv">5</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>semaphore <span class="op">=</span> asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> fetch_url(client: httpx.AsyncClient, url: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">int</span>:</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="cf">with</span> semaphore:</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        response <span class="op">=</span> <span class="cf">await</span> client.get(url)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> response.status_code</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    urls <span class="op">=</span> [<span class="ss">f&quot;https://httpbin.org/get?id=</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">50</span>)]</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> to_run <span class="op">=</span> []</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="cf">with</span> httpx.AsyncClient() <span class="im">as</span> client:</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        tasks <span class="op">=</span> [fetch_url(client, url) <span class="cf">for</span> url <span class="kw">in</span> urls]</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        results <span class="op">=</span> <span class="cf">await</span> asyncio.gather(<span class="op">*</span>tasks)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Completed </span><span class="sc">{</span><span class="bu">len</span>(results)<span class="sc">}</span><span class="ss"> requests.&quot;</span>)</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&quot;__main__&quot;</span>:</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    asyncio.run(main())</span></code></pre></div>
+<p>In this implementation, even though 50 tasks are scheduled
+simultaneously with <code>asyncio.gather</code>, only five tasks can
+execute their <code>client.get()</code> block at any given millisecond.
+The remaining 45 tasks wait cooperatively in the event loop queue until
+slots become available.</p>
+<h2 id="concurrency-vs-throughput-rate-limits">Concurrency vs.
+Throughput Rate Limits</h2>
+<p>It is important to distinguish between <strong>concurrency
+limits</strong> and <strong>frequency limits</strong>:</p>
+<ol type="1">
+<li><strong>Concurrency (Handled by Semaphore):</strong> "No more than
+10 requests active at the same moment."</li>
+<li><strong>Frequency (Handled by Token Buckets/Leaky Buckets):</strong>
+"No more than 100 requests per 60 seconds."</li>
+</ol>
+<p>If an API explicitly restricts calls per unit of time, a semaphore
+alone may still violate limits if the target server responds quickly
+(for instance, completing 10 parallel requests in 50 milliseconds allows
+200 requests per second). In such scenarios,
+<code>asyncio.Semaphore</code> should be paired with a delay mechanism
+(such as <code>asyncio.sleep</code>) or a specialized rate-limiting
+algorithm like a token bucket to throttle both concurrency and
+velocity.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

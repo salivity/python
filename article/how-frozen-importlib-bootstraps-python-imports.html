@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How _frozen_importlib Bootstraps Python Imports - python</title>
+    <meta name="description" content="Python relies on its own importlib package to find, load, and manage modules, which creates a classic chicken-and-egg dilemma: the interpreter needs an import system to load the Python files that define the import system. To resolve this circular depende">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-frozen-importlib-bootstraps-python-imports">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How _frozen_importlib Bootstraps Python Imports - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-frozen-importlib-bootstraps-python-imports" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python relies on its own importlib package to find, load, and manage modules, which creates a classic chicken-and-egg dilemma: the interpreter needs an import system to load the Python files that define the import system. To resolve this circular depende" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-_frozen_importlib-bootstraps-python-imports">How
+_frozen_importlib Bootstraps Python Imports</h1>
+<p>Python relies on its own <code>importlib</code> package to find,
+load, and manage modules, which creates a classic chicken-and-egg
+dilemma: the interpreter needs an import system to load the Python files
+that define the import system. To resolve this circular dependency,
+Python embeds a pre-compiled, bytecode version of its core import
+machinery directly into the CPython binary under the module name
+<code>_frozen_importlib</code>. This article explains how
+<code>_frozen_importlib</code> bridges the gap during interpreter
+startup, enabling a self-hosting import system to initialize without
+relying on external filesystem imports.</p>
+<h3 id="the-bootstrapping-dilemma">The Bootstrapping Dilemma</h3>
+<p>Historically, Python's import machinery was implemented entirely in
+C. With Python 3.3, the core import logic was rewritten in pure Python
+via <code>importlib</code> (specifically
+<code>importlib._bootstrap</code> and
+<code>importlib._bootstrap_external</code>). While writing the logic in
+Python makes the import machinery easier to maintain, customize, and
+test, it creates a fundamental bootstrapping problem. At interpreter
+startup, basic capabilities such as parsing file paths, reading files
+from disk, and compiling Python source code to bytecode depend on the
+very import machinery that has not yet been loaded.</p>
+<h3 id="what-is-a-frozen-module">What Is a Frozen Module?</h3>
+<p>A frozen module in CPython is a Python module whose compiled bytecode
+is embedded directly inside the CPython executable or shared library as
+a static C array of bytes. Because the bytecode is compiled at build
+time, the interpreter can load and execute it without:</p>
+<ul>
+<li>Reading anything from the filesystem.</li>
+<li>Initializing file I/O subsystems.</li>
+<li>Invoking the Python parser or bytecode compiler.</li>
+</ul>
+<p>During the CPython build process, a helper tool compiles
+<code>Lib/importlib/_bootstrap.py</code> into bytecode and transforms
+those bytes into a C header file. When CPython is compiled, this
+bytecode becomes baked directly into the C runtime.</p>
+<h3 id="the-startup-and-bootstrapping-sequence">The Startup and
+Bootstrapping Sequence</h3>
+<p>CPython uses <code>_frozen_importlib</code> to bootstrap the runtime
+through a carefully ordered sequence:</p>
+<ol type="1">
+<li><strong>Primitive C Initialization:</strong> The interpreter starts
+by initializing fundamental C-level structures, memory allocators, and
+built-in modules like <code>sys</code> and <code>builtins</code>.</li>
+<li><strong>Loading <code>_frozen_importlib</code>:</strong> The runtime
+invokes a minimal C-level loader capable exclusively of executing frozen
+bytecode arrays stored in memory. It executes the frozen bytecode of
+<code>importlib._bootstrap</code>, exposing it as the module
+<code>_frozen_importlib</code>.</li>
+<li><strong>Setting Up Core Importers:</strong> Once executed,
+<code>_frozen_importlib</code> establishes foundational classes (such as
+<code>ModuleSpec</code>) and registers primitive finders onto
+<code>sys.meta_path</code>. These initial finders only know how to load
+built-in modules (<code>BuiltinImporter</code>) and other frozen modules
+(<code>FrozenImporter</code>).</li>
+<li><strong>Loading External Import Machinery:</strong> With primitive
+importing operational, the runtime loads
+<code>_frozen_importlib_external</code> (the frozen version of
+<code>importlib._bootstrap_external</code>). This module provides
+file-system-aware classes, including <code>FileFinder</code>,
+<code>SourceFileLoader</code>, and <code>PathFinder</code>.</li>
+<li><strong>Enabling Filesystem Imports:</strong> The external importers
+are appended to <code>sys.meta_path</code>, allowing Python to locate
+<code>.py</code> and <code>.pyc</code> files on disk, inspect
+<code>sys.path</code>, and resolve standard packages.</li>
+</ol>
+<h3 id="finalizing-the-import-system">Finalizing the Import System</h3>
+<p>After <code>_frozen_importlib</code> and
+<code>_frozen_importlib_external</code> are initialized, the
+bootstrapping phase ends. The runtime can now import standard library
+modules directly from disk.</p>
+<p>When user code later runs <code>import importlib</code>, the standard
+library module simply re-exports the components already defined in
+memory by <code>_frozen_importlib</code>. This architecture allows
+Python to maintain an import subsystem written almost entirely in
+high-level Python code while avoiding runtime circular dependencies
+during startup.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

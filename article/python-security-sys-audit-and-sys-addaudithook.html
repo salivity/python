@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Security: sys.audit and sys.addaudithook - python</title>
+    <meta name="description" content="Introduced in Python 3.8 through PEP 578, the sys.audit() and sys.addaudithook() functions provide a native runtime auditing framework designed to improve Python's internal security visibility. This mechanism enables developers, system administrators, an">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-security-sys-audit-and-sys-addaudithook">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Security: sys.audit and sys.addaudithook - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-security-sys-audit-and-sys-addaudithook" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Introduced in Python 3.8 through PEP 578, the sys.audit() and sys.addaudithook() functions provide a native runtime auditing framework designed to improve Python's internal security visibility. This mechanism enables developers, system administrators, an" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-security-sysaudit-and-sysaddaudithook">Python Security:
+sys.audit and sys.addaudithook</h1>
+<p>Introduced in Python 3.8 through PEP 578, the
+<code>sys.audit()</code> and <code>sys.addaudithook()</code> functions
+provide a native runtime auditing framework designed to improve Python's
+internal security visibility. This mechanism enables developers, system
+administrators, and security monitoring agents to intercept and inspect
+low-level actions—such as dynamic code execution, network socket
+creation, file access, and process spawning—directly at the interpreter
+level before the operations are executed.</p>
+<h3 id="the-security-problem-addressed-by-pep-578">The Security Problem
+Addressed by PEP 578</h3>
+<p>Historically, Python environments operated largely as black boxes to
+operating system monitoring tools. Because Python is highly dynamic,
+malicious actors or compromised third-party packages could monkey-patch
+core built-in functions, dynamically compile payloads using
+<code>exec()</code> or <code>eval()</code>, or interact with OS
+primitives via standard libraries without triggering typical OS-level
+security alerts.</p>
+<p>Traditional runtime application self-protection (RASP) tools relied
+on fragile monkey-patching techniques to detect suspicious activity.
+Attackers could easily bypass or disable these patches by restoring
+original function references. PEP 578 solves this problem by embedding
+non-removable audit points directly into CPython's C implementation.</p>
+<h3 id="the-role-of-sysaddaudithook">The Role of
+<code>sys.addaudithook()</code></h3>
+<p>The <code>sys.addaudithook()</code> function registers a monitoring
+callback in the current Python runtime. The registered hook takes two
+arguments: the name of the audit event (a string) and a tuple containing
+event-specific positional arguments.</p>
+<p>Key characteristics of <code>sys.addaudithook()</code> include:</p>
+<ul>
+<li><strong>Permanence:</strong> Once registered, an audit hook cannot
+be removed, replaced, or disabled from within Python code. This prevents
+malicious code from simply turning off telemetry.</li>
+<li><strong>Early Execution:</strong> The hook is executed synchronously
+whenever an audited event occurs, before the requested operation
+actually executes.</li>
+<li><strong>Abortion via Exceptions:</strong> In addition to passive
+logging, an audit hook can actively block suspicious operations by
+raising an exception (typically <code>RuntimeError</code> or a custom
+security exception), terminating the intercepted action
+immediately.</li>
+</ul>
+<h3 id="the-role-of-sysaudit">The Role of <code>sys.audit()</code></h3>
+<p>The <code>sys.audit()</code> function is the event-triggering
+mechanism. When called, it broadcasts an event name and its arguments to
+all registered audit hooks:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>sys.audit(<span class="st">&quot;custom_event.name&quot;</span>, arg1, arg2)</span></code></pre></div>
+<p>CPython's standard library extensively calls <code>sys.audit()</code>
+across critical internal operations. Built-in events include:</p>
+<ul>
+<li><code>open</code>: Triggered when reading or writing files,
+providing the path and access mode.</li>
+<li><code>os.system</code> / <code>subprocess.Popen</code>: Triggered
+during shell execution and process creation.</li>
+<li><code>socket.connect</code> / <code>socket.bind</code>: Triggered
+during network activity, providing socket endpoints.</li>
+<li><code>cpython.run_command</code> / <code>exec</code>: Triggered when
+raw strings or code objects are dynamically evaluated.</li>
+<li><code>import</code>: Triggered when modules are dynamically loaded
+into memory.</li>
+</ul>
+<p>Developers can also use <code>sys.audit()</code> within their own
+applications to establish custom security boundaries and monitor
+sensitive application-specific actions, such as user privilege
+escalation or database connection initialization.</p>
+<h3 id="security-use-cases-and-limitations">Security Use Cases and
+Limitations</h3>
+<p>The primary use case for PEP 578 is security observability and
+intrusion detection. By forwarding audit hook data to centralized
+monitoring tools, security teams can track anomalies such as
+unauthorized network connections initiated by dependencies or unexpected
+code compilation at runtime.</p>
+<p>However, <code>sys.audit()</code> and <code>sys.addaudithook()</code>
+are not intended to be a complete sandbox. A determined attacker with
+arbitrary code execution privileges via C extensions or raw memory
+access (such as <code>ctypes</code>) can manipulate interpreter memory
+to bypass audit hooks. Consequently, PEP 578 acts as an auditing and
+detection layer rather than an impenetrable security boundary.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

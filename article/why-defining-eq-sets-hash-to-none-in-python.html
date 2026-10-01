@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why Defining __eq__ Sets __hash__ to None in Python - python</title>
+    <meta name="description" content="When you define a custom eq method in a Python class without defining hash, Python automatically sets hash = None, rendering the class unhashable. This article explains the technical rationale behind this behavior, focusing on the fundamental invariant o">
+    <link rel="canonical" href="https://salivity.github.io/python/article/why-defining-eq-sets-hash-to-none-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Why Defining __eq__ Sets __hash__ to None in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/why-defining-eq-sets-hash-to-none-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When you define a custom eq method in a Python class without defining hash, Python automatically sets hash = None, rendering the class unhashable. This article explains the technical rationale behind this behavior, focusing on the fundamental invariant o" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="why-defining-eq-sets-hash-to-none-in-python">Why Defining
+<strong>eq</strong> Sets <strong>hash</strong> to None in Python</h1>
+<p>When you define a custom <code>__eq__</code> method in a Python class
+without defining <code>__hash__</code>, Python automatically sets
+<code>__hash__ = None</code>, rendering the class unhashable. This
+article explains the technical rationale behind this behavior, focusing
+on the fundamental invariant of hash-based collections, the risk of data
+corruption, and how to properly restore hashing capabilities when
+appropriate.</p>
+<h2 id="the-hash-invariant">The Hash Invariant</h2>
+<p>Python's hash-based collections, such as <code>dict</code> and
+<code>set</code>, rely on a strict mathematical contract:</p>
+<blockquote>
+<p>If two objects are equal according to <code>__eq__</code>, their hash
+values must also be equal (<code>a == b</code> implies
+<code>hash(a) == hash(b)</code>).</p>
+</blockquote>
+<p>The converse does not need to be true; two different objects can
+share the same hash value (a hash collision). However, equal objects
+must never produce different hashes. If equal objects produce different
+hashes, hash tables will store them in different buckets. Consequently,
+a lookup for a key that equals an existing key will look in the wrong
+bucket and fail to find it, causing silent retrieval bugs and duplicate
+entries in sets.</p>
+<h2 id="the-problem-with-default-inheritance">The Problem with Default
+Inheritance</h2>
+<p>By default, any user-defined class inherits both <code>__eq__</code>
+and <code>__hash__</code> from <code>object</code>:</p>
+<ul>
+<li><code>object.__eq__</code> compares object identity
+(<code>self is other</code>).</li>
+<li><code>object.__hash__</code> derives a hash code from the object's
+identity (typically its memory address).</li>
+</ul>
+<p>Under the default implementation, two distinct instances are never
+equal, so their differing hashes never violate the hash invariant.</p>
+<p>However, when you implement a custom <code>__eq__</code>, you almost
+always base equality on an object's internal state rather than its
+identity:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Point:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, x, y):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.x <span class="op">=</span> x</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.y <span class="op">=</span> y</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__eq__</span>(<span class="va">self</span>, other):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">isinstance</span>(other, Point) <span class="kw">and</span> (<span class="va">self</span>.x, <span class="va">self</span>.y) <span class="op">==</span> (other.x, other.y)</span></code></pre></div>
+<p>If Python allowed this class to inherit <code>object.__hash__</code>,
+two distinct instances with identical coordinates would be equal
+(<code>Point(1, 2) == Point(1, 2)</code>), but their hash codes would
+differ because their memory addresses differ. This directly violates the
+hash contract.</p>
+<h2 id="why-python-enforces-__hash__--none">Why Python Enforces
+<code>__hash__ = None</code></h2>
+<p>Rather than allowing classes to silently inherit an invalid
+<code>__hash__</code> implementation, Python automatically sets
+<code>__hash__ = None</code> on any class that defines
+<code>__eq__</code> without <code>__hash__</code>.</p>
+<p>Setting <code>__hash__ = None</code> informs Python's runtime that
+instances of this class are intentionally unhashable. When an operation
+attempts to calculate the hash—such as adding an instance to a
+<code>set</code> or using it as a <code>dict</code> key—Python
+immediately raises a clear error:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>p <span class="op">=</span> Point(<span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">hash</span>(p)  <span class="co"># Raises TypeError: unhashable type: &#39;Point&#39;</span></span></code></pre></div>
+<p>This enforces the design principle that failing early and loudly is
+preferable to silently corrupting data structures.</p>
+<h2 id="mutability-and-hashing">Mutability and Hashing</h2>
+<p>Another reason behind this design is that classes defining custom
+equality are frequently mutable.</p>
+<p>If a mutable object's hash is computed from its attributes, modifying
+those attributes changes the hash value. If that object is already
+stored inside a set or dictionary, the container will look for it in a
+bucket corresponding to its new hash rather than the bucket where it was
+originally inserted, effectively "losing" the object.</p>
+<p>Because Python cannot automatically determine whether your class is
+immutable, it assumes that defining a custom equality check makes the
+object unsuitable for hashing by default.</p>
+<h2 id="how-to-restore-hashing">How to Restore Hashing</h2>
+<p>Depending on your use case, there are two primary ways to restore
+hashing:</p>
+<h3 id="1-implement-a-custom-hash-for-immutable-objects">1. Implement a
+Custom Hash (For Immutable Objects)</h3>
+<p>If your object's state does not change after instantiation, implement
+<code>__hash__</code> using the same attributes compared in
+<code>__eq__</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Point:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, x, y):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._x <span class="op">=</span> x</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._y <span class="op">=</span> y</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__eq__</span>(<span class="va">self</span>, other):</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">isinstance</span>(other, Point) <span class="kw">and</span> (<span class="va">self</span>._x, <span class="va">self</span>._y) <span class="op">==</span> (other._x, other._y)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__hash__</span>(<span class="va">self</span>):</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">hash</span>((<span class="va">self</span>._x, <span class="va">self</span>._y))</span></code></pre></div>
+<h3 id="2-restore-identity-hashing">2. Restore Identity Hashing</h3>
+<p>If you want instances to compare equality based on value in logic
+expressions, but still be distinguished by identity inside collections,
+you can explicitly restore identity hashing:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Point:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">__hash__</span> <span class="op">=</span> <span class="bu">object</span>.<span class="fu">__hash__</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, x, y):</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.x <span class="op">=</span> x</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.y <span class="op">=</span> y</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__eq__</span>(<span class="va">self</span>, other):</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">isinstance</span>(other, Point) <span class="kw">and</span> (<span class="va">self</span>.x, <span class="va">self</span>.y) <span class="op">==</span> (other.x, other.y)</span></code></pre></div>
+<p><em>Note: Doing this reintroduces the risk of <code>a == b</code>
+producing different hashes, so it should be used with extreme
+caution.</em></p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

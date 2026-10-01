@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Role of CO_VARARGS in Python Bytecode Execution - python</title>
+    <meta name="description" content="The COVARARGS flag is a compiler-level bit flag stored in a Python code object’s coflags attribute that signifies a function accepts arbitrary positional arguments via the args syntax. During bytecode execution, this flag instructs Python's runtime eva">
+    <link rel="canonical" href="https://salivity.github.io/python/article/role-of-co-varargs-in-python-bytecode-execution">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Role of CO_VARARGS in Python Bytecode Execution - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/role-of-co-varargs-in-python-bytecode-execution" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The COVARARGS flag is a compiler-level bit flag stored in a Python code object’s coflags attribute that signifies a function accepts arbitrary positional arguments via the args syntax. During bytecode execution, this flag instructs Python's runtime eva" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="role-of-co_varargs-in-python-bytecode-execution">Role of
+CO_VARARGS in Python Bytecode Execution</h1>
+<p>The <code>CO_VARARGS</code> flag is a compiler-level bit flag stored
+in a Python code object’s <code>co_flags</code> attribute that signifies
+a function accepts arbitrary positional arguments via the
+<code>*args</code> syntax. During bytecode execution, this flag
+instructs Python's runtime evaluation loop and argument-binding routines
+to collect any positional arguments that exceed the explicitly declared
+positional parameters, package them into a single tuple, and bind that
+tuple to a dedicated local variable slot in the execution frame.</p>
+<h3 id="flag-definition-and-compilation">Flag Definition and
+Compilation</h3>
+<p>When Python compiles source code into a code object
+(<code>PyCodeObject</code>), the compiler analyzes the function
+signature. If the signature includes a variable positional parameter
+(such as <code>*args</code>), the compiler sets the
+<code>CO_VARARGS</code> bit (internally defined as <code>0x0004</code>
+in CPython’s <code>code.h</code>) within <code>co_flags</code>.</p>
+<p>You can inspect this flag directly using the <code>inspect</code>
+module:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> inspect</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> example_func(a, <span class="op">*</span>args):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># CO_VARARGS corresponds to inspect.CO_VARARGS (value 4)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>has_varargs <span class="op">=</span> <span class="bu">bool</span>(example_func.__code__.co_flags <span class="op">&amp;</span> inspect.CO_VARARGS)</span></code></pre></div>
+<h3 id="argument-binding-during-frame-initialization">Argument Binding
+During Frame Initialization</h3>
+<p>Before the CPython virtual machine begins executing the bytecode
+instructions of a function frame, it must resolve incoming arguments.
+This is handled by internal evaluation functions (such as
+<code>_PyEval_Vector</code> or <code>_PyFunction_Vectorcall</code>).</p>
+<p>The execution sequence proceeds as follows:</p>
+<ol type="1">
+<li><strong>Positional Parameter Mapping:</strong> The interpreter first
+maps supplied positional arguments to the function's explicit positional
+parameter slots.</li>
+<li><strong>Excess Argument Detection:</strong> If the caller provides
+more positional arguments than the number of positional parameters
+defined by <code>co_argcount</code>, the interpreter checks
+<code>co_flags &amp; CO_VARARGS</code>.</li>
+<li><strong>Tuple Allocation:</strong>
+<ul>
+<li>If <code>CO_VARARGS</code> <strong>is set</strong>, the interpreter
+creates a new <code>PyTuple</code> object containing the remaining
+positional arguments.</li>
+<li>If <code>CO_VARARGS</code> <strong>is not set</strong>, the
+interpreter raises a <code>TypeError</code> indicating that the function
+was given more positional arguments than it accepts.</li>
+</ul></li>
+<li><strong>Empty Fallback:</strong> If the function defines
+<code>*args</code> but no excess positional arguments were supplied, the
+runtime assigns an empty tuple <code>()</code> to the argument
+slot.</li>
+</ol>
+<h3 id="local-variable-assignment-and-bytecode-access">Local Variable
+Assignment and Bytecode Access</h3>
+<p>Once the tuple is constructed, the runtime places the reference to
+this tuple directly into the execution frame's array of local variables
+(<code>fastlocals</code>). The designated index in this array is
+immediately after the standard positional and keyword-only parameter
+slots.</p>
+<p>Inside the function body, bytecode does not require a special
+instruction to read <code>*args</code>. The compiler emits a standard
+<code>LOAD_FAST</code> instruction referencing the local variable slot
+assigned to <code>args</code>. Because the packing process occurs
+entirely during the C-level function call preamble, the bytecode
+execution loop treats the variable positional argument container as an
+ordinary local tuple.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How PropertyMock Intercepts Attribute Reads in Python - python</title>
+    <meta name="description" content="This article explains the internal mechanics behind Python’s unittest.mock.PropertyMock and how it intercepts attribute reads on mocked objects. While standard Mock objects return callable sub-mocks upon attribute access, PropertyMock uses Python's des">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-property-mock-intercepts-attribute-reads-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How PropertyMock Intercepts Attribute Reads in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-property-mock-intercepts-attribute-reads-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the internal mechanics behind Python’s unittest.mock.PropertyMock and how it intercepts attribute reads on mocked objects. While standard Mock objects return callable sub-mocks upon attribute access, PropertyMock uses Python's des" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-propertymock-intercepts-attribute-reads-in-python">How
+PropertyMock Intercepts Attribute Reads in Python</h1>
+<p>This article explains the internal mechanics behind Python’s
+<code>unittest.mock.PropertyMock</code> and how it intercepts attribute
+reads on mocked objects. While standard <code>Mock</code> objects return
+callable sub-mocks upon attribute access, <code>PropertyMock</code> uses
+Python's descriptor protocol to execute custom logic on access without
+requiring explicit function call syntax. By defining a custom
+<code>__get__</code> method and attaching itself to a class definition,
+<code>PropertyMock</code> mimics dynamic attributes, properties, and
+getters seamlessly during testing.</p>
+<h3 id="the-role-of-pythons-descriptor-protocol">The Role of Python’s
+Descriptor Protocol</h3>
+<p>To understand <code>PropertyMock</code>, you must first understand
+Python descriptors. A descriptor is an object attribute with "binding
+behavior," meaning its attribute access is overridden by methods in the
+descriptor protocol: <code>__get__()</code>, <code>__set__()</code>, and
+<code>__delete__()</code>.</p>
+<p>Built-in Python <code>@property</code> decorators are descriptors.
+When you access <code>instance.my_attribute</code>, Python inspects the
+class of <code>instance</code>. If it finds an object in the class
+namespace that defines a <code>__get__()</code> method, Python calls
+that method instead of retrieving a standard value from the instance
+dictionary:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Behind the scenes:</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">type</span>(instance).__dict__[<span class="st">&#39;my_attribute&#39;</span>].<span class="fu">__get__</span>(instance, <span class="bu">type</span>(instance))</span></code></pre></div>
+<p><code>PropertyMock</code> is a subclass of <code>Mock</code> that
+implements this exact descriptor protocol.</p>
+<h3 id="how-propertymock-implements-__get__">How
+<code>PropertyMock</code> Implements <code>__get__</code></h3>
+<p>Under the hood, <code>PropertyMock</code> overrides the
+<code>__get__</code> method to intercept read requests. When an
+attribute represented by a <code>PropertyMock</code> is accessed:</p>
+<ol type="1">
+<li><strong>Access Trigger:</strong> The code attempts to read an
+attribute on an instance (e.g., <code>obj.status</code>).</li>
+<li><strong>Descriptor Delegation:</strong> Because Python locates the
+<code>PropertyMock</code> on the class level, it invokes
+<code>PropertyMock.__get__(self, obj, obj_type)</code>.</li>
+<li><strong>Execution as a Callable:</strong> Inside
+<code>__get__</code>, <code>PropertyMock</code> calls itself:
+<code>return self()</code>.</li>
+<li><strong>Value Resolution:</strong> Calling <code>self()</code>
+triggers standard <code>Mock</code> evaluation rules. It increments the
+mock's call count, records call arguments, checks for assigned
+<code>return_value</code> or <code>side_effect</code> configurations,
+and returns the result to the caller.</li>
+</ol>
+<p>Because <code>__get__</code> invokes the mock automatically, the
+caller receives the return value directly without having to add
+parentheses <code>()</code> to invoke the property.</p>
+<h3 id="the-class-vs-instance-binding-requirement">The Class vs.
+Instance Binding Requirement</h3>
+<p>Because descriptors rely on class-level lookup, Python only invokes
+<code>__get__</code> automatically when the descriptor exists on the
+target object's <strong>class</strong>, not on the object's instance
+dictionary.</p>
+<p>If you attach a <code>PropertyMock</code> directly to an
+instance:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> unittest.mock <span class="im">import</span> Mock, PropertyMock</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>mock_instance <span class="op">=</span> Mock()</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>mock_instance.status <span class="op">=</span> PropertyMock(return_value<span class="op">=</span><span class="st">&quot;active&quot;</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(mock_instance.status)</span></code></pre></div>
+<p>The output will be the <code>&lt;PropertyMock ...&gt;</code> instance
+itself, rather than the string <code>"active"</code>. Python's attribute
+lookup rules bypass <code>__get__</code> when an attribute is stored
+directly in an instance's <code>__dict__</code>.</p>
+<p>To successfully intercept reads, <code>PropertyMock</code> must be
+assigned to the class:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> unittest.mock <span class="im">import</span> Mock, PropertyMock</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Attach to the class of the mock</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>mock_instance <span class="op">=</span> Mock()</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="bu">type</span>(mock_instance).status <span class="op">=</span> PropertyMock(return_value<span class="op">=</span><span class="st">&quot;active&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Accessing the attribute triggers __get__()</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(mock_instance.status)  <span class="co"># Outputs: &#39;active&#39;</span></span></code></pre></div>
+<p>When using helper utilities like
+<code>unittest.mock.patch.object</code>, the patcher handles this
+automatically under the hood by binding the <code>PropertyMock</code> to
+the target object's class for the duration of the test:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> unittest.mock <span class="im">import</span> patch</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> patch.<span class="bu">object</span>(TargetClass, <span class="st">&#39;status&#39;</span>, new_callable<span class="op">=</span>PropertyMock) <span class="im">as</span> mock_status:</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    mock_status.return_value <span class="op">=</span> <span class="st">&quot;active&quot;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    instance <span class="op">=</span> TargetClass()</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> instance.status <span class="op">==</span> <span class="st">&quot;active&quot;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    mock_status.assert_called_once()</span></code></pre></div>
+<h3 id="intercepting-writes">Intercepting Writes</h3>
+<p>In addition to intercepting reads, <code>PropertyMock</code>
+implements the descriptor's <code>__set__</code> method. When an
+assignment occurs (e.g., <code>obj.status = "idle"</code>),
+<code>PropertyMock.__set__(self, obj, val)</code> executes, internally
+calling <code>self(val)</code>. This captures the assignment as a
+function call with arguments, allowing assertions such as
+<code>mock_status.assert_called_with("idle")</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Metaclasses: Modifying Class Creation - python</title>
+    <meta name="description" content="In Python, metaclasses serve as the "classes of classes," defining how classes themselves are constructed, configured, and instantiated at runtime. While standard classes define the behavior of their instances, metaclasses intercept the class creation pr">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-metaclasses-modifying-class-creation">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Metaclasses: Modifying Class Creation - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-metaclasses-modifying-class-creation" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, metaclasses serve as the "classes of classes," defining how classes themselves are constructed, configured, and instantiated at runtime. While standard classes define the behavior of their instances, metaclasses intercept the class creation pr" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-metaclasses-modifying-class-creation">Python Metaclasses:
+Modifying Class Creation</h1>
+<p>In Python, metaclasses serve as the "classes of classes," defining
+how classes themselves are constructed, configured, and instantiated at
+runtime. While standard classes define the behavior of their instances,
+metaclasses intercept the class creation process, allowing developers to
+inspect, validate, modify, or completely rewrite class definitions
+before they are finalized in memory. This article explores how
+metaclasses work under the hood, the mechanisms they provide for runtime
+modification, practical use cases such as API validation and automatic
+registration, and how they compare to simpler alternatives.</p>
+<h2 id="understanding-the-metaclass-concept">Understanding the Metaclass
+Concept</h2>
+<p>In Python, everything is an object, including classes. When Python
+executes a <code>class</code> definition block, it does not merely
+define a scope; it executes the body and passes the resulting namespace
+to a metaclass to produce a class object.</p>
+<p>By default, Python uses the built-in <code>type</code> as its
+metaclass. When you define:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> MyClass:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> <span class="dv">10</span></span></code></pre></div>
+<p>Python internally executes:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>MyClass <span class="op">=</span> <span class="bu">type</span>(<span class="st">&#39;MyClass&#39;</span>, (), {<span class="st">&#39;x&#39;</span>: <span class="dv">10</span>})</span></code></pre></div>
+<p>By inheriting from <code>type</code>, you can create a custom
+metaclass to intercept and control this instantiation pipeline.</p>
+<h2 id="the-interception-points-__new__-and-__init__">The Interception
+Points: <code>__new__</code> and <code>__init__</code></h2>
+<p>A custom metaclass primarily modifies class creation through two
+methods:</p>
+<ol type="1">
+<li><strong><code>__new__(mcs, name, bases, namespace)</code></strong>:
+Called before the class object is created. It receives the metaclass
+itself (<code>mcs</code>), the class name string (<code>name</code>), a
+tuple of base classes (<code>bases</code>), and the class attribute
+dictionary (<code>namespace</code>). Because it returns the newly
+created class object, <code>__new__</code> is the primary place to alter
+attributes, add new methods, or modify inheritance hierarchies.</li>
+<li><strong><code>__init__(cls, name, bases, namespace)</code></strong>:
+Called after the class object has been instantiated by
+<code>__new__</code>. It is used to initialize the class object, such as
+registering it in an external system or configuring class-level
+metadata.</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CustomMeta(<span class="bu">type</span>):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__new__</span>(mcs, name, bases, namespace):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Modify the class attributes before creation</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        namespace[<span class="st">&#39;category&#39;</span>] <span class="op">=</span> <span class="st">&#39;processed&#39;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">super</span>().<span class="fu">__new__</span>(mcs, name, bases, namespace)</span></code></pre></div>
+<h2 id="key-roles-in-runtime-modification">Key Roles in Runtime
+Modification</h2>
+<h3 id="1-attribute-modification-and-injection">1. Attribute
+Modification and Injection</h3>
+<p>Metaclasses can dynamically inject methods or transform existing
+attributes across all classes that use the metaclass. For instance, an
+ORM (Object-Relational Mapping) framework uses metaclasses to inspect
+class attributes defining database fields and transform them into
+descriptors that manage database transactions.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> UpperCaseAttributesMeta(<span class="bu">type</span>):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__new__</span>(mcs, name, bases, namespace):</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        transformed <span class="op">=</span> {}</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> key, value <span class="kw">in</span> namespace.items():</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="kw">not</span> key.startswith(<span class="st">&#39;__&#39;</span>):</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>                transformed[key.upper()] <span class="op">=</span> value</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">else</span>:</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>                transformed[key] <span class="op">=</span> value</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">super</span>().<span class="fu">__new__</span>(mcs, name, bases, transformed)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Config(metaclass<span class="op">=</span>UpperCaseAttributesMeta):</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    database_url <span class="op">=</span> <span class="st">&quot;localhost:5432&quot;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Config.DATABASE_URL is now accessible, while Config.database_url is not.</span></span></code></pre></div>
+<h3 id="2-validation-and-contract-enforcement">2. Validation and
+Contract Enforcement</h3>
+<p>While Python does not have built-in interfaces in the traditional
+sense, metaclasses can enforce structural contracts across entire
+inheritance trees. Unlike unit tests, a metaclass enforces rules the
+exact moment a module is imported.</p>
+<p>If a developer fails to implement an expected method or uses an
+invalid naming scheme, the metaclass can raise an exception during class
+creation, preventing the application from running with broken class
+definitions.</p>
+<h3 id="3-automatic-registration-and-discovery">3. Automatic
+Registration and Discovery</h3>
+<p>Metaclasses enable robust plugin architectures. When building
+extensible frameworks, you often need to keep track of all subclasses of
+a particular base class. A metaclass can register each new class into a
+central catalog as soon as it is declared:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>registry <span class="op">=</span> {}</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> PluginRegistryMeta(<span class="bu">type</span>):</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(cls, name, bases, namespace):</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>(name, bases, namespace)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> bases:  <span class="co"># Avoid registering the base abstract plugin itself</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>            registry[name] <span class="op">=</span> cls</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> PluginBase(metaclass<span class="op">=</span>PluginRegistryMeta):</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> AudioPlugin(PluginBase):</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co"># `registry` now automatically contains {&#39;AudioPlugin&#39;: &lt;class &#39;__main__.AudioPlugin&#39;&gt;}</span></span></code></pre></div>
+<h2 id="metaclasses-vs-modern-alternatives">Metaclasses vs. Modern
+Alternatives</h2>
+<p>While metaclasses provide total control over class instantiation,
+Python offers modern alternatives for simpler tasks:</p>
+<ul>
+<li><strong>Class Decorators</strong>: Excellent for modifying a class
+after creation, but they do not automatically apply to subclasses unless
+manually added.</li>
+<li><strong><code>__init_subclass__</code></strong>: Introduced in
+Python 3.6, this hook allows a parent class to customize the creation of
+its subclasses without defining a full metaclass.</li>
+</ul>
+<p>Metaclasses remain necessary when you must alter the class dictionary
+before the class object is built, when managing complex
+multiple-inheritance scenarios, or when developing deep architectural
+frameworks like ORMs and schema-validation libraries.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

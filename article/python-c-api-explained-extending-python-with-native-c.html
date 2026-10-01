@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python C-API Explained: Extending Python with Native C - python</title>
+    <meta name="description" content="The Python C-API is a set of low-level programmatic interfaces provided by CPython, the reference implementation of Python, allowing developers to write extensions directly in C or C++. This article examines the primary purposes of the Python C-API, deta">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-c-api-explained-extending-python-with-native-c">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python C-API Explained: Extending Python with Native C - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-c-api-explained-extending-python-with-native-c" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Python C-API is a set of low-level programmatic interfaces provided by CPython, the reference implementation of Python, allowing developers to write extensions directly in C or C++. This article examines the primary purposes of the Python C-API, deta" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-c-api-explained-extending-python-with-native-c">Python
+C-API Explained: Extending Python with Native C</h1>
+<p>The Python C-API is a set of low-level programmatic interfaces
+provided by CPython, the reference implementation of Python, allowing
+developers to write extensions directly in C or C++. This article
+examines the primary purposes of the Python C-API, detailing how it
+bridges the gap between Python’s developer-friendly syntax and C’s
+high-performance hardware capabilities. By exploring performance
+acceleration, hardware access, third-party library integration, and
+concurrency control, this guide outlines why and when developers choose
+native code to expand Python's core functionality.</p>
+<h3 id="maximizing-execution-performance">Maximizing Execution
+Performance</h3>
+<p>Python is an interpreted, dynamically typed language, which
+inherently introduces execution overhead due to bytecode interpretation,
+dynamic dispatch, and boxing of fundamental types. The Python C-API
+enables developers to isolate computationally intensive algorithms—such
+as numerical computations, matrix manipulations, and cryptographic
+operations—and implement them in compiled C. By compiling to native
+machine code, these extensions achieve execution speeds orders of
+magnitude faster than standard Python code while keeping the high-level
+interface simple for the end user.</p>
+<h3 id="wrapping-existing-c-and-c-libraries">Wrapping Existing C and C++
+Libraries</h3>
+<p>A significant purpose of the C-API is to avoid rewriting established,
+battle-tested software systems. Massive ecosystems of low-level software
+exist for audio processing, image rendering, graphics APIs (like OpenGL
+or Vulkan), and database drivers. Using the C-API, developers can create
+thin wrapper modules that expose these native libraries directly to the
+Python runtime. This allows Python programs to invoke legacy C functions
+and pass data seamlessly between languages without IPC (Inter-Process
+Communication) overhead.</p>
+<h3 id="low-level-hardware-and-system-access">Low-Level Hardware and
+System Access</h3>
+<p>Python's standard library abstracts operating system and
+architecture-specific details to maintain cross-platform portability.
+However, specialized applications often require direct interaction with
+system memory, device drivers, kernel primitives, or specific CPU
+instructions (such as SIMD or AVX vectorization). The C-API provides the
+hooks necessary to manage raw pointers, manipulate memory layouts
+directly, and communicate directly with peripheral hardware, which is
+impossible or impractical using pure Python.</p>
+<h3 id="bypassing-the-global-interpreter-lock-gil">Bypassing the Global
+Interpreter Lock (GIL)</h3>
+<p>In standard CPython, the Global Interpreter Lock (GIL) prevents
+multiple native OS threads from executing Python bytecode
+simultaneously, limiting multi-core CPU utilization in multithreaded
+pure Python code. With the C-API, native extensions can explicitly
+release the GIL before starting long-running or computationally heavy
+tasks using the <code>Py_BEGIN_ALLOW_THREADS</code> macro. While the GIL
+is released, other Python threads can continue running, and the native C
+code can leverage true multi-threaded parallel execution across multiple
+CPU cores. Once the native computation is complete, the extension
+reacquires the GIL (<code>Py_END_ALLOW_THREADS</code>) to safely return
+results to the Python runtime.</p>
+<h3 id="custom-type-definition-and-memory-control">Custom Type
+Definition and Memory Control</h3>
+<p>The C-API permits the creation of built-in extension types
+(<code>PyTypeObject</code>) that behave identically to native Python
+classes but possess the memory density and speed of C
+<code>struct</code>s. Developers gain fine-grained control over memory
+allocation, object lifecycle management via reference counting, and
+garbage collection mechanisms. This foundation is what allows core data
+science libraries, such as NumPy, to handle multi-gigabyte arrays
+compactly without the memory bloat associated with standard Python lists
+and objects.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

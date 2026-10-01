@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>itertools.starmap vs map in Python Explained - python</title>
+    <meta name="description" content="In Python, both the built-in map() function and itertools.starmap() apply a specified callable to an iterable collection of inputs using lazy evaluation. While both tools return memory-efficient iterators that compute results on demand, their execution b">
+    <link rel="canonical" href="https://salivity.github.io/python/article/itertools-starmap-vs-map-in-python-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="itertools.starmap vs map in Python Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/itertools-starmap-vs-map-in-python-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, both the built-in map() function and itertools.starmap() apply a specified callable to an iterable collection of inputs using lazy evaluation. While both tools return memory-efficient iterators that compute results on demand, their execution b" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="itertoolsstarmap-vs-map-in-python-explained">itertools.starmap
+vs map in Python Explained</h1>
+<p>In Python, both the built-in <code>map()</code> function and
+<code>itertools.starmap()</code> apply a specified callable to an
+iterable collection of inputs using lazy evaluation. While both tools
+return memory-efficient iterators that compute results on demand, their
+execution behavior differs fundamentally in how they unpack input items
+and pass them as arguments to the target function.</p>
+<h3 id="argument-unpacking-behavior">Argument Unpacking Behavior</h3>
+<p>The primary functional difference between <code>map()</code> and
+<code>itertools.starmap()</code> is the argument ingestion model.</p>
+<p>The built-in <code>map()</code> accepts a function followed by one or
+more iterables:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">map</span>(function, iterable1, iterable2, ...)</span></code></pre></div>
+<p>During execution, <code>map()</code> pulls one element from each
+supplied iterable simultaneously and passes them as discrete positional
+arguments: <code>function(iterable1[i], iterable2[i], ...)</code>.</p>
+<p>In contrast, <code>itertools.starmap()</code> operates on a single
+iterable containing pre-grouped elements (such as tuples or lists):</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>itertools.starmap(function, iterable)</span></code></pre></div>
+<p>During execution, <code>starmap()</code> applies the unpack operator
+(<code>*</code>) to each element yielded by the iterable:
+<code>function(*item)</code>. This mirrors the behavior of
+<code>function(*args)</code> on each step.</p>
+<h3 id="code-comparison">Code Comparison</h3>
+<p>Consider computing powers using <code>pow(base, exp)</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> itertools</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Using map(): Requires inputs separated into distinct parallel iterables</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>bases <span class="op">=</span> [<span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>]</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>exponents <span class="op">=</span> [<span class="dv">3</span>, <span class="dv">2</span>, <span class="fl">0.5</span>]</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>result_map <span class="op">=</span> <span class="bu">list</span>(<span class="bu">map</span>(<span class="bu">pow</span>, bases, exponents))</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: [8, 9, 2.0]</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Using starmap(): Requires inputs pre-grouped into tuples</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>pairs <span class="op">=</span> [(<span class="dv">2</span>, <span class="dv">3</span>), (<span class="dv">3</span>, <span class="dv">2</span>), (<span class="dv">4</span>, <span class="fl">0.5</span>)]</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>result_starmap <span class="op">=</span> <span class="bu">list</span>(itertools.starmap(<span class="bu">pow</span>, pairs))</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: [8, 9, 2.0]</span></span></code></pre></div>
+<p>To achieve the equivalent of <code>starmap()</code> with
+<code>map()</code>, you must unpack elements manually inside a lambda or
+helper function: <code>map(lambda args: pow(*args), pairs)</code>.
+Conversely, using <code>map()</code> directly avoids the runtime
+overhead of lambda construction.</p>
+<h3 id="handling-multiple-iterables-and-length-mismatches">Handling
+Multiple Iterables and Length Mismatches</h3>
+<p><code>map()</code> natively accepts multiple iterables. When
+iterables of unequal length are supplied, <code>map()</code> terminates
+execution as soon as the shortest iterable is exhausted, discarding
+remaining items in longer iterables without raising an error.</p>
+<p><code>itertools.starmap()</code> accepts strictly one iterable.
+Length matching depends entirely on the arity of the function and the
+length of each inner container. If any yielded container has more or
+fewer items than the target function's parameter list requires,
+<code>starmap()</code> raises a <code>TypeError</code> at runtime when
+it attempts the unpack operation.</p>
+<h3 id="memory-and-execution-performance">Memory and Execution
+Performance</h3>
+<p>Both <code>map()</code> and <code>itertools.starmap()</code> are
+implemented in C inside CPython. Both exhibit:</p>
+<ul>
+<li><strong><span class="math inline">\(O(1)\)</span> Auxiliary Space
+Complexity:</strong> Neither constructs the entire result list in
+memory. Elements are processed one at a time via the iterator protocol
+(<code>__next__()</code>).</li>
+<li><strong>Short-Circuit Capabilities:</strong> Processing halts when
+consuming code breaks out of a loop, avoiding unnecessary
+evaluations.</li>
+</ul>
+<p>Choosing between the two depends on how your data is structured: use
+<code>map()</code> when your arguments reside across distinct sequences,
+and use <code>itertools.starmap()</code> when arguments are already
+structured as tuple or list pairs.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

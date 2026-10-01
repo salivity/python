@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How PyPy JIT Compilation Accelerates Python - python</title>
+    <meta name="description" content="PyPy achieves dramatically faster execution speeds than standard Python (CPython) by using a tracing Just-In-Time (JIT) compiler that transforms dynamic bytecode into native machine code during execution. While CPython interprets bytecode instruction-by-">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-py-py-jit-compilation-accelerates-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How PyPy JIT Compilation Accelerates Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-py-py-jit-compilation-accelerates-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="PyPy achieves dramatically faster execution speeds than standard Python (CPython) by using a tracing Just-In-Time (JIT) compiler that transforms dynamic bytecode into native machine code during execution. While CPython interprets bytecode instruction-by-" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-pypy-jit-compilation-accelerates-python">How PyPy JIT
+Compilation Accelerates Python</h1>
+<p>PyPy achieves dramatically faster execution speeds than standard
+Python (CPython) by using a tracing Just-In-Time (JIT) compiler that
+transforms dynamic bytecode into native machine code during execution.
+While CPython interprets bytecode instruction-by-instruction throughout
+the entire lifecycle of a program, PyPy monitors running code to
+identify performance-critical loops, generates optimized machine
+instructions for those specific paths, and removes the heavy overhead
+inherent to Python's dynamic typing.</p>
+<h3 id="the-limitation-of-standard-cpython">The Limitation of Standard
+CPython</h3>
+<p>CPython relies strictly on a bytecode interpreter. When Python source
+code runs in CPython, it compiles into intermediate bytecode, which the
+CPython Virtual Machine processes sequentially inside a continuous
+evaluation loop. Because Python is dynamically typed, the virtual
+machine must constantly inspect object types, look up methods, and
+verify operations for every single operation—even if a variable remains
+the exact same type through millions of iterations. This constant
+type-checking and dynamic dispatch create substantial computational
+overhead.</p>
+<h3 id="tracing-jit-compilation">Tracing JIT Compilation</h3>
+<p>PyPy solves this inefficiency through a <strong>tracing JIT</strong>.
+Instead of compiling entire functions or methods ahead of time, PyPy
+compiles code based on actual runtime behavior.</p>
+<ol type="1">
+<li><strong>Profiling Hot Loops:</strong> When a program starts, PyPy
+runs code using an interpreter written in RPython (Restricted Python).
+As the code runs, PyPy keeps counters on loops. When a loop executes
+frequently enough to cross a predefined threshold, it is flagged as a
+"hotspot."</li>
+<li><strong>Recording the Trace:</strong> Once a hotspot is identified,
+the JIT enters tracing mode. During the next iteration of the loop, the
+tracer records every low-level operation executed, along with the
+concrete data types passing through the instructions. This execution
+record represents a single linear path through the loop.</li>
+<li><strong>Optimizing the Trace:</strong> PyPy applies traditional
+compiler optimizations to this linear trace. Because the concrete types
+are known from the execution trace, the JIT performs aggressive constant
+folding, dead-code elimination, and common subexpression
+elimination.</li>
+<li><strong>Machine Code Generation:</strong> The optimized trace is
+compiled directly into machine code tailored to the host CPU
+architecture (x86, ARM, etc.) and stored in an in-memory cache.
+Subsequent executions of that loop bypass the interpreter entirely and
+run native CPU instructions.</li>
+</ol>
+<h3 id="type-specialization-and-unboxing">Type Specialization and
+Unboxing</h3>
+<p>A significant performance drain in CPython is object wrapping
+(boxing). In CPython, even a simple integer is a full heap-allocated C
+struct (<code>PyObject</code>) carrying metadata, reference counts, and
+type descriptors.</p>
+<p>PyPy’s JIT uses escape analysis and type specialization to "unbox"
+these values. When operating inside a compiled trace, PyPy unwraps
+primitive values into native CPU registers (such as raw 64-bit integers
+or hardware floating-point registers). This eliminates memory
+allocations on the heap, bypasses reference counting overhead, and
+allows modern CPUs to use vectorization and branch prediction
+effectively.</p>
+<h3 id="guards-and-de-optimization">Guards and De-optimization</h3>
+<p>Because Python remains a dynamic language where variables can change
+types at any time, compiled machine code must account for unexpected
+changes. PyPy handles this using <strong>guards</strong>.</p>
+<p>Guards are lightweight conditional checks embedded in the compiled
+machine code that verify dynamic assumptions—such as ensuring a variable
+is still an integer or that a class method has not been
+monkey-patched.</p>
+<ul>
+<li>If a guard passes, execution continues at full native speed.</li>
+<li>If a guard fails (e.g., a loop suddenly encounters a string instead
+of a float), the JIT executes a "bailout." PyPy gracefully transitions
+the program state out of native machine code and back into the standard
+RPython interpreter without crashing the program.</li>
+</ul>
+<p>If a specific guard fails repeatedly, PyPy can trace that new path as
+a branch and compile a secondary machine-code bridge, ensuring high
+performance across varying program pathways.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

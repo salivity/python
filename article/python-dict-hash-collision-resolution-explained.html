@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Dict Hash Collision Resolution Explained - python</title>
+    <meta name="description" content="Python dictionaries rely on open addressing combined with a unique pseudo-random probing mechanism to resolve hash collisions during lookups. Rather than using separate chaining with linked lists, Python resolves conflicts by searching through alternativ">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-dict-hash-collision-resolution-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Dict Hash Collision Resolution Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-dict-hash-collision-resolution-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python dictionaries rely on open addressing combined with a unique pseudo-random probing mechanism to resolve hash collisions during lookups. Rather than using separate chaining with linked lists, Python resolves conflicts by searching through alternativ" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-dict-hash-collision-resolution-explained">Python Dict
+Hash Collision Resolution Explained</h1>
+<p>Python dictionaries rely on open addressing combined with a unique
+pseudo-random probing mechanism to resolve hash collisions during
+lookups. Rather than using separate chaining with linked lists, Python
+resolves conflicts by searching through alternative slots directly
+within its internal hash table. This design, paired with a compact array
+architecture introduced in Python 3.6, allows dictionaries to maintain
+high memory efficiency, preserve insertion order, and achieve amortized
+<span class="math inline">\(O(1)\)</span> time complexity for key
+lookups.</p>
+<h3 id="open-addressing-and-probing">Open Addressing and Probing</h3>
+<p>When a key-value pair is inserted into or fetched from a dictionary,
+Python computes the key's hash value using the built-in
+<code>hash()</code> function. This hash is masked against the size of
+the table to derive an initial index.</p>
+<p>If that slot is already occupied by a different key—a hash
+collision—Python uses open addressing to locate the next available slot.
+Instead of basic linear probing (checking index <span
+class="math inline">\(+ 1\)</span>) or quadratic probing, Python employs
+a custom recurrence relation that incorporates higher-order bits from
+the original hash:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>perturb <span class="op">&gt;&gt;=</span> <span class="dv">5</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>j <span class="op">=</span> (<span class="dv">5</span> <span class="op">*</span> j <span class="op">+</span> <span class="dv">1</span> <span class="op">+</span> perturb) <span class="op">&amp;</span> mask</span></code></pre></div>
+<p>In this formula:</p>
+<ul>
+<li><code>j</code> represents the current slot index.</li>
+<li><code>mask</code> equals <code>table_size - 1</code>.</li>
+<li><code>perturb</code> is initialized to the original hash value and
+is bit-shifted to the right by 5 bits on each iteration.</li>
+</ul>
+<p>This algorithm prevents clustering (where consecutive slots become
+crowded) and ensures that all 64 bits of the hash code contribute to the
+probe sequence. Eventually, <code>perturb</code> shifts to zero, turning
+the sequence into a linear congruential generator that is mathematically
+guaranteed to visit every index in the table.</p>
+<h3 id="two-tier-compact-table-structure">Two-Tier Compact Table
+Structure</h3>
+<p>Since Python 3.6 (standardized in Python 3.7), dictionaries use a
+two-array design:</p>
+<ol type="1">
+<li><strong>Indices Array (Sparse):</strong> A hash table containing
+only small integer indices or markers representing empty slots.</li>
+<li><strong>Entries Array (Dense):</strong> An array that stores entries
+in the exact order they were inserted, with each record containing
+<code>[hash, key, value]</code>.</li>
+</ol>
+<p>When a collision occurs, probing takes place on the <strong>indices
+array</strong>. The probing sequence searches the indices array until it
+encounters an empty slot or a slot pointing to an entry in the dense
+table matching the search key.</p>
+<h3 id="key-comparison-identity-before-equality">Key Comparison:
+Identity Before Equality</h3>
+<p>When probing encounters an occupied slot, Python verifies whether the
+stored key matches the target key. It performs a two-step
+validation:</p>
+<ol type="1">
+<li><strong>Identity Check (<code>key1 is key2</code>):</strong> Python
+compares memory addresses. If both keys refer to the same object in
+memory, the lookup succeeds immediately without evaluating
+equality.</li>
+<li><strong>Hash and Equality Check
+(<code>hash1 == hash2 and key1 == key2</code>):</strong> If the identity
+check fails, Python verifies that the stored hash matches the target
+hash, followed by evaluating the rich comparison <code>__eq__</code>
+method.</li>
+</ol>
+<p>If neither check succeeds, probing continues down the sequence.</p>
+<h3 id="handling-deletions-with-tombstones">Handling Deletions with
+Tombstones</h3>
+<p>When a key is deleted from a dictionary, removing it completely would
+break the probe chain for other keys that collided at that same initial
+index. Python handles this by marking the vacated slot in the indices
+array with a special dummy value (often referred to as a "tombstone").
+During lookups, the probing algorithm treats dummy slots as occupied and
+continues traversing the probe sequence. When inserting a new key,
+Python can reuse these dummy slots, and during table resizes, dummy
+entries are discarded entirely to clean up the table.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Sentinel Values Using object() - python</title>
+    <meta name="description" content="In Python, functions often need to differentiate between an argument that was intentionally passed as None and one that was omitted entirely by the caller. Using object() to create a private sentinel value solves this problem by providing a unique object">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-sentinel-values-using-object">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Sentinel Values Using object() - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-sentinel-values-using-object" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, functions often need to differentiate between an argument that was intentionally passed as None and one that was omitted entirely by the caller. Using object() to create a private sentinel value solves this problem by providing a unique object" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-sentinel-values-using-object">Python Sentinel Values
+Using object()</h1>
+<p>In Python, functions often need to differentiate between an argument
+that was intentionally passed as <code>None</code> and one that was
+omitted entirely by the caller. Using <code>object()</code> to create a
+private sentinel value solves this problem by providing a unique object
+identity that cannot be accidentally supplied by external code,
+eliminating the ambiguity inherent in standard default parameters.</p>
+<h3 id="the-ambiguity-of-default-arguments">The Ambiguity of Default
+Arguments</h3>
+<p>A standard pattern for handling optional parameters in Python assigns
+<code>None</code> as the default value:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> update_cache(key, value<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> value <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Was value omitted, or did the caller explicitly set it to None?</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span></code></pre></div>
+<p>This approach breaks down when <code>None</code> represents a valid
+domain value. For example, a cache system might legitimately store
+<code>None</code> to indicate a cached negative result, or a database
+updater might use <code>None</code> to set a column to SQL
+<code>NULL</code>. Because <code>None</code> is a built-in singleton
+accessible anywhere in Python, checking <code>value is None</code>
+cannot determine whether the caller passed <code>None</code>
+deliberately or omitted the argument.</p>
+<p>Using other falsey primitives like <code>False</code>,
+<code>""</code>, or <code>0</code> creates the same ambiguity for their
+respective types.</p>
+<h3 id="resolving-ambiguity-with-object">Resolving Ambiguity with
+<code>object()</code></h3>
+<p>Every call to <code>object()</code> instantiates a distinct object in
+memory with a unique identity:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>_MISSING <span class="op">=</span> <span class="bu">object</span>()</span></code></pre></div>
+<p>Because <code>_MISSING</code> is private to your module or class,
+outside callers cannot reference it unless you explicitly expose it.
+When used as a default argument, you can verify presence using the
+identity operator (<code>is</code>):</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>_MISSING <span class="op">=</span> <span class="bu">object</span>()</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> update_cache(key, value<span class="op">=</span>_MISSING):</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> value <span class="kw">is</span> _MISSING:</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Argument was omitted by the caller</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        fetch_and_cache(key)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Argument was explicitly provided, even if value is None</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        write_to_cache(key, value)</span></code></pre></div>
+<p>With this implementation:</p>
+<ul>
+<li><code>update_cache("user_1")</code> detects that <code>value</code>
+is omitted because <code>value is _MISSING</code> evaluates to
+<code>True</code>.</li>
+<li><code>update_cache("user_1", None)</code> detects that
+<code>value</code> was explicitly passed because
+<code>None is _MISSING</code> evaluates to <code>False</code>.</li>
+</ul>
+<h3 id="why-object-is-the-ideal-sentinel">Why <code>object()</code> Is
+the Ideal Sentinel</h3>
+<ol type="1">
+<li><strong>Guaranteed Identity Uniqueness:</strong> Python’s
+<code>is</code> operator checks memory address identity. Two separate
+calls to <code>object()</code> will never evaluate as identical:
+<code>object() is object()</code> is always <code>False</code>.</li>
+<li><strong>Minimal Overhead:</strong> The base <code>object</code>
+class is the most lightweight type in Python, consuming minimal memory
+and requiring no custom class definitions.</li>
+<li><strong>No Accidental Equivalence:</strong> Unlike custom classes
+that might implement <code>__eq__</code>, plain <code>object</code>
+instances only evaluate equal to themselves. This prevents unintended
+matches against user inputs that override equality checks.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

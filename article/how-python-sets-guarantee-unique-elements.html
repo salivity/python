@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Sets Guarantee Unique Elements - python</title>
+    <meta name="description" content="Python sets are built-in collections designed to hold distinct, unordered items, making them an ideal tool for eliminating duplicates and performing fast membership lookups. This article explores the internal mechanisms that Python uses to enforce unique">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-sets-guarantee-unique-elements">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Sets Guarantee Unique Elements - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-sets-guarantee-unique-elements" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python sets are built-in collections designed to hold distinct, unordered items, making them an ideal tool for eliminating duplicates and performing fast membership lookups. This article explores the internal mechanisms that Python uses to enforce unique" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-sets-guarantee-unique-elements">How Python Sets
+Guarantee Unique Elements</h1>
+<p>Python sets are built-in collections designed to hold distinct,
+unordered items, making them an ideal tool for eliminating duplicates
+and performing fast membership lookups. This article explores the
+internal mechanisms that Python uses to enforce uniqueness, focusing on
+hash table architecture, hash value computation, and object equality
+checks.</p>
+<h3 id="the-underlying-hash-table-architecture">The Underlying Hash
+Table Architecture</h3>
+<p>Under the hood, Python sets are implemented as hash tables, very
+similar to Python dictionaries but containing only keys without
+associated values. A hash table maps keys to specific memory locations
+(known as buckets or slots) based on numerical values derived from the
+keys themselves.</p>
+<p>When you insert an item into a set, Python does not compare the new
+item to every existing item individually. Instead, it determines where
+the item should live in memory using hashing algorithms, achieving an
+average time complexity of <span class="math inline">\(O(1)\)</span> for
+additions and lookups.</p>
+<h3 id="the-role-of-the-hash-function">The Role of the Hash
+Function</h3>
+<p>For an object to be stored in a set, it must be
+<strong>hashable</strong>. An object is hashable if it has a hash value
+that remains constant throughout its lifecycle and can be compared to
+other objects. In Python, immutable types such as strings, numbers, and
+tuples of immutable objects are hashable by default.</p>
+<p>When an element is passed to a set:</p>
+<ol type="1">
+<li>Python calls the object's <code>__hash__()</code> method to compute
+an integer hash value.</li>
+<li>The hash value is masked to produce an index pointing to a specific
+bucket within the set's underlying table.</li>
+</ol>
+<p>If the target bucket is empty, Python immediately inserts the
+element, confirming that no duplicate exists in that position.</p>
+<h3 id="resolving-collisions-and-verifying-equality">Resolving
+Collisions and Verifying Equality</h3>
+<p>Because different objects can occasionally produce the same hash
+value or map to the same bucket index (a phenomenon known as a hash
+collision), Python cannot rely solely on the hash to guarantee
+uniqueness.</p>
+<p>To determine whether an item is truly a duplicate, Python uses a
+two-step validation:</p>
+<ol type="1">
+<li><strong>Hash Comparison:</strong> It first checks if the stored
+object has the same hash value as the incoming object. If the hashes
+differ, the objects are fundamentally different.</li>
+<li><strong>Equality Comparison:</strong> If the hashes match, Python
+falls back to checking equality using the <code>__eq__()</code> method
+(evaluating <code>existing_item == new_item</code>).</li>
+</ol>
+<p>If both the hash and the equality check evaluate to true, Python
+considers the incoming element a duplicate. The set will simply ignore
+the new addition or overwrite the existing reference, leaving the total
+count unchanged.</p>
+<p>If the hash or equality check fails despite occupying the same bucket
+index, Python detects a collision. It uses an <strong>open
+addressing</strong> scheme with a pseudo-random probing sequence to
+search for the next available slot in the table, repeating the
+verification process until it finds either a matching duplicate or an
+empty bucket to place the new element.</p>
+<h3 id="requirements-for-custom-objects">Requirements for Custom
+Objects</h3>
+<p>When creating custom classes, you can control how instances behave
+inside a set by overriding <code>__hash__()</code> and
+<code>__eq__()</code>. To maintain the uniqueness guarantee, custom
+implementations must satisfy the Python hashing contract:</p>
+<ul>
+<li>If two objects compare as equal (<code>a == b</code>), their hash
+values must also be equal (<code>hash(a) == hash(b)</code>).</li>
+<li>The hash value of an object must never change while it resides in a
+set. Mutating an object's hash while it is stored will corrupt the set's
+internal lookup logic, potentially allowing duplicates to appear.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How functools.cached_property Works in Python - python</title>
+    <meta name="description" content="The functools.cachedproperty decorator, introduced in Python 3.8, transforms a class method into a property whose value is computed once and then cached as a standard attribute for the lifetime of the instance. This article explains how the underlying de">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-functools-cached-property-works-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How functools.cached_property Works in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-functools-cached-property-works-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The functools.cachedproperty decorator, introduced in Python 3.8, transforms a class method into a property whose value is computed once and then cached as a standard attribute for the lifetime of the instance. This article explains how the underlying de" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-functoolscached_property-works-in-python">How
+functools.cached_property Works in Python</h1>
+<p>The <code>functools.cached_property</code> decorator, introduced in
+Python 3.8, transforms a class method into a property whose value is
+computed once and then cached as a standard attribute for the lifetime
+of the instance. This article explains how the underlying descriptor
+protocol operates, why mutating the instance dictionary allows the cache
+to function, how it compares to the standard <code>@property</code>, and
+how to manually invalidate or clear cached values.</p>
+<h3 id="the-problem-it-solves">The Problem It Solves</h3>
+<p>When working with object-oriented Python, you often encounter
+properties that require expensive operations, such as querying a
+database, parsing large files, or running heavy mathematical
+calculations. Using a regular <code>@property</code> re-runs the method
+every time the attribute is accessed:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> DataAnalyzer:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, dataset):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.dataset <span class="op">=</span> dataset</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">@property</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> summary(<span class="va">self</span>):</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Recomputed on every call to instance.summary</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bu">sum</span>(<span class="va">self</span>.dataset) <span class="op">/</span> <span class="bu">len</span>(<span class="va">self</span>.dataset)</span></code></pre></div>
+<p>While you could manually store the result in an instance variable
+with an <code>if self._summary is None</code> check,
+<code>functools.cached_property</code> provides a clean, built-in
+solution that handles this caching automatically.</p>
+<h3 id="the-mechanics-non-data-descriptors">The Mechanics: Non-Data
+Descriptors</h3>
+<p>To understand how <code>cached_property</code> works, you must look
+at Python's descriptor protocol and attribute lookup order.</p>
+<p>Python attributes can be descriptors if they implement methods like
+<code>__get__</code>, <code>__set__</code>, or
+<code>__delete__</code>:</p>
+<ul>
+<li><strong>Data Descriptors</strong> implement both
+<code>__get__</code> and <code>__set__</code> (or
+<code>__delete__</code>). They take precedence over an instance's
+<code>__dict__</code>.</li>
+<li><strong>Non-Data Descriptors</strong> implement only
+<code>__get__</code>. An entry in the instance's <code>__dict__</code>
+takes precedence over a non-data descriptor.</li>
+</ul>
+<p>The <code>functools.cached_property</code> class is implemented as a
+<strong>non-data descriptor</strong>. Here is the step-by-step lifecycle
+of an attribute lookup:</p>
+<ol type="1">
+<li><p><strong>First Access:</strong> When you call
+<code>instance.expensive_attribute</code> for the first time, Python
+checks <code>instance.__dict__</code>. Because the attribute does not
+yet exist there, Python falls back to the class attribute, finding the
+<code>cached_property</code> non-data descriptor and invoking its
+<code>__get__</code> method.</p></li>
+<li><p><strong>Computation and Storage:</strong> Inside
+<code>__get__</code>, the decorator calls the underlying wrapped
+function with <code>instance</code> as its sole argument. It takes the
+returned result and explicitly sets it in the instance's dictionary:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>instance.__dict__[<span class="va">self</span>.attrname] <span class="op">=</span> val</span></code></pre></div></li>
+<li><p><strong>Subsequent Accesses:</strong> On all future calls to
+<code>instance.expensive_attribute</code>, Python inspects
+<code>instance.__dict__</code> first. Because the key is now present in
+the dictionary, Python returns the cached value directly without ever
+invoking <code>__get__</code> or running the underlying method
+again.</p></li>
+</ol>
+<p>Because subsequent lookups become simple dictionary reads, access
+speed is identical to accessing any standard instance attribute.</p>
+<h3 id="code-example">Code Example</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functools <span class="im">import</span> cached_property</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ReportGenerator:</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, raw_data):</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.raw_data <span class="op">=</span> raw_data</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">@cached_property</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> processed_report(<span class="va">self</span>):</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Running heavy computation...&quot;</span>)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        time.sleep(<span class="dv">2</span>)  <span class="co"># Simulating an expensive task</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> [x <span class="op">*</span> <span class="dv">2</span> <span class="cf">for</span> x <span class="kw">in</span> <span class="va">self</span>.raw_data]</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>report <span class="op">=</span> ReportGenerator([<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>])</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="co"># First call: Computes and caches</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(report.processed_report)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Output:</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Running heavy computation...</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="co"># [2, 4, 6]</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Second call: Fetched directly from report.__dict__</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(report.processed_report)</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Output:</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="co"># [2, 4, 6]</span></span></code></pre></div>
+<h3 id="cache-invalidation">Cache Invalidation</h3>
+<p>Because the cached result is stored directly inside
+<code>instance.__dict__</code>, invalidating or clearing the cache is
+straightforward: delete the attribute using the <code>del</code>
+statement.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Clear the cache</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span> report.processed_report</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Accessing it again forces a recomputation</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(report.processed_report)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Output:</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Running heavy computation...</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co"># [2, 4, 6]</span></span></code></pre></div>
+<p>Deleting the key from <code>report.__dict__</code> restores the
+original state where the attribute is missing from the instance
+dictionary, prompting Python to invoke the descriptor's
+<code>__get__</code> method on the next access.</p>
+<h3 id="key-considerations-and-limitations">Key Considerations and
+Limitations</h3>
+<ul>
+<li><strong>Instances Must Have <code>__dict__</code>:</strong>
+<code>cached_property</code> relies entirely on mutating the instance
+dictionary. Consequently, it does not work on classes using
+<code>__slots__</code> unless <code>__dict__</code> is explicitly
+included in the <code>__slots__</code> declaration.</li>
+<li><strong>Thread Safety:</strong> In Python versions prior to 3.12,
+<code>cached_property</code> did not employ locking during the initial
+calculation, meaning concurrent threads could execute the computation
+multiple times simultaneously. Python 3.12 introduced locking mechanisms
+to ensure the computation runs only once across multiple threads.</li>
+<li><strong>Mutability:</strong> The cache stores a reference to the
+returned object. If the returned object is mutable (such as a list or a
+dictionary) and modified elsewhere, those modifications persist in the
+cache.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modularizing Flask Apps with Blueprints - python</title>
+    <meta name="description" content="Flask Blueprints provide a robust mechanism for breaking down large web applications into smaller, reusable, and maintainable components. By grouping related endpoints, templates, and static assets into distinct modules, developers can build scalable dir">
+    <link rel="canonical" href="https://salivity.github.io/python/article/modularizing-flask-apps-with-blueprints">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Modularizing Flask Apps with Blueprints - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/modularizing-flask-apps-with-blueprints" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Flask Blueprints provide a robust mechanism for breaking down large web applications into smaller, reusable, and maintainable components. By grouping related endpoints, templates, and static assets into distinct modules, developers can build scalable dir" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="modularizing-flask-apps-with-blueprints">Modularizing Flask Apps
+with Blueprints</h1>
+<p>Flask Blueprints provide a robust mechanism for breaking down large
+web applications into smaller, reusable, and maintainable components. By
+grouping related endpoints, templates, and static assets into distinct
+modules, developers can build scalable directory structures, avoid code
+duplication, and foster clean separation of concerns. This architectural
+pattern allows multiple teams to collaborate on isolated sections of an
+application—such as authentication, administrative dashboards, or public
+APIs—without stepping on each other's toes.</p>
+<h3 id="understanding-the-blueprint-concept">Understanding the Blueprint
+Concept</h3>
+<p>In Flask, a <code>Blueprint</code> works similarly to an application
+instance, but it is not a standalone application. Instead, it acts as a
+recording device that collects operations, route handlers, error
+handlers, and middleware to register onto the main <code>Flask</code>
+instance later.</p>
+<p>A Blueprint is instantiated by passing a name and the import
+name:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> flask <span class="im">import</span> Blueprint</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>auth_bp <span class="op">=</span> Blueprint(<span class="st">&#39;auth&#39;</span>, <span class="va">__name__</span>)</span></code></pre></div>
+<p>Once defined, the blueprint is registered to the central application
+object using <code>app.register_blueprint()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> flask <span class="im">import</span> Flask</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> .auth <span class="im">import</span> auth_bp</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> Flask(<span class="va">__name__</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>app.register_blueprint(auth_bp, url_prefix<span class="op">=</span><span class="st">&#39;/auth&#39;</span>)</span></code></pre></div>
+<h3 id="modular-routing">Modular Routing</h3>
+<p>The most common use of blueprints is route management. Rather than
+declaring every route on the root <code>app</code> object, individual
+modules define their own endpoints using the blueprint’s decorator:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="at">@auth_bp.route</span>(<span class="st">&#39;/login&#39;</span>, methods<span class="op">=</span>[<span class="st">&#39;GET&#39;</span>, <span class="st">&#39;POST&#39;</span>])</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> login():</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;Login Page&quot;</span></span></code></pre></div>
+<p>Blueprints streamline URL architecture through parameters provided
+during registration:</p>
+<ul>
+<li><strong>URL Prefixes:</strong> The <code>url_prefix</code> parameter
+(e.g., <code>/auth</code> or <code>/admin</code>) prepends a base path
+to all routes within that blueprint, eliminating hardcoded redundant
+path segments.</li>
+<li><strong>Subdomain Routing:</strong> Blueprints can be bound to
+specific subdomains, such as <code>api.example.com</code>.</li>
+<li><strong>Endpoint Namespacing:</strong> Endpoints are automatically
+namespaced. Generating a URL with <code>url_for()</code> requires the
+blueprint name prefix, such as <code>url_for('auth.login')</code>, which
+prevents naming collisions across different modules.</li>
+</ul>
+<h3 id="modular-templates">Modular Templates</h3>
+<p>By default, Flask looks for templates in the root
+<code>templates</code> folder. Blueprints allow you to isolate templates
+by specifying a dedicated directory via the <code>template_folder</code>
+argument:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>admin_bp <span class="op">=</span> Blueprint(<span class="st">&#39;admin&#39;</span>, <span class="va">__name__</span>, template_folder<span class="op">=</span><span class="st">&#39;templates&#39;</span>)</span></code></pre></div>
+<p>To prevent naming collisions, it is standard practice to create a
+nested subfolder named after the blueprint inside its template directory
+(e.g., <code>admin/templates/admin/index.html</code>). Because Flask
+searches the root template folder first, namespacing templates this way
+ensures that an <code>index.html</code> in an <code>admin</code>
+blueprint does not accidentally override an <code>index.html</code> in a
+<code>blog</code> blueprint.</p>
+<p>When rendering the template within a blueprint view, use the
+namespaced path:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> flask <span class="im">import</span> render_template</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="at">@admin_bp.route</span>(<span class="st">&#39;/dashboard&#39;</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> dashboard():</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> render_template(<span class="st">&#39;admin/dashboard.html&#39;</span>)</span></code></pre></div>
+<h3 id="modular-static-files">Modular Static Files</h3>
+<p>Like templates, static assets such as CSS, JavaScript, and images can
+be encapsulated within a blueprint by setting the
+<code>static_folder</code> parameter:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>admin_bp <span class="op">=</span> Blueprint(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;admin&#39;</span>, </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">__name__</span>, </span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    template_folder<span class="op">=</span><span class="st">&#39;templates&#39;</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    static_folder<span class="op">=</span><span class="st">&#39;static&#39;</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    static_url_path<span class="op">=</span><span class="st">&#39;/admin/static&#39;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>This configuration creates a dedicated static endpoint for the
+blueprint. You can reference blueprint-specific assets using
+<code>url_for</code> by pointing to the blueprint's static endpoint:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">link</span><span class="ot"> rel</span><span class="op">=</span><span class="st">&quot;stylesheet&quot;</span><span class="ot"> href</span><span class="op">=</span><span class="st">&quot;{{ url_for(&#39;admin.static&#39;, filename=&#39;css/dashboard.css&#39;) }}&quot;</span><span class="dt">&gt;</span></span></code></pre></div>
+<p>If <code>static_url_path</code> is omitted, Flask serves the files at
+the blueprint’s URL prefix followed by <code>/static</code>.</p>
+<h3 id="application-structure-example">Application Structure
+Example</h3>
+<p>A standard blueprint-driven Flask project typically organizes these
+elements into a directory structure like this:</p>
+<pre class="text"><code>my_project/
+├── app.py
+├── auth/
+│   ├── __init__.py
+│   ├── routes.py
+│   ├── static/
+│   │   └── css/
+│   │       └── auth.css
+│   └── templates/
+│       └── auth/
+│           └── login.html
+└── admin/
+    ├── __init__.py
+    ├── routes.py
+    └── templates/
+        └── admin/
+            └── dashboard.html</code></pre>
+<p>Using this architecture, the root <code>app.py</code> only handles
+global configurations and blueprint registration, while the domain
+logic, presentation templates, and assets remain self-contained within
+their respective directories.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

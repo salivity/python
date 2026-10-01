@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Shelve: Persistent Storage with DBM - python</title>
+    <meta name="description" content="The shelve module in Python provides a convenient way to store persistent Python objects on disk using a dictionary-like interface. It achieves this by combining the object serialization power of the pickle module with the disk-backed, key-value storage">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-shelve-persistent-storage-with-dbm">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Shelve: Persistent Storage with DBM - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-shelve-persistent-storage-with-dbm" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The shelve module in Python provides a convenient way to store persistent Python objects on disk using a dictionary-like interface. It achieves this by combining the object serialization power of the pickle module with the disk-backed, key-value storage" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-shelve-persistent-storage-with-dbm">Python Shelve:
+Persistent Storage with DBM</h1>
+<p>The <code>shelve</code> module in Python provides a convenient way to
+store persistent Python objects on disk using a dictionary-like
+interface. It achieves this by combining the object serialization power
+of the <code>pickle</code> module with the disk-backed, key-value
+storage capabilities of the <code>dbm</code> module. This article
+explains how <code>shelve</code> functions under the hood, how it
+interacts with the underlying <code>dbm</code> engine, the mechanics of
+reading and writing data, and key considerations like mutation tracking
+and concurrency.</p>
+<h2 id="the-architecture-combining-pickle-and-dbm">The Architecture:
+Combining Pickle and DBM</h2>
+<p>At its core, a standard <code>dbm</code> database acts as a
+persistent hash table stored on disk. However, native <code>dbm</code>
+databases possess a strict limitation: both keys and values must be raw
+bytes (or strings that can be encoded as bytes). They cannot natively
+store complex Python data structures like lists, sets, dictionaries, or
+custom class instances.</p>
+<p>The <code>shelve</code> module resolves this limitation by acting as
+an abstraction layer:</p>
+<ol type="1">
+<li><strong>Serialization via <code>pickle</code></strong>: Whenever an
+arbitrary Python object is assigned as a value in a shelf,
+<code>shelve</code> serializes the object into a byte stream using
+<code>pickle.dumps()</code>.</li>
+<li><strong>Storage via <code>dbm</code></strong>: The resulting
+serialized bytes are then handed to an underlying <code>dbm</code>
+database file, mapped to the user-provided string key.</li>
+<li><strong>Deserialization on Access</strong>: When a key is requested,
+<code>shelve</code> queries the <code>dbm</code> database for the stored
+byte stream and unpacks it back into a live Python object using
+<code>pickle.loads()</code>.</li>
+</ol>
+<p>Because of this design, the top-level class <code>shelve.Shelf</code>
+implements the <code>collections.abc.MutableMapping</code> interface,
+allowing developers to interact with the database using standard
+dictionary syntax (<code>shelf[key] = value</code>,
+<code>del shelf[key]</code>, and <code>key in shelf</code>).</p>
+<h2 id="behind-the-scenes-read-and-write-mechanics">Behind the Scenes:
+Read and Write Mechanics</h2>
+<p>When you call <code>shelve.open(filename)</code>, Python detects an
+appropriate <code>dbm</code> implementation available on the system—such
+as <code>dbm.gnu</code> (GDBM), <code>dbm.ndbm</code>, or the fallback
+pure-Python <code>dbm.dumb</code>—and initializes or opens the specified
+file.</p>
+<h3 id="writing-objects">Writing Objects</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> shelve</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> shelve.<span class="bu">open</span>(<span class="st">&quot;app_state&quot;</span>) <span class="im">as</span> shelf:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    shelf[<span class="st">&quot;user_1&quot;</span>] <span class="op">=</span> {<span class="st">&quot;name&quot;</span>: <span class="st">&quot;Alice&quot;</span>, <span class="st">&quot;preferences&quot;</span>: [<span class="st">&quot;dark_mode&quot;</span>, <span class="st">&quot;notifications&quot;</span>]}</span></code></pre></div>
+<p>When <code>shelf["user_1"]</code> is assigned:</p>
+<ul>
+<li>The string key <code>"user_1"</code> is validated and encoded to
+bytes.</li>
+<li>The dictionary value is passed to <code>pickle.dump()</code> to
+generate a byte string.</li>
+<li>The underlying <code>dbm</code> instance stores this byte string on
+disk at the slot corresponding to <code>"user_1"</code>.</li>
+</ul>
+<h3 id="reading-objects">Reading Objects</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> shelve.<span class="bu">open</span>(<span class="st">&quot;app_state&quot;</span>) <span class="im">as</span> shelf:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    user <span class="op">=</span> shelf[<span class="st">&quot;user_1&quot;</span>]</span></code></pre></div>
+<p>When accessing <code>shelf["user_1"]</code>:</p>
+<ul>
+<li><code>shelve</code> fetches the byte sequence from the
+<code>dbm</code> file for the key <code>"user_1"</code>.</li>
+<li>It executes <code>pickle.load()</code> on the retrieved bytes.</li>
+<li>A newly constructed Python dictionary is returned to the
+caller.</li>
+</ul>
+<h2 id="the-mutation-caveat-and-the-writeback-parameter">The Mutation
+Caveat and the <code>writeback</code> Parameter</h2>
+<p>Because fetching an item unpickles a <em>new</em> copy of the object
+in memory, in-place modifications to mutable objects do not
+automatically persist to disk.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> shelve.<span class="bu">open</span>(<span class="st">&quot;app_state&quot;</span>) <span class="im">as</span> shelf:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># This modifies the in-memory object, NOT the disk storage:</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    shelf[<span class="st">&quot;user_1&quot;</span>][<span class="st">&quot;name&quot;</span>] <span class="op">=</span> <span class="st">&quot;Bob&quot;</span></span></code></pre></div>
+<p>To ensure mutations are saved, you have two approaches:</p>
+<ol type="1">
+<li><strong>Explicit Re-assignment</strong>:
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> shelf[<span class="st">&quot;user_1&quot;</span>]</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>data[<span class="st">&quot;name&quot;</span>] <span class="op">=</span> <span class="st">&quot;Bob&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>shelf[<span class="st">&quot;user_1&quot;</span>] <span class="op">=</span> data  <span class="co"># Triggers pickle and dbm write</span></span></code></pre></div></li>
+<li><strong>Enabling <code>writeback=True</code></strong>:
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> shelve.<span class="bu">open</span>(<span class="st">&quot;app_state&quot;</span>, writeback<span class="op">=</span><span class="va">True</span>) <span class="im">as</span> shelf:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    shelf[<span class="st">&quot;user_1&quot;</span>][<span class="st">&quot;name&quot;</span>] <span class="op">=</span> <span class="st">&quot;Bob&quot;</span></span></code></pre></div>
+When <code>writeback=True</code> is enabled, <code>shelve</code> keeps
+an in-memory cache of every object read from the database. When the
+shelf is synchronized or closed via <code>.close()</code>, it writes all
+cached objects back to the <code>dbm</code> database. While convenient,
+this increases memory overhead and slows down the closing process for
+large datasets.</li>
+</ol>
+<h2 id="concurrency-and-limitations">Concurrency and Limitations</h2>
+<p>While <code>shelve</code> provides a quick solution for disk-backed
+persistence, it inherits the architectural trade-offs of both
+<code>pickle</code> and <code>dbm</code>:</p>
+<ul>
+<li><strong>No Concurrent Writes</strong>: Standard <code>dbm</code>
+implementations do not support safe, multi-process concurrent writes.
+Simultaneous modifications can lead to corrupted database files.</li>
+<li><strong>Security Considerations</strong>: Because values are
+unpickled automatically upon retrieval, opening untrusted
+<code>shelve</code> files can introduce arbitrary code execution
+vulnerabilities.</li>
+<li><strong>String-Only Keys</strong>: While values can be almost any
+picklable object, keys must always be strings.</li>
+<li><strong>Portability Constraints</strong>: Depending on the host OS,
+different underlying <code>dbm</code> libraries may be chosen (e.g.,
+GDBM on Linux versus <code>dbm.dumb</code> on environments lacking C
+libraries), which can occasionally cause cross-platform file
+incompatibility.</li>
+</ul>
+<p><code>shelve</code> remains an effective, zero-dependency tool when
+an application requires lightweight, persistent state storage without
+the overhead of setting up an external database engine.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Read Package Assets with importlib.resources - python</title>
+    <meta name="description" content="The importlib.resources module provides a modern, secure, and standardized interface for accessing non-code assets—such as configuration files, templates, schemas, and media—packaged directly within Python modules. Introduced in Python 3.7 and modern">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-read-package-assets-with-importlib-resources">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Read Package Assets with importlib.resources - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-read-package-assets-with-importlib-resources" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The importlib.resources module provides a modern, secure, and standardized interface for accessing non-code assets—such as configuration files, templates, schemas, and media—packaged directly within Python modules. Introduced in Python 3.7 and modern" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-read-package-assets-with-importlibresources">How to Read
+Package Assets with importlib.resources</h1>
+<p>The <code>importlib.resources</code> module provides a modern,
+secure, and standardized interface for accessing non-code assets—such as
+configuration files, templates, schemas, and media—packaged directly
+within Python modules. Introduced in Python 3.7 and modernized with a
+path-like API in Python 3.9, it replaces older, brittle techniques like
+manual <code>__file__</code> path manipulation and the deprecated
+<code>pkg_resources</code> API, ensuring assets are accessible whether a
+package is installed in an editable directory, packaged as a wheel, or
+loaded from a zip archive.</p>
+<h3 id="the-modern-files-api-and-traversable">The Modern
+<code>files()</code> API and <code>Traversable</code></h3>
+<p>The primary entry point in modern Python is
+<code>importlib.resources.files()</code>. Passing an installed module's
+name or module object returns a <code>Traversable</code> instance. This
+object mirrors a subset of Python's standard <code>pathlib.Path</code>
+interface, allowing developers to navigate an asset tree using familiar
+methods.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> importlib.resources</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Returns a Traversable pointing to the package root</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>pkg_root <span class="op">=</span> importlib.resources.files(<span class="st">&quot;my_package&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Navigate into nested asset directories</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>config_path <span class="op">=</span> pkg_root <span class="op">/</span> <span class="st">&quot;assets&quot;</span> <span class="op">/</span> <span class="st">&quot;config.json&quot;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Or using joinpath:</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>config_path <span class="op">=</span> pkg_root.joinpath(<span class="st">&quot;assets&quot;</span>, <span class="st">&quot;config.json&quot;</span>)</span></code></pre></div>
+<h3 id="direct-asset-reading">Direct Asset Reading</h3>
+<p><code>importlib.resources</code> offers direct reading methods
+without the need to manage file handles manually. These operations
+automatically handle opening, reading, and closing the resource
+stream:</p>
+<ul>
+<li><strong>Text Content</strong>:
+<code>.read_text(encoding="utf-8")</code> reads the resource directly
+into a string.</li>
+<li><strong>Binary Content</strong>: <code>.read_bytes()</code> loads
+raw binary data directly into memory.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>data_file <span class="op">=</span> importlib.resources.files(<span class="st">&quot;my_package.data&quot;</span>) <span class="op">/</span> <span class="st">&quot;lookup.csv&quot;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Read as text</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>csv_content <span class="op">=</span> data_file.read_text(encoding<span class="op">=</span><span class="st">&quot;utf-8&quot;</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Read as bytes</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>binary_data <span class="op">=</span> data_file.read_bytes()</span></code></pre></div>
+<h3 id="stream-based-access">Stream-Based Access</h3>
+<p>For large files where loading the entire asset into memory is
+inefficient, <code>Traversable</code> instances support standard
+stream-based access via the <code>.open()</code> method. This works
+seamlessly with context managers:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>resource <span class="op">=</span> importlib.resources.files(<span class="st">&quot;my_package&quot;</span>) <span class="op">/</span> <span class="st">&quot;large_dataset.bin&quot;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> resource.<span class="bu">open</span>(<span class="st">&quot;rb&quot;</span>) <span class="im">as</span> stream:</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    chunk <span class="op">=</span> stream.read(<span class="dv">4096</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> chunk:</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        process(chunk)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        chunk <span class="op">=</span> stream.read(<span class="dv">4096</span>)</span></code></pre></div>
+<h3 id="extracting-physical-file-paths-via-as_file">Extracting Physical
+File Paths via <code>as_file</code></h3>
+<p>Certain external libraries (such as C extensions, SQLite, or GUI
+toolkits) require a physical path on the operating system's filesystem,
+rather than an abstract stream. If a package is distributed as a zip
+file, standard paths do not natively exist.</p>
+<p>The <code>importlib.resources.as_file()</code> context manager solves
+this by temporarily extracting the resource to the local filesystem if
+necessary, yielding a real <code>pathlib.Path</code>, and cleaning it up
+once the context block exits.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>resource <span class="op">=</span> importlib.resources.files(<span class="st">&quot;my_package&quot;</span>) <span class="op">/</span> <span class="st">&quot;database.sqlite&quot;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> importlib.resources.as_file(resource) <span class="im">as</span> actual_path:</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># actual_path is guaranteed to be a real pathlib.Path</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    connection <span class="op">=</span> sqlite3.<span class="ex">connect</span>(actual_path)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># The temporary file is cleaned up upon exiting the block if it was extracted</span></span></code></pre></div>
+<h3 id="directory-inspection-and-discovery">Directory Inspection and
+Discovery</h3>
+<p><code>importlib.resources</code> enables runtime discovery of static
+assets without knowing the exact file names ahead of time. The
+<code>Traversable</code> object supports directory queries:</p>
+<ul>
+<li><code>.iterdir()</code> yields <code>Traversable</code> objects for
+all contents inside a package directory.</li>
+<li><code>.is_file()</code> and <code>.is_dir()</code> allow inspection
+of asset types.</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>templates_dir <span class="op">=</span> importlib.resources.files(<span class="st">&quot;my_package&quot;</span>) <span class="op">/</span> <span class="st">&quot;templates&quot;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>available_templates <span class="op">=</span> [</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    item.name <span class="cf">for</span> item <span class="kw">in</span> templates_dir.iterdir() <span class="cf">if</span> item.is_file() <span class="kw">and</span> item.name.endswith(<span class="st">&quot;.html&quot;</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>]</span></code></pre></div>
+<h3 id="compatibility-across-package-formats">Compatibility Across
+Package Formats</h3>
+<p>A key capability of <code>importlib.resources</code> is transport
+abstraction. Assets are accessed using loaders defined by Python’s
+import system (PEP 302). Whether a package resides in a standard
+directory on disk, within an unextracted <code>.whl</code> or
+<code>.egg</code>, or inside a frozen executable (such as PyInstaller),
+code utilizing <code>importlib.resources</code> runs identically without
+environment-specific modifications.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

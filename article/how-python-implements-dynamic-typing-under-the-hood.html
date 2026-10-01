@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Implements Dynamic Typing Under the Hood - python</title>
+    <meta name="description" content="Python achieves dynamic typing by treating variables as lightweight references to heap-allocated objects rather than fixed, typed memory locations. Under the hood, particularly within the standard CPython implementation, every value is encapsulated insid">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-implements-dynamic-typing-under-the-hood">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Implements Dynamic Typing Under the Hood - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-implements-dynamic-typing-under-the-hood" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python achieves dynamic typing by treating variables as lightweight references to heap-allocated objects rather than fixed, typed memory locations. Under the hood, particularly within the standard CPython implementation, every value is encapsulated insid" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-implements-dynamic-typing-under-the-hood">How Python
+Implements Dynamic Typing Under the Hood</h1>
+<p>Python achieves dynamic typing by treating variables as lightweight
+references to heap-allocated objects rather than fixed, typed memory
+locations. Under the hood, particularly within the standard CPython
+implementation, every value is encapsulated inside a generic C structure
+called <code>PyObject</code>, which carries both the data and the
+explicit metadata defining its type. This architecture allows Python to
+resolve types, inspect capabilities, and dispatch operations entirely at
+runtime, freeing developers from declaring variable types ahead of
+time.</p>
+<h3 id="variables-as-pointers-not-memory-containers">Variables as
+Pointers, Not Memory Containers</h3>
+<p>In statically typed languages like C or Rust, a variable declaration
+allocates a specific block of memory designed to hold a specific binary
+representation (such as 4 bytes for a 32-bit integer). In contrast, a
+Python variable is simply a name bound to a pointer.</p>
+<p>When you write <code>x = 42</code>, Python does not allocate an
+integer-sized slot labeled <code>x</code>. Instead, it allocates an
+integer object on the heap and points the name <code>x</code> in the
+local namespace dictionary to that object's memory address. If you later
+execute <code>x = "hello"</code>, Python simply points <code>x</code> to
+a newly allocated string object. The variable <code>x</code> has no type
+of its own; only the object it points to possesses a type.</p>
+<h3 id="the-foundation-pyobject-and-ob_type">The Foundation:
+<code>PyObject</code> and <code>ob_type</code></h3>
+<p>At the C level, every Python object shares a common header defined by
+the <code>PyObject</code> structure. This structure contains two
+critical fields:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">typedef</span> <span class="kw">struct</span> _object <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    _PyObject_HEAD_EXTRA</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    Py_ssize_t ob_refcnt<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">struct</span> _typeobject <span class="op">*</span>ob_type<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> PyObject<span class="op">;</span></span></code></pre></div>
+<ol type="1">
+<li><strong><code>ob_refcnt</code></strong>: An integer tracking the
+number of active references to the object, used by Python's
+reference-counting garbage collector.</li>
+<li><strong><code>ob_type</code></strong>: A pointer to a
+<code>PyTypeObject</code>. This pointer is the cornerstone of dynamic
+typing.</li>
+</ol>
+<p>Because every object begins with these fields, the CPython runtime
+can treat any pointer to any Python object as a generic
+<code>PyObject*</code>. When Python needs to know what an object is or
+what it can do, it follows the <code>ob_type</code> pointer to inspect
+the type's definition.</p>
+<h3 id="the-role-of-pytypeobject">The Role of
+<code>PyTypeObject</code></h3>
+<p>The <code>PyTypeObject</code> struct serves as the blueprint for an
+object's behavior. It contains metadata such as the type's name, its
+allocation size, and tables of function pointers known as suites or
+method tables (such as <code>tp_as_number</code>,
+<code>tp_as_sequence</code>, and <code>tp_as_mapping</code>).</p>
+<p>These function pointers dictate how the object responds to
+language-level operations:</p>
+<ul>
+<li><strong>Addition (<code>+</code>)</strong>: Maps to the
+<code>nb_add</code> function pointer inside the
+<code>tp_as_number</code> struct.</li>
+<li><strong>Indexing (<code>obj[key]</code>)</strong>: Maps to
+<code>mp_subscript</code> inside <code>tp_as_mapping</code> or
+<code>sq_item</code> inside <code>tp_as_sequence</code>.</li>
+<li><strong>String representation (<code>str()</code>)</strong>: Maps to
+the <code>tp_str</code> function pointer.</li>
+</ul>
+<p>When an operation is executed, Python does not rely on compile-time
+assertions. Instead, it inspects the <code>ob_type</code> of the operand
+at runtime, verifies whether the requested slot contains a valid
+function pointer, and executes that function.</p>
+<h3 id="dynamic-dispatch-and-duck-typing">Dynamic Dispatch and Duck
+Typing</h3>
+<p>Because operations depend on the function pointers inside
+<code>ob_type</code>, Python natively supports duck typing. When
+evaluating an expression like <code>a + b</code>, the interpreter does
+not verify that <code>a</code> belongs to a specific class
+hierarchy.</p>
+<p>Instead, the execution follows these steps:</p>
+<ol type="1">
+<li>The interpreter reads the <code>ob_type</code> of
+<code>a</code>.</li>
+<li>It checks if <code>a-&gt;ob_type-&gt;tp_as_number-&gt;nb_add</code>
+is defined.</li>
+<li>If defined, it calls that function with <code>a</code> and
+<code>b</code> as arguments.</li>
+<li>If the operation returns <code>NotImplemented</code> or the slot is
+null, the interpreter checks if <code>b</code> provides a reverse
+operation (<code>nb_radd</code>).</li>
+<li>If neither operand provides a valid implementation, Python raises a
+runtime <code>TypeError</code>.</li>
+</ol>
+<p>This process eliminates the need for explicit type matching at
+compile time, resolving compatibility solely based on an object's
+runtime interface.</p>
+<h3 id="the-cost-of-dynamic-typing-and-modern-optimizations">The Cost of
+Dynamic Typing and Modern Optimizations</h3>
+<p>Dynamic typing introduces performance overhead compared to static
+compilation. Every basic operation requires multiple pointer
+dereferences (fetching the type object, looking up the method table, and
+calling the function pointer) alongside boxing primitive values into
+heap-allocated objects.</p>
+<p>To minimize this overhead, CPython implements several internal
+optimizations:</p>
+<ul>
+<li><strong>Object Caching</strong>: Frequently used immutable objects,
+such as small integers (between -5 and 256) and interned strings, are
+pre-allocated and reused globally to avoid repeated heap
+allocations.</li>
+<li><strong>Specializing Adaptive Interpreter</strong>: Introduced in
+Python 3.11, the bytecode interpreter monitors running code for type
+stability. When an operation repeatedly encounters the same types at a
+specific bytecode instruction, the interpreter dynamically rewires that
+instruction to a specialized, fast-path variant, bypassing generic type
+lookups for as long as the types remain consistent.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

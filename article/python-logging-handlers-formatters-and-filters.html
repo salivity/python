@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Logging: Handlers, Formatters, and Filters - python</title>
+    <meta name="description" content="Python's built-in logging module provides a flexible architecture for tracking events, debugging code, and monitoring software in production. While the logger object itself acts as the entry point for capturing events, three primary components govern how">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-logging-handlers-formatters-and-filters">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Logging: Handlers, Formatters, and Filters - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-logging-handlers-formatters-and-filters" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's built-in logging module provides a flexible architecture for tracking events, debugging code, and monitoring software in production. While the logger object itself acts as the entry point for capturing events, three primary components govern how" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-logging-handlers-formatters-and-filters">Python Logging:
+Handlers, Formatters, and Filters</h1>
+<p>Python's built-in <code>logging</code> module provides a flexible
+architecture for tracking events, debugging code, and monitoring
+software in production. While the logger object itself acts as the entry
+point for capturing events, three primary components govern how those
+events are processed: handlers, formatters, and filters. This guide
+explains the purpose of each component, how they interact within the
+logging pipeline, and how they provide precise control over the
+destination, structure, and criteria of your application logs.</p>
+<h2 id="handlers-directing-where-logs-go">Handlers: Directing Where Logs
+Go</h2>
+<p>Handlers determine the final destination of a log message. When a
+logger creates a log record, it passes that record to one or more
+configured handlers. Without a handler, log messages cannot be displayed
+or stored.</p>
+<p>A single logger can have multiple handlers attached to it, allowing
+the same event to be sent to different destinations simultaneously. For
+example:</p>
+<ul>
+<li><strong><code>StreamHandler</code></strong>: Sends log records to
+output streams such as <code>sys.stdout</code> or
+<code>sys.stderr</code> for console display.</li>
+<li><strong><code>FileHandler</code></strong>: Appends log records
+directly to a file on the disk.</li>
+<li><strong><code>RotatingFileHandler</code> /
+<code>TimedRotatingFileHandler</code></strong>: Writes logs to files
+that automatically roll over based on file size or time intervals to
+prevent disk exhaustion.</li>
+<li><strong><code>SMTPHandler</code></strong>: Sends log events via
+email, typically used for critical errors.</li>
+<li><strong><code>SocketHandler</code> /
+<code>HTTPHandler</code></strong>: Transmits logs across networks to
+remote servers, log aggregators, or monitoring platforms.</li>
+</ul>
+<p>Handlers also maintain their own minimum log level (such as
+<code>DEBUG</code>, <code>INFO</code>, <code>WARNING</code>,
+<code>ERROR</code>, or <code>CRITICAL</code>). This allows you to output
+all debug logs to a local file while only displaying warnings and errors
+on the console.</p>
+<h2 id="formatters-defining-the-layout-of-logs">Formatters: Defining the
+Layout of Logs</h2>
+<p>Formatters specify the layout and structure of the log record once it
+reaches a handler. While a log record contains rich metadata—such as the
+timestamp, module name, line number, and process ID—the formatter
+determines which of these attributes are rendered and how they are
+arranged.</p>
+<p>Formatters are attached directly to handlers rather than loggers.
+This means different handlers can represent the exact same log event
+differently. For example, a console handler might use a brief,
+human-readable format, while a file handler might format the message as
+structured JSON for ingestion by log analysis tools.</p>
+<p>Formatters use standard string interpolation attributes, such as:</p>
+<ul>
+<li><code>%(asctime)s</code>: The human-readable time when the log
+record was created.</li>
+<li><code>%(levelname)s</code>: The textual severity level of the
+message (e.g., <code>INFO</code>, <code>ERROR</code>).</li>
+<li><code>%(name)s</code>: The name of the logger used to record the
+call.</li>
+<li><code>%(message)s</code>: The actual message provided by the
+application code.</li>
+</ul>
+<h2 id="filters-providing-granular-selection">Filters: Providing
+Granular Selection</h2>
+<p>Filters provide fine-grained control over which log records are
+processed, going beyond the simple thresholding offered by log
+levels.</p>
+<p>A standard log level check only determines if a message is severe
+enough (e.g., higher than <code>WARNING</code>). Filters can inspect the
+entire context of a <code>LogRecord</code> object to make conditional
+decisions. They can be attached to either loggers or handlers.</p>
+<p>Filters serve two primary purposes:</p>
+<ol type="1">
+<li><strong>Conditional Suppression</strong>: A filter can evaluate any
+attribute of a record—such as contextual data, message content, or
+thread ID—and return a boolean value to decide whether to drop or allow
+the message. For instance, you can suppress messages from a specific
+noisy third-party library or only allow logs associated with a
+particular user session.</li>
+<li><strong>Record Mutation</strong>: Filters can modify log records
+in-place before they are formatted. This is commonly used to inject
+contextual metadata into records, such as an HTTP request ID, IP
+address, or active user ID, making distributed tracing easier.</li>
+</ol>
+<h2 id="how-the-components-work-together">How the Components Work
+Together</h2>
+<p>The logging flow follows a distinct pipeline:</p>
+<ol type="1">
+<li>An application event triggers a call on a <strong>Logger</strong>
+instance (e.g., <code>logger.error("Failed to connect")</code>).</li>
+<li>The logger checks its minimum severity level. If passed, it
+generates a <code>LogRecord</code>.</li>
+<li>If logger-level <strong>Filters</strong> are present, they evaluate
+the record. If approved, the record is passed to all attached
+<strong>Handlers</strong>.</li>
+<li>Each handler evaluates the record against its own severity level and
+handler-level <strong>Filters</strong>.</li>
+<li>If the record passes, the handler uses its assigned
+<strong>Formatter</strong> to turn the <code>LogRecord</code> into
+text.</li>
+<li>The handler writes the formatted text to the configured destination
+(console, file, network endpoint).</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

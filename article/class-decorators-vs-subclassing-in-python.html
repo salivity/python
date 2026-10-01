@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Decorators vs Subclassing in Python - python</title>
+    <meta name="description" content="Modifying class behavior in Python is commonly achieved through either dynamic class decorators or traditional subclassing (inheritance). While both approaches allow developers to extend and alter functionality, they operate through fundamentally differe">
+    <link rel="canonical" href="https://salivity.github.io/python/article/class-decorators-vs-subclassing-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Class Decorators vs Subclassing in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/class-decorators-vs-subclassing-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Modifying class behavior in Python is commonly achieved through either dynamic class decorators or traditional subclassing (inheritance). While both approaches allow developers to extend and alter functionality, they operate through fundamentally differe" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="class-decorators-vs-subclassing-in-python">Class Decorators vs
+Subclassing in Python</h1>
+<p>Modifying class behavior in Python is commonly achieved through
+either dynamic class decorators or traditional subclassing
+(inheritance). While both approaches allow developers to extend and
+alter functionality, they operate through fundamentally different
+mechanisms. Class decorators inspect and modify or wrap a class in-place
+at definition time without altering the class hierarchy, whereas
+subclassing creates an entirely new type linked through Python's Method
+Resolution Order (MRO). Choosing between them depends on whether your
+goal is to inject cross-cutting features or establish a specialized
+subtype.</p>
+<h3 id="mechanism-and-execution">Mechanism and Execution</h3>
+<p>A class decorator is a callable that accepts a class as its argument
+and returns either the modified class, a wrapped version of it, or a
+completely new object. It executes immediately after the class body is
+evaluated during import or definition time:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> add_greeting(cls):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    cls.greeting <span class="op">=</span> <span class="st">&quot;Hello&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> cls</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">@add_greeting</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Greeter:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<p>In contrast, subclassing relies on Python's object-oriented
+inheritance model. A new class object is created that references its
+parent class (or classes) through its <code>__bases__</code>
+attribute:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> BaseGreeter:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    greeting <span class="op">=</span> <span class="st">&quot;Hello&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Greeter(BaseGreeter):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<h3 id="type-identity-and-instance-checking">Type Identity and Instance
+Checking</h3>
+<p>One of the primary distinctions lies in how each approach impacts
+identity and <code>isinstance()</code> checks:</p>
+<ul>
+<li><strong>Class Decorators:</strong> When a decorator mutates a class
+in-place, the class's identity remains unchanged. Instances of the
+decorated class match the original class name and type. If the decorator
+wraps the class inside another class, it can obscure the original class
+identity unless explicitly handled via tools like
+<code>functools.wraps</code>.</li>
+<li><strong>Subclassing:</strong> Inheritance always produces a distinct
+type. Instances of the derived class satisfy
+<code>isinstance(instance, Parent)</code> and
+<code>isinstance(instance, Child)</code>, but their direct
+<code>type(instance)</code> is exclusively the child class.</li>
+</ul>
+<h3 id="method-resolution-order-mro">Method Resolution Order (MRO)</h3>
+<p>Subclassing modifies the Method Resolution Order. When you override a
+method in a subclass, Python searches the inheritance chain, allowing
+cooperative method calls via <code>super()</code>. While powerful, deep
+inheritance trees can introduce tight coupling, fragile base class
+problems, and conflicts in multiple inheritance.</p>
+<p>Dynamic class decorators do not alter the MRO unless they explicitly
+return a new subclass. When they inject methods or attributes directly
+into the class dictionary, those additions live directly on the class
+itself. This avoids the overhead and potential ambiguity of complex
+inheritance hierarchies.</p>
+<h3 id="composition-vs-inheritance">Composition vs. Inheritance</h3>
+<p>Class decorators favor composition and augmentation over rigid
+hierarchies. They represent cross-cutting modifications that can be
+applied modularly to disparate classes regardless of their domain.
+Examples include <code>@dataclass</code>, serializers, and validation
+frameworks.</p>
+<p>Subclassing represents an "is-a" relationship designed for
+polymorphism, where the derived class is a specialized variant of the
+base class intended to adhere to the Liskov Substitution Principle.</p>
+<h3 id="summary-of-differences">Summary of Differences</h3>
+<ul>
+<li><strong>Hierarchy:</strong> Subclassing adds a layer to the
+inheritance tree; decorators typically modify the class in place without
+changing inheritance.</li>
+<li><strong>Polymorphism:</strong> Subclasses enable subtype
+polymorphism and <code>super()</code> delegation; decorators generally
+add shared boilerplate, register classes, or patch attributes.</li>
+<li><strong>Coupling:</strong> Subclasses are tightly coupled to the
+implementation details of their base classes; decorators are loosely
+coupled, modular transformations applied at definition time.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python bisect.insort Maintains Sorted Lists - python</title>
+    <meta name="description" content="Python's bisect.insort() function maintains a sorted sequence by combining a binary search algorithm with an in-place list insertion. Instead of appending an element and resorting the entire list—an expensive $O(n \log n)$ operation—bisect.insort() f">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-bisect-insort-maintains-sorted-lists">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python bisect.insort Maintains Sorted Lists - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-bisect-insort-maintains-sorted-lists" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's bisect.insort() function maintains a sorted sequence by combining a binary search algorithm with an in-place list insertion. Instead of appending an element and resorting the entire list—an expensive $O(n \log n)$ operation—bisect.insort() f" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-bisectinsort-maintains-sorted-lists">How Python
+bisect.insort Maintains Sorted Lists</h1>
+<p>Python's <code>bisect.insort()</code> function maintains a sorted
+sequence by combining a binary search algorithm with an in-place list
+insertion. Instead of appending an element and resorting the entire
+list—an expensive <span class="math inline">\(O(n \log n)\)</span>
+operation—<code>bisect.insort()</code> finds the correct insertion index
+in <span class="math inline">\(O(\log n)\)</span> time and inserts the
+element directly. This approach ensures the list remains ordered after
+every operation without requiring a full re-sort.</p>
+<h3 id="the-two-step-mechanism">The Two-Step Mechanism</h3>
+<p>The <code>bisect.insort()</code> function executes its task in two
+distinct steps:</p>
+<ol type="1">
+<li><strong>Locate the Index:</strong> It uses bisection (binary search)
+to find the precise index where the new element should reside to
+preserve order.</li>
+<li><strong>Insert the Element:</strong> It calls the list's native
+<code>.insert()</code> method to place the element at the computed
+index, automatically shifting subsequent elements one position to the
+right.</li>
+</ol>
+<p>By default, <code>bisect.insort()</code> is an alias for
+<code>bisect.insort_right()</code>.</p>
+<h3 id="step-1-finding-the-position-with-binary-search">Step 1: Finding
+the Position with Binary Search</h3>
+<p>To locate the insertion point, the algorithm divides the search range
+in half repeatedly:</p>
+<ul>
+<li>It initializes two pointers, <code>lo</code> (default 0) and
+<code>hi</code> (default <code>len(list)</code>).</li>
+<li>It computes the midpoint index:
+<code>mid = (lo + hi) // 2</code>.</li>
+<li>It compares the target value with the value at <code>mid</code>.
+<ul>
+<li>If the target is smaller, the insertion index must be in the left
+half, so <code>hi</code> moves to <code>mid</code>.</li>
+<li>If the target is greater than or equal to the midpoint value, the
+insertion index must be in the right half, so <code>lo</code> moves to
+<code>mid + 1</code>.</li>
+</ul></li>
+<li>This halving process continues until <code>lo == hi</code>. The
+resulting index is the mathematically correct position for the new
+value.</li>
+</ul>
+<p>Because the search interval is halved at each step, locating the
+index takes logarithmic time, or <span class="math inline">\(O(\log
+n)\)</span>.</p>
+<h3 id="step-2-in-place-list-mutation">Step 2: In-Place List
+Mutation</h3>
+<p>Once the target index is identified, Python inserts the value:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> bisect</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>numbers <span class="op">=</span> [<span class="dv">10</span>, <span class="dv">20</span>, <span class="dv">30</span>, <span class="dv">40</span>, <span class="dv">50</span>]</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>bisect.insort(numbers, <span class="dv">25</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(numbers)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: [10, 20, 25, 30, 40, 50]</span></span></code></pre></div>
+<p>Under the hood, this translates to:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>index <span class="op">=</span> bisect.bisect_right(numbers, <span class="dv">25</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>numbers.insert(index, <span class="dv">25</span>)</span></code></pre></div>
+<p>While locating the index is <span class="math inline">\(O(\log
+n)\)</span>, inserting an element into a standard Python list requires
+shifting all subsequent elements in memory. Therefore, the insertion
+step takes linear time, or <span
+class="math inline">\(O(n)\)</span>.</p>
+<h3 id="handling-duplicate-values-insort_left-vs-insort_right">Handling
+Duplicate Values: <code>insort_left</code> vs.
+<code>insort_right</code></h3>
+<p>The module provides two variants to handle duplicates:</p>
+<ul>
+<li><strong><code>bisect.insort_right()</code> (Default):</strong> If
+the item already exists in the list, the new item is placed immediately
+<strong>after</strong> (to the right of) the existing entry.</li>
+<li><strong><code>bisect.insort_left()</code>:</strong> If the item
+already exists, the new item is placed immediately
+<strong>before</strong> (to the left of) the existing entry.</li>
+</ul>
+<p>For primitive types like integers, the visual outcome is identical.
+However, when working with custom objects or elements where identity or
+insertion stability matters, this distinction determines relative
+ordering.</p>
+<h3 id="complexity-and-performance">Complexity and Performance</h3>
+<ul>
+<li><strong>Lookup Time:</strong> <span class="math inline">\(O(\log
+n)\)</span></li>
+<li><strong>Insertion Time:</strong> <span
+class="math inline">\(O(n)\)</span> due to memory shifting in dynamic
+arrays.</li>
+<li><strong>Overall Time Complexity:</strong> <span
+class="math inline">\(O(n)\)</span> per insertion.</li>
+<li><strong>Space Complexity:</strong> <span
+class="math inline">\(O(1)\)</span> auxiliary space.</li>
+</ul>
+<p>Maintaining a sorted list incrementally with
+<code>bisect.insort()</code> across <span
+class="math inline">\(n\)</span> insertions results in an overall
+complexity of <span class="math inline">\(O(n^2)\)</span>. If you have
+all data available up front, appending all items at once and calling
+<code>list.sort()</code> is faster at <span class="math inline">\(O(n
+\log n)\)</span>. However, for streams, real-time feeds, or dynamic
+collections where the sequence must stay sorted between individual
+insertions, <code>bisect.insort()</code> provides an optimized, built-in
+solution.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

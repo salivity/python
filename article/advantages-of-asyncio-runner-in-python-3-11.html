@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advantages of asyncio.Runner in Python 3.11 - python</title>
+    <meta name="description" content="Python 3.11 introduced asyncio.Runner to modernize and streamline event loop lifecycle management in asynchronous applications. While asyncio.run() simplified running single coroutines, it lacked flexibility for complex lifecycles, and low-level loop fun">
+    <link rel="canonical" href="https://salivity.github.io/python/article/advantages-of-asyncio-runner-in-python-3-11">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Advantages of asyncio.Runner in Python 3.11 - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/advantages-of-asyncio-runner-in-python-3-11" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python 3.11 introduced asyncio.Runner to modernize and streamline event loop lifecycle management in asynchronous applications. While asyncio.run() simplified running single coroutines, it lacked flexibility for complex lifecycles, and low-level loop fun" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="advantages-of-asynciorunner-in-python-311">Advantages of
+asyncio.Runner in Python 3.11</h1>
+<p>Python 3.11 introduced <code>asyncio.Runner</code> to modernize and
+streamline event loop lifecycle management in asynchronous applications.
+While <code>asyncio.run()</code> simplified running single coroutines,
+it lacked flexibility for complex lifecycles, and low-level loop
+functions required verbose, error-prone boilerplate. This article
+explores the primary advantages of <code>asyncio.Runner</code>,
+highlighting how it provides finer control over loop lifecycles, reduces
+resource leaks, supports custom loop factories, and enables multiple
+coroutine executions within a shared context.</p>
+<h2 id="1-multi-call-execution-in-a-shared-loop">1. Multi-Call Execution
+in a Shared Loop</h2>
+<p>Prior to Python 3.11, the high-level <code>asyncio.run()</code>
+function created a brand-new event loop, executed a single coroutine,
+and immediately tore the loop down. If an application needed to execute
+multiple coroutines sequentially—common in synchronous test suites or
+synchronous-to-asynchronous bridges—developers either had to accept the
+overhead of repeated loop creation and destruction or fall back to
+error-prone, low-level loop management APIs.</p>
+<p><code>asyncio.Runner</code> acts as a context manager that maintains
+an open event loop across multiple calls:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> asyncio.Runner() <span class="im">as</span> runner:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    runner.run(coroutine_one())</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    runner.run(coroutine_two())</span></code></pre></div>
+<p>This allows multiple coroutines to share the same underlying loop,
+preserving cached state, connection pools, and thread executors without
+tearing them down prematurely.</p>
+<h2 id="2-deterministic-cleanup-and-resource-management">2.
+Deterministic Cleanup and Resource Management</h2>
+<p>Manually closing an event loop using <code>loop.close()</code> often
+left dangling resources, such as unfinished tasks, unclosed asynchronous
+generators, or running thread executors. <code>asyncio.Runner</code>
+handles the complex shutdown sequence automatically upon exit.</p>
+<p>When closed (either explicitly via <code>.close()</code> or
+implicitly through its context manager),
+<code>asyncio.Runner</code>:</p>
+<ul>
+<li>Cancels all lingering tasks and awaits their completion.</li>
+<li>Shuts down asynchronous generators using
+<code>loop.shutdown_asyncgens()</code>.</li>
+<li>Shuts down default thread pool executors using
+<code>loop.shutdown_default_executor()</code>.</li>
+<li>Closes the event loop safely.</li>
+</ul>
+<p>This ensures zero resource leakage without requiring developers to
+write custom shutdown routines.</p>
+<h2 id="3-direct-support-for-custom-loop-factories">3. Direct Support
+for Custom Loop Factories</h2>
+<p>Before Python 3.11, using an alternative event loop implementation
+(such as <code>uvloop</code>) required globally modifying the loop
+policy via <code>asyncio.set_event_loop_policy()</code>. Global policy
+changes can cause side effects across different modules or during test
+suite runs.</p>
+<p><code>asyncio.Runner</code> accepts a <code>loop_factory</code>
+argument directly:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> uvloop</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> asyncio.Runner(loop_factory<span class="op">=</span>uvloop.new_event_loop) <span class="im">as</span> runner:</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    runner.run(main())</span></code></pre></div>
+<p>This provides localized, explicit dependency injection for event
+loops without altering global interpreter state.</p>
+<h2 id="4-safer-replacement-for-low-level-apis">4. Safer Replacement for
+Low-Level APIs</h2>
+<p>Python’s legacy approach to managing loops often relied on
+combinations of <code>get_event_loop()</code>,
+<code>new_event_loop()</code>, and <code>set_event_loop()</code>. These
+APIs frequently caused
+<code>RuntimeError: There is no current event loop</code> exceptions or
+silently attached work to unintended global loops.</p>
+<p><code>asyncio.Runner</code> encapsulates loop initialization and
+contextual binding into a single object. By discouraging the use of
+implicit global loops, it leads to codebases that are thread-safe,
+predictable, and easier to debug.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

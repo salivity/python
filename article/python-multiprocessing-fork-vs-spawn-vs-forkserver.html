@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Multiprocessing: Fork vs Spawn vs Forkserver - python</title>
+    <meta name="description" content="Python's multiprocessing module allows developers to bypass the Global Interpreter Lock (GIL) by running tasks across multiple operating system processes. To create these worker processes, Python provides three distinct start methods: fork, spawn, and fo">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-multiprocessing-fork-vs-spawn-vs-forkserver">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Multiprocessing: Fork vs Spawn vs Forkserver - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-multiprocessing-fork-vs-spawn-vs-forkserver" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's multiprocessing module allows developers to bypass the Global Interpreter Lock (GIL) by running tasks across multiple operating system processes. To create these worker processes, Python provides three distinct start methods: fork, spawn, and fo" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-multiprocessing-fork-vs-spawn-vs-forkserver">Python
+Multiprocessing: Fork vs Spawn vs Forkserver</h1>
+<p>Python's <code>multiprocessing</code> module allows developers to
+bypass the Global Interpreter Lock (GIL) by running tasks across
+multiple operating system processes. To create these worker processes,
+Python provides three distinct start methods: <code>fork</code>,
+<code>spawn</code>, and <code>forkserver</code>. This article breaks
+down how each method functions, their performance and safety trade-offs,
+operating system availability, and how to select the right approach for
+your concurrent applications.</p>
+<hr />
+<h3 id="1-the-fork-method">1. The <code>fork</code> Method</h3>
+<p>The <code>fork</code> method uses the standard POSIX system call
+<code>os.fork()</code>. When a new worker process is created, the
+operating system clones the parent process entirely, copying its virtual
+memory space using copy-on-write (COW).</p>
+<ul>
+<li><strong>How it works:</strong> The child process starts with an
+identical copy of the parent process's state, including loaded modules,
+global variables, and memory allocations, without re-executing the
+Python script or re-importing libraries.</li>
+<li><strong>Speed:</strong> Extremely fast. Because the OS merely
+duplicates page tables rather than reloading the Python interpreter,
+initialization overhead is minimal.</li>
+<li><strong>Drawbacks and Risks:</strong>
+<ul>
+<li><strong>Thread Safety Issues:</strong> If the parent process
+contains active threads, <code>fork</code> only copies the thread that
+called <code>fork()</code>. The child inherits the memory state of other
+threads, including any locks or mutexes that were held at the moment of
+the fork. This frequently causes deadlocks.</li>
+<li><strong>Platform Support:</strong> Available only on Unix-like
+systems (Linux, macOS). It is not supported on Windows. Due to safety
+issues, macOS deprecated <code>fork</code> as the default in Python
+3.8.</li>
+</ul></li>
+</ul>
+<h3 id="2-the-spawn-method">2. The <code>spawn</code> Method</h3>
+<p>The <code>spawn</code> method launches a completely fresh Python
+interpreter process from scratch.</p>
+<ul>
+<li><strong>How it works:</strong> The operating system creates a new
+process, initializes a new Python interpreter, and executes the code
+necessary to import the target function. Only resources explicitly
+passed as arguments to the target function are transferred, serialized
+via <code>pickle</code>.</li>
+<li><strong>Speed:</strong> The slowest of the three methods. Launching
+a new interpreter and re-importing all modules in every worker
+introduces noticeable latency and CPU overhead during startup.</li>
+<li><strong>Advantages:</strong>
+<ul>
+<li><strong>Safety:</strong> It guarantees a pristine process state. No
+unwanted file descriptors, thread-held locks, or corrupted memory states
+are inherited from the parent.</li>
+<li><strong>Portability:</strong> Supported across all major operating
+systems. It is the default on Windows and macOS.</li>
+</ul></li>
+<li><strong>Requirements:</strong> All arguments passed to child
+processes must be serializable via <code>pickle</code>. Code execution
+must also be guarded by an <code>if __name__ == '__main__':</code> block
+to prevent infinite recursion during process initialization.</li>
+</ul>
+<h3 id="3-the-forkserver-method">3. The <code>forkserver</code>
+Method</h3>
+<p>The <code>forkserver</code> method offers a hybrid approach designed
+to combine the safety of <code>spawn</code> with the creation speed of
+<code>fork</code>.</p>
+<ul>
+<li><strong>How it works:</strong> When the program requests the
+<code>forkserver</code> method, a dedicated single-threaded server
+process is spawned. From that point forward, whenever a new worker
+process is required, the parent asks this clean server process to
+<code>fork()</code> itself.</li>
+<li><strong>Speed:</strong> Faster than <code>spawn</code> because new
+workers are forked from an existing process, but slightly slower than
+pure <code>fork</code> due to the inter-process communication with the
+server.</li>
+<li><strong>Advantages:</strong> Because the fork server process remains
+single-threaded, workers never inherit unreleased thread locks or
+corrupted states from the main application process.</li>
+<li><strong>Platform Support:</strong> Available only on Unix platforms
+that support passing file descriptors over Unix domain sockets.</li>
+</ul>
+<hr />
+<h3 id="quick-comparison">Quick Comparison</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>fork</code></th>
+<th style="text-align: left;"><code>spawn</code></th>
+<th style="text-align: left;"><code>forkserver</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Creation Speed</strong></td>
+<td style="text-align: left;">Fastest</td>
+<td style="text-align: left;">Slowest</td>
+<td style="text-align: left;">Moderate / Fast</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Memory Isolation</strong></td>
+<td style="text-align: left;">Shared via Copy-on-Write</td>
+<td style="text-align: left;">Completely isolated</td>
+<td style="text-align: left;">Isolated from main app threads</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Thread-Safe</strong></td>
+<td style="text-align: left;">No (can deadlock)</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Windows Support</strong></td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes (Default)</td>
+<td style="text-align: left;">No</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Linux Support</strong></td>
+<td style="text-align: left;">Yes (Default)</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>macOS Support</strong></td>
+<td style="text-align: left;">Deprecated</td>
+<td style="text-align: left;">Yes (Default)</td>
+<td style="text-align: left;">Yes</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="how-to-configure-the-start-method">How to Configure the Start
+Method</h3>
+<p>You can set the start method globally at the start of your program
+using <code>multiprocessing.set_start_method()</code>. This call should
+be placed inside the <code>if __name__ == '__main__':</code> block and
+can only be set once per run.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> multiprocessing</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Options: &#39;fork&#39;, &#39;spawn&#39;, or &#39;forkserver&#39;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    multiprocessing.set_start_method(<span class="st">&#39;spawn&#39;</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Alternatively, create an isolated context:</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ctx = multiprocessing.get_context(&#39;forkserver&#39;)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># p = ctx.Process(target=worker_func)</span></span></code></pre></div>
+<p>Use <code>spawn</code> when writing cross-platform code or working
+with multi-threaded libraries like NumPy, OpenCV, or PyTorch. Use
+<code>forkserver</code> on Linux when you need high-throughput process
+creation without sacrificing thread safety. Use <code>fork</code>
+strictly in simple, single-threaded Linux applications where process
+creation speed is paramount.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

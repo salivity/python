@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Unlimited Precision Integers at the C Level - python</title>
+    <meta name="description" content="Python avoids integer overflow by ditching fixed-width CPU registers in favor of dynamic, heap-allocated data structures managed by the CPython runtime. Rather than relying on native C types such as int64t or long long, CPython implements integers via a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-unlimited-precision-integers-at-the-c-level">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Unlimited Precision Integers at the C Level - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-unlimited-precision-integers-at-the-c-level" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python avoids integer overflow by ditching fixed-width CPU registers in favor of dynamic, heap-allocated data structures managed by the CPython runtime. Rather than relying on native C types such as int64t or long long, CPython implements integers via a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-unlimited-precision-integers-at-the-c-level">Python
+Unlimited Precision Integers at the C Level</h1>
+<p>Python avoids integer overflow by ditching fixed-width CPU registers
+in favor of dynamic, heap-allocated data structures managed by the
+CPython runtime. Rather than relying on native C types such as
+<code>int64_t</code> or <code>long long</code>, CPython implements
+integers via a custom type called <code>PyLongObject</code>. This
+article explores how CPython defines this structure under the hood, how
+it packs arbitrarily large numeric values into arrays of "digits," and
+how the underlying C implementation manages signs and dynamic
+memory.</p>
+<h2 id="the-pylongobject-structure">The <code>PyLongObject</code>
+Structure</h2>
+<p>In CPython, every integer is an instance of
+<code>PyLongObject</code>. At the C level, this object is a
+variable-length object that extends <code>PyVarObject</code>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> _longobject <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    PyObject_VAR_HEAD</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    digit ob_digit<span class="op">[</span><span class="dv">1</span><span class="op">];</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<p>The macro <code>PyObject_VAR_HEAD</code> expands to include standard
+object metadata:</p>
+<ul>
+<li>A reference count (<code>ob_refcnt</code>) for garbage
+collection.</li>
+<li>A pointer to the type object (<code>ob_type</code>), which resolves
+to <code>&amp;PyLong_Type</code>.</li>
+<li>An item count/size field (<code>ob_size</code>), typed as
+<code>Py_ssize_t</code>.</li>
+</ul>
+<p>Directly following this header is the flexible array member
+<code>ob_digit</code>, which holds the actual numeric payload.</p>
+<h2 id="sign-and-length-management-via-ob_size">Sign and Length
+Management via <code>ob_size</code></h2>
+<p>CPython optimizes memory by using the <code>ob_size</code> field for
+two distinct purposes: the length of the integer and its sign.</p>
+<ul>
+<li><strong>Absolute Size:</strong> The absolute value
+<code>abs(ob_size)</code> specifies the number of elements allocated and
+used in the <code>ob_digit</code> array.</li>
+<li><strong>Sign:</strong> If <code>ob_size &gt; 0</code>, the integer
+is positive. If <code>ob_size &lt; 0</code>, the integer is negative. If
+<code>ob_size == 0</code>, the value is zero, and <code>ob_digit</code>
+contains no elements.</li>
+</ul>
+<p>By encoding the sign into <code>ob_size</code>, individual digits
+inside <code>ob_digit</code> can remain strictly unsigned, which
+significantly simplifies bitwise operations and arithmetic logic in
+C.</p>
+<h2 id="chunking-via-radix-representation-ob_digit">Chunking via Radix
+Representation (<code>ob_digit</code>)</h2>
+<p>Computers cannot natively execute arithmetic on numbers with hundreds
+or thousands of bits in a single CPU instruction. To handle this, Python
+breaks the number down into smaller chunks, effectively implementing a
+positional numeral system with a very large base.</p>
+<p>The type <code>digit</code> is an alias for <code>uint32_t</code> on
+64-bit platforms (or <code>uint16_t</code> on 32-bit platforms). Instead
+of utilizing all 32 bits of each element:</p>
+<ul>
+<li>On 64-bit systems, Python uses a <strong>30-bit base</strong>: <span
+class="math inline">\(2^{30} = 1,073,741,824\)</span>.</li>
+<li>On 32-bit systems, Python uses a <strong>15-bit base</strong>: <span
+class="math inline">\(2^{15} = 32,768\)</span>.</li>
+</ul>
+<p>The digits are stored in <strong>little-endian</strong> order within
+the <code>ob_digit</code> array: <code>ob_digit[0]</code> holds the
+least significant 30 bits, <code>ob_digit[1]</code> holds the next 30
+bits, and so on.</p>
+<p>The integer value <span class="math inline">\(V\)</span> is
+represented as:</p>
+<p><span class="math display">\[V = \text{sgn}(\text{ob\_size}) \times
+\sum_{i=0}^{|\text{ob\_size}| - 1} \text{ob\_digit}[i] \times 2^{30
+\times i}\]</span></p>
+<h3 id="why-30-bit-digits-on-64-bit-systems">Why 30-Bit Digits on 64-Bit
+Systems?</h3>
+<p>Reserving the top 2 bits (or 34 bits in a 64-bit register) prevents
+arithmetic overflow during primitive operations. When multiplying two
+30-bit integers, the maximum product requires 60 bits:</p>
+<p><span class="math display">\[ (2^{30} - 1) \times (2^{30} - 1) &lt;
+2^{60} \]</span></p>
+<p>Because <span class="math inline">\(2^{60} &lt; 2^{64}\)</span>,
+intermediate multiplication and addition steps fit into standard C
+unsigned 64-bit integers (<code>uint64_t</code>, often aliased as
+<code>twodigits</code>) without carrying out manual overflow checks at
+every assembly-level instruction.</p>
+<h2 id="memory-allocation-and-immutability">Memory Allocation and
+Immutability</h2>
+<p>Because Python integers are immutable, the <code>ob_digit</code>
+array is allocated to an exact fit when the integer is created.</p>
+<ol type="1">
+<li><strong>Small Integers:</strong> To avoid heap allocation churn for
+ubiquitous numbers, CPython pre-allocates an array of small integer
+objects in the range <span class="math inline">\([-5, 256]\)</span> at
+startup. Any reference to these numbers reuses the existing singleton
+pointers.</li>
+<li><strong>Dynamic Integers:</strong> For numbers outside this range,
+Python calculates the required number of <code>digit</code> units via
+<code>_PyLong_New(size)</code> and allocates contiguous memory matching
+<code>sizeof(PyVarObject) + (size * sizeof(digit))</code>.</li>
+</ol>
+<h2 id="arithmetic-algorithms">Arithmetic Algorithms</h2>
+<p>When operations cause an integer to exceed its current capacity,
+CPython allocates a new <code>PyLongObject</code> with an expanded
+<code>ob_digit</code> array:</p>
+<ul>
+<li><strong>Addition/Subtraction:</strong> Uses standard column-wise
+addition/subtraction with carry propagation across digits, running in
+<span class="math inline">\(\mathcal{O}(N)\)</span> time where <span
+class="math inline">\(N\)</span> is the number of digits.</li>
+<li><strong>Multiplication:</strong> For smaller numbers, CPython uses
+the classic grade-school <span
+class="math inline">\(\mathcal{O}(N^2)\)</span> algorithm. When inputs
+exceed a threshold (traditionally around 70 digits), CPython
+automatically switches to the <strong>Karatsuba multiplication
+algorithm</strong>, reducing time complexity to approximately <span
+class="math inline">\(\mathcal{O}(N^{1.58})\)</span>.</li>
+</ul>
+<p>By abstracting dynamic array management and carrying operations
+behind the C-level <code>PyLongObject</code>, Python exposes an integer
+type that scales seamlessly with available system memory without user
+intervention.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

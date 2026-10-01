@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding Auditwheel for Python Linux Wheels - python</title>
+    <meta name="description" content="The auditwheel tool is an essential command-line utility used by Python developers to inspect and repair Linux binary wheels (.whl files). Its primary purpose is to convert platform-specific Linux wheels into standardized, portable packages—such as man">
+    <link rel="canonical" href="https://salivity.github.io/python/article/understanding-auditwheel-for-python-linux-wheels">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding Auditwheel for Python Linux Wheels - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/understanding-auditwheel-for-python-linux-wheels" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The auditwheel tool is an essential command-line utility used by Python developers to inspect and repair Linux binary wheels (.whl files). Its primary purpose is to convert platform-specific Linux wheels into standardized, portable packages—such as man" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-auditwheel-for-python-linux-wheels">Understanding
+Auditwheel for Python Linux Wheels</h1>
+<p>The <code>auditwheel</code> tool is an essential command-line utility
+used by Python developers to inspect and repair Linux binary wheels
+(<code>.whl</code> files). Its primary purpose is to convert
+platform-specific Linux wheels into standardized, portable packages—such
+as <code>manylinux</code> or <code>musllinux</code>—ensuring they can be
+seamlessly installed and run across different Linux distributions
+without missing shared library dependencies.</p>
+<h2 id="the-challenge-of-linux-binary-distribution">The Challenge of
+Linux Binary Distribution</h2>
+<p>When compiling C or C++ extensions for Python on Linux, the resulting
+binaries typically link dynamically to system libraries installed on the
+build machine. Because Linux distributions (such as Debian, Fedora,
+CentOS, and Alpine) use varying versions of standard C libraries
+(<code>glibc</code> or <code>musl</code>) and system shared libraries, a
+binary built on one operating system often fails to run on another.
+Without standardizing these dependencies, <code>pip</code> cannot
+guarantee that a pre-compiled binary wheel will function on an end
+user's machine.</p>
+<h2 id="the-core-functions-of-auditwheel">The Core Functions of
+Auditwheel</h2>
+<p><code>auditwheel</code> addresses Linux fragmentation through two
+primary operations: inspection and repair.</p>
+<h3 id="1-dependency-and-compatibility-inspection">1. Dependency and
+Compatibility Inspection</h3>
+<p>Using the <code>auditwheel show</code> command, the tool analyzes the
+compiled <code>.so</code> extension modules within a wheel. It
+scans:</p>
+<ul>
+<li>The dynamic dependencies declared in the binary headers
+(<code>DT_NEEDED</code> tags).</li>
+<li>The specific symbol versions required from the system's C runtime
+(such as <code>glibc</code>).</li>
+</ul>
+<p>Based on this analysis, <code>auditwheel</code> determines the
+highest standardized platform tag (e.g., <code>manylinux2014</code>,
+<code>manylinux_2_28</code>) the wheel qualifies for, or it lists the
+missing dependencies that prevent it from being portable.</p>
+<h3 id="2-wheel-repair-and-bundling">2. Wheel Repair and Bundling</h3>
+<p>The <code>auditwheel repair</code> command actively modifies the
+wheel to make it self-contained and compliant with Python Packaging
+Authority (PyPA) standards. It performs three critical actions:</p>
+<ul>
+<li><strong>Bundling External Libraries:</strong> It locates external
+dynamic libraries (excluding standard, whitelisted system libraries like
+<code>libc</code>) and copies them directly into the wheel archive,
+typically inside a <code>.libs</code> subfolder.</li>
+<li><strong>Patching RPATH and RUNPATH:</strong> Using the
+<code>patchelf</code> utility, <code>auditwheel</code> rewrites the
+runtime library search paths (<code>RPATH</code> or
+<code>RUNPATH</code>) of the compiled extension modules. This forces the
+binaries to load the newly bundled shared libraries rather than
+searching for them on the host system.</li>
+<li><strong>Updating Metadata and Tags:</strong> Once the binaries are
+patched, <code>auditwheel</code> updates the wheel's filename and
+internal metadata to reflect the target platform tag (such as changing a
+generic <code>linux_x86_64</code> tag to a compliant
+<code>manylinux</code> tag).</li>
+</ul>
+<h2 id="why-auditwheel-is-necessary">Why Auditwheel Is Necessary</h2>
+<p>Without <code>auditwheel</code>, Python maintainers would either have
+to force Linux users to compile packages from source—requiring local
+development headers and compilers—or distribute fragile binaries that
+break across different distributions. By automating the bundling and
+patching of external dependencies, <code>auditwheel</code> allows
+pre-compiled Python packages to install reliably and run immediately via
+standard <code>pip install</code> commands.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

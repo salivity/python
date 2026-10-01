@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Thread Synchronization: RLock vs Semaphore - python</title>
+    <meta name="description" content="Python’s threading module provides various primitives to coordinate concurrent execution and prevent race conditions in multithreaded applications. Among these, Re-entrant Locks (RLock) and Semaphores serve distinct synchronization purposes based on re">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-thread-synchronization-r-lock-vs-semaphore">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Thread Synchronization: RLock vs Semaphore - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-thread-synchronization-r-lock-vs-semaphore" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s threading module provides various primitives to coordinate concurrent execution and prevent race conditions in multithreaded applications. Among these, Re-entrant Locks (RLock) and Semaphores serve distinct synchronization purposes based on re" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-thread-synchronization-rlock-vs-semaphore">Python Thread
+Synchronization: RLock vs Semaphore</h1>
+<p>Python’s <code>threading</code> module provides various primitives to
+coordinate concurrent execution and prevent race conditions in
+multithreaded applications. Among these, Re-entrant Locks
+(<code>RLock</code>) and Semaphores serve distinct synchronization
+purposes based on resource ownership and access limits. An
+<code>RLock</code> ensures exclusive, recursive access to a resource by
+a single thread at a time, whereas a Semaphore manages a fixed pool of
+shared access tokens, allowing multiple threads to access a resource
+concurrently up to a specified capacity.</p>
+<h2 id="understanding-re-entrant-locks-rlock">Understanding Re-entrant
+Locks (RLock)</h2>
+<p>A standard mutual exclusion lock (<code>Lock</code>) can only be
+acquired once. If the thread holding the lock attempts to acquire it
+again without releasing it first, the application enters a deadlock. A
+Re-entrant Lock (<code>threading.RLock</code>) resolves this limitation
+by introducing the concept of thread ownership and recursion depth.</p>
+<p>When a thread acquires an <code>RLock</code>, Python records the
+identifying thread and initializes an internal counter to
+<code>1</code>. If the same thread requests the lock again:</p>
+<ul>
+<li>The internal counter increments instead of blocking execution.</li>
+<li>The thread continues execution uninterrupted.</li>
+<li>Each call to <code>acquire()</code> must be matched by a
+corresponding call to <code>release()</code>.</li>
+<li>The lock is fully freed only when the recursion level reaches zero,
+allowing other waiting threads to compete for ownership.</li>
+</ul>
+<p>RLocks are primarily used in class architectures where public methods
+call other methods within the same class, or in recursive algorithms
+where a shared state must remain locked throughout nested function
+invocations.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> threading</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> RecursiveCounter:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.lock <span class="op">=</span> threading.RLock()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.count <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> increment(<span class="va">self</span>, amount):</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">with</span> <span class="va">self</span>.lock:</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> amount <span class="op">&gt;</span> <span class="dv">0</span>:</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>                <span class="va">self</span>.count <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>                <span class="co"># Re-acquires the same lock safely without deadlocking</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>                <span class="va">self</span>.increment(amount <span class="op">-</span> <span class="dv">1</span>)</span></code></pre></div>
+<h2 id="understanding-semaphores">Understanding Semaphores</h2>
+<p>A Semaphore (<code>threading.Semaphore</code>) manages an internal
+counter that decrements each time <code>acquire()</code> is called and
+increments each time <code>release()</code> is called. Unlike an
+<code>RLock</code>, a Semaphore does not provide mutual exclusion for a
+single thread, nor does it track thread ownership.</p>
+<ul>
+<li><strong>Non-zero state:</strong> If the counter is greater than
+zero, a thread calling <code>acquire()</code> decrements the counter and
+proceeds immediately.</li>
+<li><strong>Zero state:</strong> If the counter reaches zero, any
+subsequent thread calling <code>acquire()</code> will block until
+another thread calls <code>release()</code>.</li>
+<li><strong>BoundedSemaphore:</strong> Python also provides
+<code>threading.BoundedSemaphore</code>, which raises a
+<code>ValueError</code> if <code>release()</code> is called more times
+than the initial capacity, preventing accidental counter inflation.</li>
+</ul>
+<p>Semaphores are designed to limit concurrent throughput, making them
+ideal for throttling access to constrained external systems such as
+connection pools, database queries, or rate-limited APIs.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> threading</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Allow up to 3 threads to access the resource concurrently</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>pool_limiter <span class="op">=</span> threading.Semaphore(<span class="dv">3</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> access_resource(thread_id):</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> pool_limiter:</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Thread </span><span class="sc">{</span>thread_id<span class="sc">}</span><span class="ss"> acquired access.&quot;</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        time.sleep(<span class="dv">1</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Thread </span><span class="sc">{</span>thread_id<span class="sc">}</span><span class="ss"> releasing access.&quot;</span>)</span></code></pre></div>
+<h2 id="key-architectural-differences">Key Architectural
+Differences</h2>
+<h3 id="1-thread-ownership-and-releasing">1. Thread Ownership and
+Releasing</h3>
+<p>An <code>RLock</code> strictly tracks which thread acquired it. If
+Thread A holds an <code>RLock</code>, attempting to call
+<code>release()</code> from Thread B will raise a
+<code>RuntimeError</code>. Conversely, Semaphores possess no thread
+affinity; any thread can release an acquired semaphore, making them
+useful for signaling events between producer and consumer threads.</p>
+<h3 id="2-concurrency-capacity">2. Concurrency Capacity</h3>
+<p>An <code>RLock</code> enforces binary access—either a single thread
+owns it, or it is free. A Semaphore acts as an access gate permitting
+<span class="math inline">\(N\)</span> concurrent threads, where <span
+class="math inline">\(N\)</span> is the integer value passed during
+initialization.</p>
+<h3 id="3-re-entrancy-behavior">3. Re-entrancy Behavior</h3>
+<p>If a single thread calls <code>acquire()</code> twice on a Semaphore
+initialized with a value of <code>1</code>, the second call will block
+because the counter reaches zero. The same scenario with an
+<code>RLock</code> allows immediate execution by incrementing the lock's
+recursion counter.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Re-entrant Lock (<code>RLock</code>)</th>
+<th style="text-align: left;">Semaphore (<code>Semaphore</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Max Concurrent
+Threads</strong></td>
+<td style="text-align: left;">Exactly 1</td>
+<td style="text-align: left;"><span class="math inline">\(N\)</span>
+(user-defined)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Ownership
+Enforcement</strong></td>
+<td style="text-align: left;">Yes (only owner can release)</td>
+<td style="text-align: left;">No (any thread can release)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Re-entrant by Same
+Thread</strong></td>
+<td style="text-align: left;">Yes (increments internal counter)</td>
+<td style="text-align: left;">No (blocks if counter reaches 0)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Primary Use Case</strong></td>
+<td style="text-align: left;">Nested synchronization / recursion</td>
+<td style="text-align: left;">Resource throttling / rate-limiting</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

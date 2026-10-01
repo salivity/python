@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using types.coroutine to Bridge Python Generators - python</title>
+    <meta name="description" content="Python's types.coroutine decorator serves as a vital compatibility bridge between legacy generator-based coroutines and modern native coroutines defined with async def. Introduced in Python 3.5, it converts a standard generator function into an object th">
+    <link rel="canonical" href="https://salivity.github.io/python/article/using-types-coroutine-to-bridge-python-generators">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using types.coroutine to Bridge Python Generators - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/using-types-coroutine-to-bridge-python-generators" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's types.coroutine decorator serves as a vital compatibility bridge between legacy generator-based coroutines and modern native coroutines defined with async def. Introduced in Python 3.5, it converts a standard generator function into an object th" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-typescoroutine-to-bridge-python-generators">Using
+types.coroutine to Bridge Python Generators</h1>
+<p>Python's <code>types.coroutine</code> decorator serves as a vital
+compatibility bridge between legacy generator-based coroutines and
+modern native coroutines defined with <code>async def</code>. Introduced
+in Python 3.5, it converts a standard generator function into an object
+that can be recognized as a coroutine, allowing developers to
+<code>await</code> generator-based code directly within native
+coroutines without rewriting the underlying yielding logic.</p>
+<h3 id="the-historical-divide">The Historical Divide</h3>
+<p>Before Python 3.5, asynchronous programming relied heavily on
+standard generators. Libraries like <code>asyncio</code> used the
+<code>@asyncio.coroutine</code> decorator combined with the
+<code>yield from</code> syntax to pass futures and control back to an
+event loop.</p>
+<p>When Python 3.5 introduced native coroutines via
+<code>async def</code> and <code>await</code>, it established a strict
+separation: native coroutines could not directly <code>await</code>
+standard generators to prevent accidental misuse of regular iterators.
+However, this created a backward-compatibility problem for existing
+codebases and low-level libraries that needed to yield raw futures to
+event loops.</p>
+<h3 id="how-typescoroutine-works">How <code>types.coroutine</code>
+Works</h3>
+<p>Under the hood, <code>types.coroutine</code> sets an internal flag
+(<code>CO_ITERABLE_COROUTINE</code>) on the code object of the decorated
+generator function.</p>
+<p>This flag signals to Python's runtime that the generator is intended
+to be used as a coroutine. As a result:</p>
+<ol type="1">
+<li><strong>Awaitability:</strong> The wrapped generator satisfies the
+<code>collections.abc.Coroutine</code> interface rules and can be used
+in an <code>await</code> expression inside an <code>async def</code>
+function.</li>
+<li><strong>Yield Preservation:</strong> Unlike native
+<code>async def</code> functions—which cannot use plain
+<code>yield</code> expressions to suspend execution without becoming
+asynchronous generators—a <code>types.coroutine</code> can still yield
+values (such as <code>asyncio.Future</code> instances) directly down the
+call stack to an event loop driver.</li>
+</ol>
+<h3 id="practical-implementation">Practical Implementation</h3>
+<p>The following example demonstrates how a generator-based coroutine
+can be called seamlessly from a native <code>async def</code>
+coroutine:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> types</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">@types.coroutine</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> legacy_sleep_step():</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Yield control directly, behaving like low-level asyncio internals</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">yield</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Starting native coroutine...&quot;</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Directly awaiting the generator-based coroutine</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> legacy_sleep_step()</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Resumed and finished.&quot;</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>asyncio.run(main())</span></code></pre></div>
+<p>Without the <code>@types.coroutine</code> decorator, attempting to
+<code>await legacy_sleep_step()</code> raises a
+<code>TypeError: object generator can't be used in 'await' expression</code>.</p>
+<h3 id="primary-use-cases">Primary Use Cases</h3>
+<ul>
+<li><strong>Low-Level Event Loop Interaction:</strong> Modern native
+coroutines cannot yield arbitrary objects directly to an event loop
+scheduler; they can only return or await other awaitables.
+<code>types.coroutine</code> provides a loophole for framework authors
+to implement primitive suspension points.</li>
+<li><strong>Incremental Migration:</strong> It allows large codebases
+using deprecated <code>@asyncio.coroutine</code> syntax to interface
+with modern <code>async</code>/<code>await</code> functions without
+requiring an immediate, complete rewrite of all generator-based
+asynchronous functions.</li>
+<li><strong>Cross-Compatibility:</strong> Library authors can build
+libraries that integrate with both older generator-based frameworks and
+modern asynchronous ecosystems.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python gc.collect(): Manual Garbage Collection Guide - python</title>
+    <meta name="description" content="The gc.collect() function in Python provides developers with direct control over memory reclamation by forcing an immediate garbage collection sweep. While Python primarily frees memory using automatic reference counting, it relies on a cyclical garbage">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-gc-collect-manual-garbage-collection-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python gc.collect(): Manual Garbage Collection Guide - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-gc-collect-manual-garbage-collection-guide" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The gc.collect() function in Python provides developers with direct control over memory reclamation by forcing an immediate garbage collection sweep. While Python primarily frees memory using automatic reference counting, it relies on a cyclical garbage" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-gccollect-manual-garbage-collection-guide">Python
+gc.collect(): Manual Garbage Collection Guide</h1>
+<p>The <code>gc.collect()</code> function in Python provides developers
+with direct control over memory reclamation by forcing an immediate
+garbage collection sweep. While Python primarily frees memory using
+automatic reference counting, it relies on a cyclical garbage collector
+to detect and clean up circular references that reference counting
+cannot resolve. By invoking <code>gc.collect()</code>, you explicitly
+trigger this cyclic collector, allowing you to reclaim unused memory
+instantly rather than waiting for the runtime's internal collection
+thresholds to be met.</p>
+<h3 id="how-python-memory-management-works">How Python Memory Management
+Works</h3>
+<p>Python utilizes two core mechanisms to manage runtime memory:</p>
+<ol type="1">
+<li><strong>Reference Counting:</strong> Every Python object tracks how
+many references point to it. As soon as an object's reference count
+drops to zero, its memory is deallocated immediately.</li>
+<li><strong>Generational Cyclic Garbage Collector:</strong> Reference
+counting fails when objects reference each other cyclically (e.g.,
+Object A points to Object B, and Object B points to Object A). Even if
+these objects become unreachable by the rest of the application, their
+reference counts never reach zero. Python's built-in <code>gc</code>
+module periodically scans objects to detect and resolve these circular
+references.</li>
+</ol>
+<h3 id="the-core-purpose-of-gccollect">The Core Purpose of
+<code>gc.collect()</code></h3>
+<p>The primary purpose of <code>gc.collect()</code> is to execute a
+synchronous, manual sweep of the cyclic garbage collector. By default,
+Python triggers automatic collections based on predefined allocation and
+deallocation thresholds across three generational tiers (Generation 0,
+1, and 2). Calling <code>gc.collect()</code> bypasses these automatic
+intervals, immediately identifying unreachable circular references,
+breaking their cycles, and reclaiming their memory.</p>
+<p>When executed, <code>gc.collect()</code> returns an integer
+representing the number of unreachable objects found and cleared during
+the sweep.</p>
+<h3 id="common-use-cases-for-manual-sweeps">Common Use Cases for Manual
+Sweeps</h3>
+<p>While automatic memory management is sufficient for standard
+applications, calling <code>gc.collect()</code> manually is essential in
+specific scenarios:</p>
+<ul>
+<li><strong>Handling Large Datasets and Batches:</strong> When
+processing massive amounts of data in loops, temporary objects can
+consume significant RAM before the automatic collector triggers. Calling
+<code>gc.collect()</code> at the end of a processing cycle ensures
+memory is freed before the next batch loads.</li>
+<li><strong>Managing Predictable Latency:</strong> Automatic garbage
+collection causes brief execution pauses. In time-sensitive operations,
+such as real-time audio processing or trading systems, you can disable
+automatic collection entirely and trigger <code>gc.collect()</code>
+during planned idle periods to prevent unexpected latency spikes.</li>
+<li><strong>Resource-Constrained Environments:</strong> Embedded
+systems, low-memory containers, or serverless functions benefit from
+aggressive memory management to avoid running out of memory (OOM
+errors).</li>
+<li><strong>Debugging Memory Leaks:</strong> Running
+<code>gc.collect()</code> alongside diagnostic tools like
+<code>gc.garbage</code> or <code>tracemalloc</code> helps verify whether
+suspected memory leaks are caused by uncollected cyclic references.</li>
+</ul>
+<h3 id="usage-and-syntax">Usage and Syntax</h3>
+<p>The function can be imported and executed with default parameters or
+targeted at specific generational tiers:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gc</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Run a full collection sweep across all generations (0, 1, and 2)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>unreachable_objects <span class="op">=</span> gc.collect()</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Collected </span><span class="sc">{</span>unreachable_objects<span class="sc">}</span><span class="ss"> unreachable objects.&quot;</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Run a collection sweep exclusively on Generation 0</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>gc.collect(<span class="dv">0</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Run a collection sweep on Generations 0 and 1</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>gc.collect(<span class="dv">1</span>)</span></code></pre></div>
+<p>By default, omitting arguments or passing <code>2</code> instructs
+Python to inspect all three generations, ensuring the most thorough
+memory reclamation possible.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastAPI Dependency Injection for Database Sessions - python</title>
+    <meta name="description" content="FastAPI utilizes a robust dependency injection system powered by the Depends class and Python generator functions to manage database sessions seamlessly across endpoints. By defining a dependency that yields a database session, FastAPI ensures that each">
+    <link rel="canonical" href="https://salivity.github.io/python/article/fast-api-dependency-injection-for-database-sessions">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="FastAPI Dependency Injection for Database Sessions - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/fast-api-dependency-injection-for-database-sessions" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="FastAPI utilizes a robust dependency injection system powered by the Depends class and Python generator functions to manage database sessions seamlessly across endpoints. By defining a dependency that yields a database session, FastAPI ensures that each" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="fastapi-dependency-injection-for-database-sessions">FastAPI
+Dependency Injection for Database Sessions</h1>
+<p>FastAPI utilizes a robust dependency injection system powered by the
+<code>Depends</code> class and Python generator functions to manage
+database sessions seamlessly across endpoints. By defining a dependency
+that yields a database session, FastAPI ensures that each incoming HTTP
+request receives an isolated session that automatically handles commit,
+rollback, and cleanup logic when the request lifecycle concludes.</p>
+<h3 id="the-session-generator-function">The Session Generator
+Function</h3>
+<p>The foundation of sharing a database session lies in a generator
+function, commonly named <code>get_db</code>. Using an ORM like
+SQLAlchemy, this function creates a session instance, yields it to the
+route handler, and ensures the session is closed afterward using a
+<code>try...finally</code> block.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sqlalchemy <span class="im">import</span> create_engine</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sqlalchemy.orm <span class="im">import</span> declarative_base, sessionmaker</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>DATABASE_URL <span class="op">=</span> <span class="st">&quot;sqlite:///./test.db&quot;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>engine <span class="op">=</span> create_engine(DATABASE_URL, connect_args<span class="op">=</span>{<span class="st">&quot;check_same_thread&quot;</span>: <span class="va">False</span>})</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>SessionLocal <span class="op">=</span> sessionmaker(autocommit<span class="op">=</span><span class="va">False</span>, autoflush<span class="op">=</span><span class="va">False</span>, bind<span class="op">=</span>engine)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>Base <span class="op">=</span> declarative_base()</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_db():</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    db <span class="op">=</span> SessionLocal()</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">yield</span> db</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">finally</span>:</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        db.close()</span></code></pre></div>
+<p>The <code>yield</code> statement is critical. Code execution pauses
+at <code>yield db</code>, passing the active session object to whichever
+route requested it. Once the route finishes processing and sends an HTTP
+response, execution resumes immediately after the <code>yield</code>,
+executing the <code>finally</code> block to close the database
+connection.</p>
+<h3 id="injecting-sessions-into-routes">Injecting Sessions into
+Routes</h3>
+<p>To consume the database session within an API endpoint, declare a
+parameter in the route function and assign it to
+<code>Depends(get_db)</code>. FastAPI automatically evaluates the
+dependency, invokes the generator, and injects the resulting session
+object into the route parameter.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastapi <span class="im">import</span> Depends, FastAPI</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sqlalchemy.orm <span class="im">import</span> Session</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> FastAPI()</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="at">@app.get</span>(<span class="st">&quot;/items/&quot;</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> read_items(db: Session <span class="op">=</span> Depends(get_db)):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    items <span class="op">=</span> db.query(ItemModel).<span class="bu">all</span>()</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> items</span></code></pre></div>
+<h3 id="request-lifecycle-and-concurrency">Request Lifecycle and
+Concurrency</h3>
+<p>FastAPI ensures thread-safety and proper scoping for each
+connection:</p>
+<ul>
+<li><strong>Per-Request Isolation:</strong> Each route invocation calls
+<code>get_db</code> independently, creating a dedicated database session
+for that specific HTTP request. This prevents data leaks and race
+conditions between concurrent requests.</li>
+<li><strong>Error Handling:</strong> If an unhandled exception occurs
+inside the route, the <code>finally</code> block in <code>get_db</code>
+still executes, guaranteeing that database connections are never left
+dangling or exhausted in the connection pool.</li>
+<li><strong>Sub-dependency Reusability:</strong> If a route depends on
+multiple services that all require a database connection, FastAPI caches
+the result of <code>get_db</code> for the duration of that single
+request by default, allowing all sub-dependencies to share the exact
+same session instance.</li>
+</ul>
+<h3 id="overriding-for-testing">Overriding for Testing</h3>
+<p>A major advantage of this architecture is testability. FastAPI allows
+dependency overrides without altering production code. During automated
+tests, you can swap the production <code>get_db</code> dependency with a
+test-specific session connected to a mock or an in-memory database:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>app.dependency_overrides[get_db] <span class="op">=</span> get_test_db</span></code></pre></div>
+<p>This modular approach keeps route handlers lightweight, enforces
+separation of concerns, and simplifies connection lifecycle management
+across the application.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

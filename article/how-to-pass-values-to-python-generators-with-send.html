@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Pass Values to Python Generators with send - python</title>
+    <meta name="description" content="The Python generator .send() method transforms a standard data producer into a two-way communication channel, known as a coroutine. While standard iteration methods like next() only retrieve data from a generator, .send() allows an external caller to inj">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-pass-values-to-python-generators-with-send">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Pass Values to Python Generators with send - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-pass-values-to-python-generators-with-send" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Python generator .send() method transforms a standard data producer into a two-way communication channel, known as a coroutine. While standard iteration methods like next() only retrieve data from a generator, .send() allows an external caller to inj" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-pass-values-to-python-generators-with-send">How to Pass
+Values to Python Generators with send</h1>
+<p>The Python generator <code>.send()</code> method transforms a
+standard data producer into a two-way communication channel, known as a
+coroutine. While standard iteration methods like <code>next()</code>
+only retrieve data from a generator, <code>.send()</code> allows an
+external caller to inject values directly into the generator's execution
+context while simultaneously advancing the execution to the next
+<code>yield</code> statement.</p>
+<h3 id="the-mechanism-of-send">The Mechanism of
+<code>.send()</code></h3>
+<p>In basic Python generators, the <code>yield</code> statement is used
+solely to emit values. However, <code>yield</code> is actually an
+expression that can evaluate to a value. When code invokes
+<code>generator.send(value)</code>, the current <code>yield</code>
+expression inside the generator evaluates to whatever <code>value</code>
+was passed.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> accumulator():</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    total <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="va">True</span>:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Execution pauses at yield, returns total, and receives value via .send()</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        val <span class="op">=</span> <span class="cf">yield</span> total</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> val <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            total <span class="op">+=</span> val</span></code></pre></div>
+<p>In this example, the variable <code>val</code> receives the argument
+passed via <code>.send()</code>.</p>
+<h3 id="two-way-communication-in-a-single-step">Two-Way Communication in
+a Single Step</h3>
+<p>The <code>.send()</code> method performs two distinct operations in a
+single invocation:</p>
+<ol type="1">
+<li>It injects the provided argument into the generator, fulfilling the
+expression at the paused <code>yield</code>.</li>
+<li>It resumes execution until the next <code>yield</code> statement (or
+termination), returning the value produced by that subsequent
+<code>yield</code>.</li>
+</ol>
+<p>Because of this dual action, calling <code>gen.send(10)</code> both
+updates the internal state and retrieves the next yielded result
+immediately, functioning identically to <code>next()</code> but with
+custom input.</p>
+<h3 id="priming-the-generator">Priming the Generator</h3>
+<p>A generator cannot accept non-<code>None</code> values before it has
+started running. Execution must reach the first <code>yield</code>
+expression before the generator can receive input.</p>
+<p>To prime an active generator, you must first execute either
+<code>next(gen)</code> or <code>gen.send(None)</code>. Attempting to
+pass an actual value to an unstarted generator raises a
+<code>TypeError</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>gen <span class="op">=</span> accumulator()</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Priming the generator to reach the first yield</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="bu">next</span>(gen)  <span class="co"># Returns 0</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Sending values into the generator</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(gen.send(<span class="dv">10</span>))  <span class="co"># val becomes 10; returns 10</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(gen.send(<span class="dv">20</span>))  <span class="co"># val becomes 20; returns 30</span></span></code></pre></div>
+<h3 id="key-use-cases">Key Use Cases</h3>
+<p>The <code>.send()</code> capability provides several architectural
+advantages:</p>
+<ul>
+<li><strong>Stateful Consumer Coroutines:</strong> It allows generators
+to maintain state across multiple inputs without relying on external
+class attributes or global variables.</li>
+<li><strong>Cooperative Multitasking:</strong> Early Python asynchronous
+frameworks leveraged <code>.send()</code> to yield control back to an
+event loop and receive completed I/O results when resumed.</li>
+<li><strong>Data Pipelines and Reset Signals:</strong> Consumers can
+send control signals (such as configuration updates or reset flags) down
+an active pipeline to alter processing behavior dynamically.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

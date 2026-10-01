@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Inspect Module Introspects Objects - python</title>
+    <meta name="description" content="Python's built-in inspect module provides a comprehensive suite of tools to examine live objects, classes, functions, and active execution frames at runtime. By tapping directly into the CPython runtime's internal data structures, type systems, and evalu">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-inspect-module-introspects-objects">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Inspect Module Introspects Objects - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-inspect-module-introspects-objects" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's built-in inspect module provides a comprehensive suite of tools to examine live objects, classes, functions, and active execution frames at runtime. By tapping directly into the CPython runtime's internal data structures, type systems, and evalu" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-inspect-module-introspects-objects">How Python
+Inspect Module Introspects Objects</h1>
+<p>Python's built-in <code>inspect</code> module provides a
+comprehensive suite of tools to examine live objects, classes,
+functions, and active execution frames at runtime. By tapping directly
+into the CPython runtime's internal data structures, type systems, and
+evaluation stack, it translates raw interpreter state into
+human-readable, programmatic metadata. This article explores how
+<code>inspect</code> works under the hood to extract object attributes,
+trace class hierarchies, inspect execution frames, and retrieve original
+source code.</p>
+<h3 id="inspecting-live-objects-and-types">Inspecting Live Objects and
+Types</h3>
+<p>At its core, Python treats everything as an object, backed by a
+C-level structure (like <code>PyObject</code>) containing a reference
+count, a type pointer (<code>ob_type</code>), and often an internal
+dictionary (<code>__dict__</code>). The <code>inspect</code> module
+leverages these native hooks:</p>
+<ul>
+<li><strong>Type Predicates:</strong> Functions such as
+<code>inspect.isfunction()</code>, <code>inspect.isclass()</code>, and
+<code>inspect.isgenerator()</code> check the object's
+<code>__class__</code> or match its internal <code>PyTypeObject</code>
+flags against standard types in the <code>types</code> module (e.g.,
+<code>types.FunctionType</code>).</li>
+<li><strong>Member Retrieval:</strong> <code>inspect.getmembers()</code>
+traverses an object's namespace by combining <code>dir(object)</code>
+with <code>getattr()</code>, resolving descriptors and filtering results
+using custom predicates.</li>
+<li><strong>Signatures and Callables:</strong>
+<code>inspect.signature()</code> analyzes callable objects by inspecting
+their underlying code object (<code>__code__</code>), default argument
+tuples (<code>__defaults__</code> and <code>__kwdefaults__</code>), and
+type annotations (<code>__annotations__</code>). It builds an immutable
+<code>Signature</code> object mapping each parameter name, kind
+(positional, keyword, variadic), and default value.</li>
+</ul>
+<h3 id="class-inspection-and-method-resolution">Class Inspection and
+Method Resolution</h3>
+<p>When analyzing classes, <code>inspect</code> inspects the structure
+of Python's inheritance system:</p>
+<ul>
+<li><strong>MRO Resolution:</strong> The module uses the class's
+<code>__mro__</code> attribute (Method Resolution Order) to determine
+the exact order in which attributes and methods are inherited according
+to the C3 linearization algorithm.</li>
+<li><strong>Class Hierarchies:</strong> Functions like
+<code>inspect.getclasstree()</code> walk the <code>__bases__</code>
+attribute of given classes, constructing nested list structures that
+represent inheritance trees.</li>
+<li><strong>Method Classification:</strong>
+<code>inspect.classify_class_attrs()</code> distinguishes between
+regular methods, class methods, static methods, properties, and plain
+data attributes by analyzing descriptor objects directly inside the
+class dictionary without triggering descriptor <code>__get__</code>
+calls.</li>
+</ul>
+<h3 id="execution-frames-and-call-stack-introspection">Execution Frames
+and Call Stack Introspection</h3>
+<p>Python executes code within a stack of frame objects
+(<code>PyFrameObject</code>), which represent the execution context of
+functions or modules. The <code>inspect</code> module accesses this
+stack through low-level hooks like <code>sys._getframe()</code>:</p>
+<ul>
+<li><strong>Frame Objects:</strong> An individual frame contains the
+current execution state, including local variables
+(<code>f_locals</code>), global variables (<code>f_globals</code>), the
+currently executing code object (<code>f_code</code>), the line number
+(<code>f_lineno</code>), and a reference to the calling frame
+(<code>f_back</code>).</li>
+<li><strong>Stack Traversal:</strong> Functions like
+<code>inspect.currentframe()</code> and <code>inspect.stack()</code>
+start from the active frame and traverse the linked list of
+<code>f_back</code> pointers backward to the root of the call
+stack.</li>
+<li><strong>Traceback Extraction:</strong> When combined with
+tracebacks, <code>inspect</code> maps the current bytecode instruction
+pointer (<code>f_lasti</code>) to concrete line numbers, allowing
+detailed debugging and dynamic runtime logging.</li>
+</ul>
+<h3 id="source-code-retrieval-and-line-caching">Source Code Retrieval
+and Line Caching</h3>
+<p>One of <code>inspect</code>'s most powerful capabilities is
+retrieving the original source code of live objects:</p>
+<ol type="1">
+<li><strong>Locating the File:</strong> The module retrieves the
+<code>co_filename</code> and <code>co_firstlineno</code> fields from a
+callable's <code>__code__</code> attribute or searches a class's module
+namespace (<code>__module__</code>).</li>
+<li><strong>Reading the Code:</strong> It uses Python's internal
+<code>linecache</code> module to read the source file from disk into
+memory, preventing redundant I/O operations.</li>
+<li><strong>Tokenizing and Parsing:</strong> To locate where a
+multi-line function or class ends, <code>inspect.getsource()</code> uses
+the <code>tokenize</code> module to tokenize the Python code starting
+from <code>co_firstlineno</code>. It tracks indentation levels and
+statement boundaries, ensuring that only the relevant block of code is
+returned.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

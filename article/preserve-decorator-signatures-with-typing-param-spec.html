@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preserve Decorator Signatures with typing.ParamSpec - python</title>
+    <meta name="description" content="In Python, writing decorators that maintain accurate type information has historically been a challenge for static type checkers. When wrapping a function, standard type annotations often erase the original parameter names, types, and default values. Int">
+    <link rel="canonical" href="https://salivity.github.io/python/article/preserve-decorator-signatures-with-typing-param-spec">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Preserve Decorator Signatures with typing.ParamSpec - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/preserve-decorator-signatures-with-typing-param-spec" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, writing decorators that maintain accurate type information has historically been a challenge for static type checkers. When wrapping a function, standard type annotations often erase the original parameter names, types, and default values. Int" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="preserve-decorator-signatures-with-typingparamspec">Preserve
+Decorator Signatures with typing.ParamSpec</h1>
+<p>In Python, writing decorators that maintain accurate type information
+has historically been a challenge for static type checkers. When
+wrapping a function, standard type annotations often erase the original
+parameter names, types, and default values. Introduced in Python 3.10
+via PEP 612, <code>typing.ParamSpec</code> solves this problem by
+capturing the parameter signature of a callable and forwarding it to the
+wrapper function, allowing tools like mypy, pyright, and modern IDEs to
+retain full autocompletion and type safety across decorated
+functions.</p>
+<h3 id="the-problem-with-traditional-decorator-typing">The Problem with
+Traditional Decorator Typing</h3>
+<p>Before <code>ParamSpec</code>, typing higher-order functions relied
+on <code>typing.TypeVar</code> and <code>typing.Callable</code>. While
+<code>TypeVar</code> can capture the return type, <code>Callable</code>
+cannot dynamically capture an arbitrary list of parameters. Developers
+typically used <code>Callable[..., R]</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> Callable, TypeVar</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>R <span class="op">=</span> TypeVar(<span class="st">&quot;R&quot;</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> simple_decorator(func: Callable[..., R]) <span class="op">-&gt;</span> Callable[..., R]:</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> wrapper(<span class="op">*</span>args, <span class="op">**</span>kwargs) <span class="op">-&gt;</span> R:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> func(<span class="op">*</span>args, <span class="op">**</span>kwargs)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> wrapper</span></code></pre></div>
+<p>While this preserves the return type <code>R</code>, the ellipsis
+(<code>...</code>) discards all argument information. A type checker
+will accept any arguments passed to the decorated function, silently
+permitting invalid calls and disabling IDE parameter hints.</p>
+<h3 id="how-paramspec-works">How <code>ParamSpec</code> Works</h3>
+<p><code>ParamSpec</code> (Parameter Specification Variable) acts
+similarly to a <code>TypeVar</code>, but instead of representing a
+single type, it represents the entire parameter specification of a
+callable. This includes:</p>
+<ul>
+<li>Positional-only parameters</li>
+<li>Keyword-only parameters</li>
+<li>Default values</li>
+<li><code>*args</code> and <code>**kwargs</code> types</li>
+</ul>
+<p>When defining a decorator, <code>ParamSpec</code> is declared
+alongside a return <code>TypeVar</code>. The input function is annotated
+as <code>Callable[P, R]</code>, and the wrapper function or return type
+is also annotated using <code>P</code> and <code>R</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> collections.abc <span class="im">import</span> Callable</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> ParamSpec, TypeVar</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> functools</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>P <span class="op">=</span> ParamSpec(<span class="st">&quot;P&quot;</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>R <span class="op">=</span> TypeVar(<span class="st">&quot;R&quot;</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> trace(func: Callable[P, R]) <span class="op">-&gt;</span> Callable[P, R]:</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">@functools.wraps</span>(func)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> wrapper(<span class="op">*</span>args: P.args, <span class="op">**</span>kwargs: P.kwargs) <span class="op">-&gt;</span> R:</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Calling </span><span class="sc">{</span>func<span class="sc">.</span><span class="va">__name__</span><span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        result <span class="op">=</span> func(<span class="op">*</span>args, <span class="op">**</span>kwargs)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Finished </span><span class="sc">{</span>func<span class="sc">.</span><span class="va">__name__</span><span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> result</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> wrapper</span></code></pre></div>
+<h3 id="key-components">Key Components</h3>
+<ol type="1">
+<li><strong><code>P = ParamSpec("P")</code></strong>: Declares the
+parameter specification variable.</li>
+<li><strong><code>Callable[P, R]</code></strong>: Binds the parameter
+specification <code>P</code> to the exact argument types and order of
+the original function.</li>
+<li><strong><code>P.args</code> and <code>P.kwargs</code></strong>: Used
+to annotate <code>*args</code> and <code>**kwargs</code> inside the
+inner wrapper function. This ensures that the wrapper only accepts
+arguments valid for <code>P</code> and passes them through
+properly.</li>
+</ol>
+<h3 id="static-analysis-and-developer-experience">Static Analysis and
+Developer Experience</h3>
+<p>When a function is wrapped using this pattern, static analysis tools
+substitute <code>P</code> with the concrete parameters of the decorated
+function:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="at">@trace</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> greet(name: <span class="bu">str</span>, repeat: <span class="bu">int</span> <span class="op">=</span> <span class="dv">1</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f&quot;Hello, </span><span class="sc">{</span>name<span class="sc">}</span><span class="ss">!&quot;</span> <span class="op">*</span> repeat</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Valid call: Type checker verifies parameters against `greet`</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>greet(<span class="st">&quot;Alice&quot;</span>, repeat<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Invalid call: Type checker raises an error (Argument 1 expects str, got int)</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>greet(<span class="dv">123</span>)</span></code></pre></div>
+<p>Because <code>ParamSpec</code> binds directly to the original
+callable's signature, IDEs can display the original parameter names and
+default values during autocomplete, and static analyzers can catch
+signature mismatches at compile time without altering runtime
+behavior.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

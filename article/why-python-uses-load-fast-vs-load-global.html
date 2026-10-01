@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why Python Uses LOAD_FAST vs LOAD_GLOBAL - python</title>
+    <meta name="description" content="Python implements local variable lookups using the LOADFAST opcode and global lookups using LOADGLOBAL primarily due to how variable scopes are analyzed during compilation. Because a function's local variables are fixed and known before execution, Python">
+    <link rel="canonical" href="https://salivity.github.io/python/article/why-python-uses-load-fast-vs-load-global">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Why Python Uses LOAD_FAST vs LOAD_GLOBAL - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/why-python-uses-load-fast-vs-load-global" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python implements local variable lookups using the LOADFAST opcode and global lookups using LOADGLOBAL primarily due to how variable scopes are analyzed during compilation. Because a function's local variables are fixed and known before execution, Python" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="why-python-uses-load_fast-vs-load_global">Why Python Uses
+LOAD_FAST vs LOAD_GLOBAL</h1>
+<p>Python implements local variable lookups using the
+<code>LOAD_FAST</code> opcode and global lookups using
+<code>LOAD_GLOBAL</code> primarily due to how variable scopes are
+analyzed during compilation. Because a function's local variables are
+fixed and known before execution, Python optimizes them into a static
+array accessed by integer indices. In contrast, the global and built-in
+namespaces are dynamic dictionaries that can change at runtime,
+necessitating a string-based hash table lookup.</p>
+<h3 id="compile-time-static-analysis-of-locals">Compile-Time Static
+Analysis of Locals</h3>
+<p>When Python compiles a function into a code object, the compiler
+scans the entire function block for any variable assignment (such as
+<code>x = 1</code> or function parameters). Any identifier assigned
+within that scope is designated as a local variable.</p>
+<p>Because the full list of local variables is determined at compile
+time, Python stores their names in a fixed tuple called
+<code>co_varnames</code>. At runtime, when a call frame is created,
+Python allocates a contiguous C array (<code>f_localsplus</code>) sized
+exactly to hold references for these local variables.</p>
+<p><code>LOAD_FAST</code> takes an integer offset rather than a variable
+name. Accessing a local variable executes a direct C array index
+operation (<code>f_localsplus[i]</code>), which is an <span
+class="math inline">\(O(1)\)</span> memory offset calculation. It
+bypasses string hashing, dictionary lookups, and dynamic scope
+resolution, making it the fastest variable retrieval mechanism in the
+CPython virtual machine.</p>
+<h3 id="dynamic-nature-of-global-and-built-in-scopes">Dynamic Nature of
+Global and Built-in Scopes</h3>
+<p>Unlike local variables inside a function, global variables cannot be
+fixed at compile time. Python modules are dynamic environments: code can
+introduce new global variables at any time using
+<code>globals()[key] = value</code>, modules can be monkey-patched, and
+variables can be deleted with <code>del</code>.</p>
+<p>Because of this dynamism, Python cannot map globals to a static array
+at compilation. Instead, the global namespace is maintained as a
+standard Python dictionary (<code>f_globals</code>), alongside a
+fallback built-in dictionary (<code>f_builtins</code>).</p>
+<p>When <code>LOAD_GLOBAL</code> executes:</p>
+<ol type="1">
+<li>It takes a name reference from the code object's
+<code>co_names</code> tuple.</li>
+<li>It queries the current module's <code>f_globals</code> dictionary
+using a hash-table lookup.</li>
+<li>If the name is not found in <code>f_globals</code>, it searches the
+<code>f_builtins</code> dictionary.</li>
+<li>If neither dictionary contains the name, it raises a
+<code>NameError</code>.</li>
+</ol>
+<p>Even though modern CPython implementations utilize inline caches to
+accelerate repeated <code>LOAD_GLOBAL</code> operations, the lookup
+fundamentally remains a dictionary query with validation checks rather
+than a direct memory index.</p>
+<h3 id="performance-implications">Performance Implications</h3>
+<p>The architectural difference between an array index and a dictionary
+search explains why local variable access is substantially faster than
+global variable access in Python. In tight, performance-critical loops,
+developers frequently alias global objects or built-in functions to
+local variables (such as <code>local_len = len</code>). This technique
+converts repeated <code>LOAD_GLOBAL</code> operations into
+<code>LOAD_FAST</code> operations, eliminating redundant namespace
+dictionary traversals.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

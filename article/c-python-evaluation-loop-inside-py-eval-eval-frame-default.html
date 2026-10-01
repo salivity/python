@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPython Evaluation Loop: Inside _PyEval_EvalFrameDefault - python</title>
+    <meta name="description" content="The PyEvalEvalFrameDefault function is the core execution engine of CPython, responsible for interpreting compiled Python bytecode into runtime actions. Located primarily within Python/ceval.c (and modularized execution tables in modern Python versions),">
+    <link rel="canonical" href="https://salivity.github.io/python/article/c-python-evaluation-loop-inside-py-eval-eval-frame-default">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="CPython Evaluation Loop: Inside _PyEval_EvalFrameDefault - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/c-python-evaluation-loop-inside-py-eval-eval-frame-default" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The PyEvalEvalFrameDefault function is the core execution engine of CPython, responsible for interpreting compiled Python bytecode into runtime actions. Located primarily within Python/ceval.c (and modularized execution tables in modern Python versions)," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="cpython-evaluation-loop-inside-_pyeval_evalframedefault">CPython
+Evaluation Loop: Inside _PyEval_EvalFrameDefault</h1>
+<p>The <code>_PyEval_EvalFrameDefault</code> function is the core
+execution engine of CPython, responsible for interpreting compiled
+Python bytecode into runtime actions. Located primarily within
+<code>Python/ceval.c</code> (and modularized execution tables in modern
+Python versions), this function manages the virtual machine's stack,
+dispatches opcodes, handles function calls, manages exceptions, and
+coordinates system-level interrupts and thread switches.</p>
+<h2 id="frame-initialization-and-context-setup">Frame Initialization and
+Context Setup</h2>
+<p>When a Python function is invoked, CPython creates an execution
+frame—represented in modern CPython (3.11+) as an
+<code>_PyInterpreterFrame</code>. When
+<code>_PyEval_EvalFrameDefault</code> receives this frame, it
+initializes several register-level C variables for maximum
+performance:</p>
+<ul>
+<li><strong>Instruction Pointer (<code>next_instr</code>):</strong>
+Points to the current bytecode instruction inside the code object
+(<code>co_code</code>).</li>
+<li><strong>Stack Pointer (<code>stack_pointer</code>):</strong> Points
+to the top of the evaluation stack. CPython is a stack-based virtual
+machine, meaning values are pushed and popped to perform
+operations.</li>
+<li><strong>Locals and Globals Arrays:</strong> Pointers to the
+fast-access local variable array (<code>localsplus</code>), cell/free
+variables for closures, and dictionaries for globals and builtins.</li>
+</ul>
+<h2 id="the-fetch-decode-execute-cycle">The Fetch-Decode-Execute
+Cycle</h2>
+<p>The core of <code>_PyEval_EvalFrameDefault</code> is an infinite loop
+that repeatedly fetches, decodes, and executes bytecode
+instructions.</p>
+<h3 id="1-instruction-fetching">1. Instruction Fetching</h3>
+<p>Bytecode is stored as an array of 16-bit code units (in Python
+3.10+). Each code unit consists of an 8-bit opcode and an 8-bit argument
+(<code>oparg</code>). If an argument exceeds 8 bits, an
+<code>EXTENDED_ARG</code> prefix instruction is used to shift and
+accumulate bits before reaching the true operation.</p>
+<h3 id="2-opcode-dispatching">2. Opcode Dispatching</h3>
+<p>CPython uses two primary strategies to jump to the code that handles
+a specific instruction:</p>
+<ul>
+<li><strong>Computed <code>goto</code> (Direct Threading):</strong> On
+supported compilers (like GCC and Clang), CPython uses an array of jump
+labels. At the end of every instruction, the loop reads the next opcode
+and directly jumps to its handler address via an indirect
+<code>goto</code>. This avoids the branch prediction penalty of a
+traditional loop.</li>
+<li><strong>Standard <code>switch</code>:</strong> On compilers lacking
+computed <code>goto</code> support, CPython falls back to a massive
+<code>switch(opcode)</code> statement enclosed within a
+<code>for(;;)</code> loop.</li>
+</ul>
+<h3 id="3-execution-and-stack-manipulation">3. Execution and Stack
+Manipulation</h3>
+<p>Each instruction block contains raw C code that alters the state of
+the machine. For instance:</p>
+<ul>
+<li><code>LOAD_FAST</code> reads a pointer directly from the local
+variable array and pushes it onto the value stack.</li>
+<li><code>BINARY_OP</code> pops two operands from the stack, executes
+the corresponding C-level slot function (e.g.,
+<code>PyNumber_Add</code>), and pushes the result back onto the
+stack.</li>
+<li><code>STORE_FAST</code> pops the top value off the stack and writes
+it into the local variable array.</li>
+</ul>
+<h2 id="periodic-checks-and-interrupt-handling">Periodic Checks and
+Interrupt Handling</h2>
+<p>Inside the loop, CPython periodically checks whether it must service
+external requests. This mechanism is controlled by an evaluation breaker
+flag (<code>eval_breaker</code>):</p>
+<ul>
+<li><strong>Signals:</strong> If an OS-level signal (like
+<code>SIGINT</code> / Ctrl+C) arrives, the loop halts standard execution
+to invoke Python signal handlers.</li>
+<li><strong>Thread Scheduling and the GIL:</strong> When multiple
+threads run, the Global Interpreter Lock (GIL) must be periodically
+released. The evaluation loop checks a tick or counter mechanism to
+yield the GIL to other waiting threads.</li>
+<li><strong>Asynchronous Callbacks:</strong> Functions scheduled via
+<code>Py_AddPendingCall</code> are executed when the eval breaker
+triggers.</li>
+</ul>
+<h2 id="exception-handling-and-stack-unwinding">Exception Handling and
+Stack Unwinding</h2>
+<p>If any C API call within an instruction returns <code>NULL</code>
+(indicating an error), the evaluation loop transitions to
+exception-handling mode:</p>
+<ol type="1">
+<li><strong>Exception Table Lookup:</strong> Modern CPython checks the
+code object's exception table to find an offset matching the current
+instruction pointer.</li>
+<li><strong>Stack Adjustment:</strong> If an enclosing
+<code>try...except</code> or <code>try...finally</code> block is found,
+the value stack is unwound to the depth expected by the handler, the
+exception state is pushed, and <code>next_instr</code> jumps to the
+handler's bytecode offset.</li>
+<li><strong>Frame Unwinding:</strong> If no handler exists within the
+current frame, <code>_PyEval_EvalFrameDefault</code> cleans up the
+current frame, sets the exception in the thread state
+(<code>PyThreadState</code>), and returns <code>NULL</code> to the
+caller, propagating the exception up the call stack.</li>
+</ol>
+<h2 id="adaptive-specialization-python-311">Adaptive Specialization
+(Python 3.11+)</h2>
+<p>In modern CPython architectures,
+<code>_PyEval_EvalFrameDefault</code> incorporates the specializing
+adaptive interpreter (PEP 659).</p>
+<p>Instructions monitor their execution patterns at runtime. For
+example, a generic <code>LOAD_ATTR</code> instruction tracks the types
+of objects passing through it. Once a type stabilizes, the interpreter
+overwrites the instruction in-place with a specialized opcode (such as
+<code>LOAD_ATTR_INSTANCE_VALUE</code>) alongside an inline cache entry.
+In subsequent iterations of the loop, the specialized opcode bypasses
+generic dictionary lookups, directly fetching attributes via precomputed
+memory offsets. If type assumptions are invalidated, the instruction
+de-optimizes back to its generic form.</p>
+<h2 id="exiting-the-frame">Exiting the Frame</h2>
+<p>The loop terminates when it encounters instructions like
+<code>RETURN_VALUE</code> or when an unhandled exception causes an exit.
+The function decrements references to remaining objects on the value
+stack, adjusts the interpreter frame hierarchy to point back to the
+caller frame, and returns the final <code>PyObject*</code> to the
+calling context.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

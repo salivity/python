@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python MethodWrapperType vs User-Defined Methods - python</title>
+    <meta name="description" content="In Python, types.MethodWrapperType represents a bound method-wrapper for C-implemented special methods, whereas standard user-defined methods are represented by types.MethodType. While both represent callable methods bound to an instance, their origins,">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-method-wrapper-type-vs-user-defined-methods">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python MethodWrapperType vs User-Defined Methods - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-method-wrapper-type-vs-user-defined-methods" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, types.MethodWrapperType represents a bound method-wrapper for C-implemented special methods, whereas standard user-defined methods are represented by types.MethodType. While both represent callable methods bound to an instance, their origins," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-methodwrappertype-vs-user-defined-methods">Python
+MethodWrapperType vs User-Defined Methods</h1>
+<p>In Python, <code>types.MethodWrapperType</code> represents a bound
+method-wrapper for C-implemented special methods, whereas standard
+user-defined methods are represented by <code>types.MethodType</code>.
+While both represent callable methods bound to an instance, their
+origins, internal representations, introspection capabilities, and
+performance behaviors differ significantly based on whether the
+underlying routine is a C-level slot or Python bytecode.</p>
+<h3 id="underlying-origin-and-creation">Underlying Origin and
+Creation</h3>
+<p>The primary distinction lies in what the method wraps.</p>
+<ul>
+<li><strong>User-Defined Methods
+(<code>types.MethodType</code>):</strong> When you define a function
+inside a class using Python syntax (<code>def func(self): ...</code>),
+Python creates a <code>function</code> object. Accessing this function
+through an instance invokes its descriptor protocol
+(<code>__get__</code>), producing an instance of
+<code>types.MethodType</code> that binds the function to the
+instance.</li>
+<li><strong>Method-Wrappers
+(<code>types.MethodWrapperType</code>):</strong> Built-in and
+C-extension types implement core behaviors (like <code>__repr__</code>,
+<code>__add__</code>, or <code>__len__</code>) as C-level function
+pointers stored in type slots. Accessing one of these dunder methods on
+an instance (for example, <code>[].__repr__</code> or
+<code>(42).__add__</code>) invokes the <code>__get__</code> descriptor
+of a <code>wrapper_descriptor</code>. This produces a
+<code>method-wrapper</code>, represented by
+<code>types.MethodWrapperType</code>.</li>
+</ul>
+<h3 id="introspection-and-python-level-attributes">Introspection and
+Python-Level Attributes</h3>
+<p>Because user-defined methods wrap native Python function objects,
+they expose the full suite of Python execution metadata:</p>
+<ul>
+<li><code>method.__code__</code>: Contains the bytecode, variable names,
+and line numbers.</li>
+<li><code>method.__globals__</code>: The global namespace of the module
+where the function was defined.</li>
+<li><code>method.__closure__</code>: Cell variables if the method closes
+over outer scopes.</li>
+</ul>
+<p>In contrast, <code>types.MethodWrapperType</code> points directly to
+compiled C functions and lacks these attributes entirely. Inspecting a
+<code>MethodWrapperType</code> instance yields C-level wrapper
+descriptors instead:</p>
+<ul>
+<li><code>__self__</code>: The instance to which the wrapper is bound
+(shared with <code>MethodType</code>).</li>
+<li><code>__objclass__</code>: The class that defines the underlying
+slot wrapper (e.g., <code>list</code>, <code>int</code>, or
+<code>object</code>).</li>
+<li>It does not possess <code>__code__</code>, <code>__globals__</code>,
+or <code>__annotations__</code>. Attempting to access these attributes
+raises an <code>AttributeError</code>.</li>
+</ul>
+<h3 id="descriptor-binding-mechanics">Descriptor Binding Mechanics</h3>
+<p>The descriptor chain that creates each type is fundamentally
+different:</p>
+<ol type="1">
+<li><p><strong>User Method Resolution:</strong>
+<code>instance.method</code> <span
+class="math inline">\(\rightarrow\)</span>
+<code>Class.__dict__['method'].__get__(instance, Class)</code> <span
+class="math inline">\(\rightarrow\)</span> returns
+<code>types.MethodType(Class.__dict__['method'], instance)</code></p></li>
+<li><p><strong>Slot Wrapper Resolution:</strong>
+<code>instance.__dunder__</code> <span
+class="math inline">\(\rightarrow\)</span>
+<code>Class.__dict__['__dunder__'].__get__(instance, Class)</code> <span
+class="math inline">\(\rightarrow\)</span> returns a
+<code>method-wrapper</code> (<code>types.MethodWrapperType</code>)
+wrapping the slot pointer.</p></li>
+</ol>
+<p>If a user class overrides a dunder method in pure Python:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Custom:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__str__</span>(<span class="va">self</span>):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&quot;custom&quot;</span></span></code></pre></div>
+<p>Accessing <code>Custom().__str__</code> will return a
+<code>types.MethodType</code>, not a
+<code>types.MethodWrapperType</code>. The wrapper type only emerges when
+binding to a dunder method implemented in C on the type's underlying C
+struct.</p>
+<h3 id="execution-overhead">Execution Overhead</h3>
+<p><code>types.MethodWrapperType</code> bypasses the standard Python
+bytecode evaluation loop when called. Invoking a
+<code>method-wrapper</code> directly executes the C-level function
+pointer associated with that type's slot, providing faster execution and
+smaller memory overhead per call compared to the evaluation of a
+standard Python stack frame in <code>types.MethodType</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

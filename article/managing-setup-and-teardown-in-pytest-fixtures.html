@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Managing Setup and Teardown in Pytest Fixtures - python</title>
+    <meta name="description" content="In Python testing, pytest fixtures provide a modular, declarative framework to prepare test environments and cleanly dispose of resources. This article explains how fixtures utilize the yield statement to execute setup and teardown phases, how pytest res">
+    <link rel="canonical" href="https://salivity.github.io/python/article/managing-setup-and-teardown-in-pytest-fixtures">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Managing Setup and Teardown in Pytest Fixtures - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/managing-setup-and-teardown-in-pytest-fixtures" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python testing, pytest fixtures provide a modular, declarative framework to prepare test environments and cleanly dispose of resources. This article explains how fixtures utilize the yield statement to execute setup and teardown phases, how pytest res" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="managing-setup-and-teardown-in-pytest-fixtures">Managing Setup
+and Teardown in Pytest Fixtures</h1>
+<p>In Python testing, <code>pytest</code> fixtures provide a modular,
+declarative framework to prepare test environments and cleanly dispose
+of resources. This article explains how fixtures utilize the
+<code>yield</code> statement to execute setup and teardown phases, how
+<code>pytest</code> resolves complex fixture dependencies through
+dependency injection, and how scoping rules dictate the lifecycle of
+resources across your test suite.</p>
+<h3 id="the-yield-keyword-defining-setup-and-teardown">The
+<code>yield</code> Keyword: Defining Setup and Teardown</h3>
+<p><code>pytest</code> separates setup from teardown within a single
+fixture using Python’s <code>yield</code> statement. When a test
+requests a fixture, <code>pytest</code> executes all code prior to the
+<code>yield</code> statement during the setup phase. The value provided
+to <code>yield</code> is then passed directly into the test function.
+Once the test completes—regardless of whether it passed, failed, or
+raised an exception—<code>pytest</code> resumes the fixture to execute
+the code following <code>yield</code> as the teardown phase.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pytest</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">@pytest.fixture</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> database_connection():</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Setup: initialize resource</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    conn <span class="op">=</span> create_db_connection()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">yield</span> conn</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Teardown: clean up resource</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    conn.close()</span></code></pre></div>
+<p>This structure ensures resource disposal without requiring nested
+<code>try...finally</code> blocks inside individual test cases.</p>
+<h3 id="resolving-dependencies-via-dependency-injection">Resolving
+Dependencies via Dependency Injection</h3>
+<p>Fixtures are designed to be composable. A fixture can request other
+fixtures simply by listing them as arguments in its function definition.
+When a test runs, <code>pytest</code> constructs a Directed Acyclic
+Graph (DAG) of all requested fixtures to determine the exact order of
+execution.</p>
+<p>Setup operations run from the outermost dependency inward:</p>
+<ol type="1">
+<li>Base dependencies execute their setup code first.</li>
+<li>Dependent fixtures execute their setup using the resolved base
+dependencies.</li>
+<li>The test function runs.</li>
+<li>Teardown executes in the exact reverse order: dependent fixtures
+tear down first, followed by base dependencies.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="at">@pytest.fixture</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> app_config():</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {<span class="st">&quot;host&quot;</span>: <span class="st">&quot;localhost&quot;</span>, <span class="st">&quot;port&quot;</span>: <span class="dv">5432</span>}</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="at">@pytest.fixture</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> db_client(app_config):</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    client <span class="op">=</span> <span class="ex">connect</span>(app_config[<span class="st">&quot;host&quot;</span>], app_config[<span class="st">&quot;port&quot;</span>])</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">yield</span> client</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    client.disconnect()</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_query(db_client):</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> db_client.is_connected()</span></code></pre></div>
+<p>In this scenario, <code>app_config</code> is evaluated first, passed
+to <code>db_client</code>, and teardown occurs strictly after
+<code>test_query</code> finishes.</p>
+<h3 id="managing-lifecycles-with-fixture-scopes">Managing Lifecycles
+with Fixture Scopes</h3>
+<p>To avoid unnecessary setup and teardown overhead, fixtures support
+multiple scopes via the <code>@pytest.fixture(scope=...)</code>
+decorator parameter. The available scopes are:</p>
+<ul>
+<li><strong><code>function</code></strong> (default): Runs setup and
+teardown for each test function.</li>
+<li><strong><code>class</code></strong>: Runs once per test class,
+sharing setup across all methods in that class.</li>
+<li><strong><code>module</code></strong>: Runs once per module (Python
+file).</li>
+<li><strong><code>package</code></strong>: Runs once per package
+directory.</li>
+<li><strong><code>session</code></strong>: Runs once for the entire test
+session.</li>
+</ul>
+<p>Higher-scoped fixtures (such as <code>session</code>) cannot depend
+on lower-scoped fixtures (such as <code>function</code>), preserving
+test isolation and deterministic teardown sequences.</p>
+<h3 id="automatic-execution-with-autouse">Automatic Execution with
+<code>autouse</code></h3>
+<p>When setup or teardown must occur globally without passing fixture
+arguments directly to test signatures, fixtures can be defined with
+<code>autouse=True</code>.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="at">@pytest.fixture</span>(autouse<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> clear_cache():</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    cache.clear()</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">yield</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    cache.clear()</span></code></pre></div>
+<p>Every test within the fixture's scope automatically triggers this
+setup and teardown behavior, guaranteeing that environment states remain
+isolated between tests.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

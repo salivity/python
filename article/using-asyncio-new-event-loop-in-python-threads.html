@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using asyncio.new_event_loop in Python Threads - python</title>
+    <meta name="description" content="This article explains the purpose and implementation of asyncio.neweventloop() when working with secondary threads in Python. Python's asyncio framework assigns a default event loop to the main thread, but background threads lack one by default. Understa">
+    <link rel="canonical" href="https://salivity.github.io/python/article/using-asyncio-new-event-loop-in-python-threads">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using asyncio.new_event_loop in Python Threads - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/using-asyncio-new-event-loop-in-python-threads" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the purpose and implementation of asyncio.neweventloop() when working with secondary threads in Python. Python's asyncio framework assigns a default event loop to the main thread, but background threads lack one by default. Understa" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-asyncionew_event_loop-in-python-threads">Using
+asyncio.new_event_loop in Python Threads</h1>
+<p>This article explains the purpose and implementation of
+<code>asyncio.new_event_loop()</code> when working with secondary
+threads in Python. Python's <code>asyncio</code> framework assigns a
+default event loop to the main thread, but background threads lack one
+by default. Understanding how <code>asyncio.new_event_loop()</code>
+creates, configures, and isolates an independent asynchronous runtime is
+essential for safely running concurrent coroutines inside secondary
+threads without interfering with the main thread or causing runtime
+errors.</p>
+<h2 id="the-role-of-asyncionew_event_loop">The Role of
+<code>asyncio.new_event_loop()</code></h2>
+<p>In Python, the <code>asyncio</code> event loop is not thread-safe. A
+single event loop instance cannot safely execute tasks across multiple
+threads simultaneously. To run asynchronous code inside a secondary OS
+thread (such as one created using <code>threading.Thread</code>), that
+thread must have its own isolated event loop.</p>
+<p>By default, calling <code>asyncio.get_event_loop()</code> inside a
+secondary thread raises a
+<code>RuntimeError: There is no current event loop in thread</code> in
+modern Python versions. The <code>asyncio.new_event_loop()</code>
+function solves this by explicitly constructing a new, unattached
+<code>AbstractEventLoop</code> instance configured specifically for that
+thread's execution context.</p>
+<h2 id="managing-the-lifecycle-on-a-secondary-thread">Managing the
+Lifecycle on a Secondary Thread</h2>
+<p>Creating the loop object is only the first step. To execute
+coroutines reliably within a worker thread, you must manage the loop's
+full lifecycle: creation, association, execution, and cleanup.</p>
+<ol type="1">
+<li><strong>Creation</strong>: Calling
+<code>loop = asyncio.new_event_loop()</code> allocates a fresh event
+loop instance.</li>
+<li><strong>Association</strong>: Calling
+<code>asyncio.set_event_loop(loop)</code> registers the newly created
+loop as the current active event loop for the calling thread. This
+ensures that any nested functions or third-party libraries calling
+<code>asyncio.get_running_loop()</code> or
+<code>asyncio.get_event_loop()</code> resolve to this specific
+loop.</li>
+<li><strong>Execution</strong>: The thread starts the loop using either
+<code>loop.run_until_complete(coroutine())</code> for bounded tasks or
+<code>loop.run_forever()</code> for persistent background
+listeners.</li>
+<li><strong>Cleanup</strong>: Once execution finishes, the loop must be
+shut down gracefully using <code>loop.close()</code> to release
+underlying OS selectors, sockets, and resources.</li>
+</ol>
+<h2 id="standard-implementation-pattern">Standard Implementation
+Pattern</h2>
+<p>The following pattern illustrates how
+<code>asyncio.new_event_loop()</code> is typically implemented inside a
+worker thread function:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> threading</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> worker_thread():</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 1. Create a new independent loop for this thread</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    loop <span class="op">=</span> asyncio.new_event_loop()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 2. Assign the loop to the current thread&#39;s context</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    asyncio.set_event_loop(loop)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="kw">def</span> sample_coroutine():</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> asyncio.sleep(<span class="dv">1</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&quot;Task finished&quot;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="co"># 3. Run the task within this thread&#39;s loop</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        result <span class="op">=</span> loop.run_until_complete(sample_coroutine())</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(result)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">finally</span>:</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="co"># 4. Clean up pending tasks and close the loop</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        loop.run_until_complete(loop.shutdown_asyncgens())</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        loop.close()</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Start the secondary thread</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>thread <span class="op">=</span> threading.Thread(target<span class="op">=</span>worker_thread)</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>thread.start()</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>thread.join()</span></code></pre></div>
+<h2 id="comparison-with-asynciorun">Comparison with
+<code>asyncio.run()</code></h2>
+<p>In Python 3.7 and later, <code>asyncio.run()</code> serves as a
+higher-level convenience function. When called within a secondary
+thread, <code>asyncio.run()</code> internally calls
+<code>asyncio.new_event_loop()</code>, sets it as the active loop, runs
+the target coroutine, and closes the loop automatically upon
+completion.</p>
+<p>However, direct usage of <code>asyncio.new_event_loop()</code>
+remains necessary when:</p>
+<ul>
+<li>The worker thread requires a persistent, long-running loop that must
+stay open across multiple separate calls using
+<code>loop.run_forever()</code>.</li>
+<li>Thread-safe scheduling from other threads is required via
+<code>asyncio.run_coroutine_threadsafe(coro, loop)</code>.</li>
+<li>Custom event loop policies or specific lifecycle hooks need to be
+configured before execution begins.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Handles Unicode and String Storage - python</title>
+    <meta name="description" content="This article provides an overview of Python's internal memory architecture for text, detailing how the interpreter balances memory efficiency with performance. Modern Python abstracts the complexities of Unicode through the Flexible String Representation">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-handles-unicode-and-string-storage">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Handles Unicode and String Storage - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-handles-unicode-and-string-storage" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of Python's internal memory architecture for text, detailing how the interpreter balances memory efficiency with performance. Modern Python abstracts the complexities of Unicode through the Flexible String Representation" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-handles-unicode-and-string-storage">How Python
+Handles Unicode and String Storage</h1>
+<p>This article provides an overview of Python's internal memory
+architecture for text, detailing how the interpreter balances memory
+efficiency with performance. Modern Python abstracts the complexities of
+Unicode through the Flexible String Representation introduced in PEP
+393. Instead of relying on a single static encoding or a variable-width
+byte stream in memory, Python dynamically adapts the internal storage
+width of each string based on its highest code point, ensuring
+constant-time character access while minimizing memory bloat.</p>
+<h3 id="the-problem-with-traditional-unicode-storage">The Problem with
+Traditional Unicode Storage</h3>
+<p>Prior to Python 3.3, CPython relied on build-time configurations that
+either used UCS-2 (two bytes per character) or UCS-4 (four bytes per
+character). The UCS-2 approach could not natively represent characters
+outside the Basic Multilingual Plane (such as certain historical scripts
+and emojis) without surrogate pairs, breaking random access. Conversely,
+UCS-4 represented every character correctly but quadrupled memory usage
+for standard ASCII text.</p>
+<p>Directly using UTF-8 internally was also problematic. While UTF-8 is
+memory-efficient for serialized data, it is a variable-length encoding
+where a single character can span from one to four bytes. This variable
+width makes random indexing (<code>string[i]</code>) an <span
+class="math inline">\(O(n)\)</span> operation because the interpreter
+must scan the string from the beginning to locate the <span
+class="math inline">\(i\)</span>-th character.</p>
+<h3 id="pep-393-flexible-string-representation">PEP 393: Flexible String
+Representation</h3>
+<p>Python 3.3 solved this dilemma with PEP 393 by introducing the
+"Flexible String Representation." Under this system, every Python string
+is stored using a fixed character width, but that width is chosen on a
+per-string basis at runtime. The width is determined by the character
+with the highest Unicode code point in the string:</p>
+<ol type="1">
+<li><strong>Latin-1 (1 byte per character):</strong> If all characters
+in the string fall within the range <code>U+0000</code> to
+<code>U+00FF</code> (which includes standard ASCII and Western European
+characters), the string is stored using 1 byte per character
+(<code>PyUnicode_1BYTE_KIND</code>).</li>
+<li><strong>UCS-2 (2 bytes per character):</strong> If the highest code
+point is between <code>U+0100</code> and <code>U+FFFF</code> (the Basic
+Multilingual Plane, covering most global languages), the entire string
+is allocated using 2 bytes per character
+(<code>PyUnicode_2BYTE_KIND</code>).</li>
+<li><strong>UCS-4 (4 bytes per character):</strong> If any character in
+the string has a code point between <code>U+10000</code> and
+<code>U+10FFFF</code> (such as mathematical symbols, rare scripts, or
+emojis), the entire string is allocated using 4 bytes per character
+(<code>PyUnicode_4BYTE_KIND</code>).</li>
+</ol>
+<h3 id="constant-time-indexing-and-memory-overhead">Constant-Time
+Indexing and Memory Overhead</h3>
+<p>By ensuring that all characters within a <em>single</em> string
+occupy the same number of bytes, Python maintains <span
+class="math inline">\(O(1)\)</span> random-access performance. To
+retrieve <code>string[i]</code>, the interpreter simply reads the memory
+address at <code>base_address + (i * char_width)</code>.</p>
+<p>The trade-off of this design is that adding a single four-byte
+character (like an emoji) to a large ASCII string causes the entire
+string to be upsized to four bytes per character upon recreation, as
+strings in Python are immutable.</p>
+<h3 id="internal-object-layout">Internal Object Layout</h3>
+<p>In CPython, strings are represented by tiered C structures depending
+on their content:</p>
+<ul>
+<li><strong><code>PyASCIIObject</code>:</strong> Used for pure ASCII
+strings. It contains basic metadata—such as the object reference count,
+type pointer, string length, and hash—followed immediately by the
+null-terminated byte array.</li>
+<li><strong><code>PyCompactUnicodeObject</code>:</strong> Used for
+non-ASCII strings where the character data is stored in the same memory
+block as the object header, reducing memory fragmentation and pointer
+indirection.</li>
+<li><strong>Legacy Structures:</strong> Maintained for backward
+compatibility with the C-API when external extensions request raw
+<code>wchar_t</code> representations.</li>
+</ul>
+<h3 id="encoding-and-decoding-interfaces">Encoding and Decoding
+Interfaces</h3>
+<p>Python cleanly separates Unicode text from raw byte sequences:</p>
+<ul>
+<li><strong>Strings (<code>str</code>):</strong> Represent abstract
+Unicode code points managed via the flexible internal
+representation.</li>
+<li><strong>Bytes (<code>bytes</code>):</strong> Represent raw sequences
+of 8-bit integers.</li>
+</ul>
+<p>When Python reads text from an external source (such as a file,
+network socket, or database), it executes a <strong>decoding</strong>
+step, converting bytes into code points using a specified codec
+(defaulting to UTF-8). During decoding, Python scans the input,
+determines the maximum code point, allocates the appropriate 1-, 2-, or
+4-byte buffer, and populates it. Conversely, the
+<strong>encoding</strong> process (<code>str.encode()</code>) iterates
+over the internal buffer and serializes the code points into an external
+standard format like UTF-8, UTF-16, or ASCII.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

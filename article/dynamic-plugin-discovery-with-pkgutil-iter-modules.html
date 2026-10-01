@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Plugin Discovery with pkgutil.iter_modules - python</title>
+    <meta name="description" content="Python's pkgutil.itermodules() provides a standard mechanism for dynamically discovering modules and packages at runtime without requiring static imports or hardcoded lists. By traversing directory paths or inspecting the global sys.path, this function q">
+    <link rel="canonical" href="https://salivity.github.io/python/article/dynamic-plugin-discovery-with-pkgutil-iter-modules">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Dynamic Plugin Discovery with pkgutil.iter_modules - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/dynamic-plugin-discovery-with-pkgutil-iter-modules" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's pkgutil.itermodules() provides a standard mechanism for dynamically discovering modules and packages at runtime without requiring static imports or hardcoded lists. By traversing directory paths or inspecting the global sys.path, this function q" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="dynamic-plugin-discovery-with-pkgutiliter_modules">Dynamic
+Plugin Discovery with pkgutil.iter_modules</h1>
+<p>Python's <code>pkgutil.iter_modules()</code> provides a standard
+mechanism for dynamically discovering modules and packages at runtime
+without requiring static imports or hardcoded lists. By traversing
+directory paths or inspecting the global <code>sys.path</code>, this
+function queries Python's underlying import machinery to yield metadata
+for all available submodules. This capability allows developers to
+implement extensible plugin architectures, automatic route
+registrations, and modular application extensions that adapt seamlessly
+to newly installed code.</p>
+<h3 id="the-mechanics-of-pkgutiliter_modules">The Mechanics of
+<code>pkgutil.iter_modules()</code></h3>
+<p>At its core, <code>iter_modules(path=None, prefix='')</code> scans
+specified search locations to locate importable Python modules. If the
+<code>path</code> argument is omitted or set to <code>None</code>, it
+defaults to searching <code>sys.path</code>. If a list of directory
+paths is provided, it restricts its search exclusively to those target
+locations. The optional <code>prefix</code> argument allows callers to
+prepend a string (such as a parent package name) to each discovered
+module name.</p>
+<p>Internally, <code>iter_modules()</code> relies on Python’s PEP 302
+and PEP 451 import hooks. Rather than manually parsing file systems with
+standard file-listing operations like <code>os.listdir()</code>, it
+iterates over the paths and retrieves the corresponding "finder" object
+registered in <code>sys.path_importer_cache</code> (or instantiates a
+new <code>importlib.machinery.FileFinder</code>).</p>
+<h3 id="inspecting-finders-and-yielding-metadata">Inspecting Finders and
+Yielding Metadata</h3>
+<p>Once the appropriate finder for a path is identified,
+<code>iter_modules()</code> calls the finder's internal scanning methods
+to evaluate the files and directories present. The finder looks for
+valid Python file extensions (such as <code>.py</code> and
+<code>.pyc</code>) or directories containing an <code>__init__.py</code>
+file (or namespace packages).</p>
+<p>For every valid target discovered, <code>iter_modules()</code> yields
+a <code>ModuleInfo</code> named tuple containing three distinct
+attributes:</p>
+<ol type="1">
+<li><strong><code>module_finder</code></strong>: The finder object
+responsible for locating the module.</li>
+<li><strong><code>name</code></strong>: The string name of the module,
+including the specified <code>prefix</code>.</li>
+<li><strong><code>ispkg</code></strong>: A boolean flag indicating
+whether the item is a package directory (<code>True</code>) or a
+standalone module file (<code>False</code>).</li>
+</ol>
+<p>Because it yields an iterator, <code>iter_modules()</code> evaluates
+modules lazily. It does not import the code into memory during the
+discovery phase, avoiding premature execution of module-level code and
+preventing circular import side effects.</p>
+<h3 id="implementing-a-plugin-system">Implementing a Plugin System</h3>
+<p>To turn discovered metadata into functional code,
+<code>iter_modules()</code> is paired with
+<code>importlib.import_module()</code>. In a typical plugin pattern, an
+application defines a designated plugin package directory, scans it
+using <code>pkgutil</code>, and imports the discovered modules
+dynamically.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> importlib</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pkgutil</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> my_application.plugins <span class="im">as</span> plugins_package</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> load_plugins():</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    discovered_plugins <span class="op">=</span> {}</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Iterate over modules inside the plugins package path</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> module_info <span class="kw">in</span> pkgutil.iter_modules(plugins_package.__path__, plugins_package.<span class="va">__name__</span> <span class="op">+</span> <span class="st">&quot;.&quot;</span>):</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Dynamically import the module by name</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        module <span class="op">=</span> importlib.import_module(module_info.name)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Access plugin attributes or registration functions</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">hasattr</span>(module, <span class="st">&quot;register&quot;</span>):</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>            discovered_plugins[module_info.name] <span class="op">=</span> module.register()</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> discovered_plugins</span></code></pre></div>
+<p>In this implementation, <code>plugins_package.__path__</code> passes
+the absolute directory path of the plugin container, while
+<code>plugins_package.__name__ + "."</code> ensures the modules are
+imported relative to their fully qualified namespace. The discovery
+mechanism detects any new <code>.py</code> file added to that folder
+immediately upon application startup without requiring changes to the
+core codebase.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python __name__, __file__, and __package__ Explained - python</title>
+    <meta name="description" content="When Python executes a script, its runtime environment automatically assigns specific values to built-in attributes, primarily file, name, and package. These variables dictate how the code identifies its location on the filesystem, determines whether it">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-name-file-and-package-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python __name__, __file__, and __package__ Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-name-file-and-package-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When Python executes a script, its runtime environment automatically assigns specific values to built-in attributes, primarily file, name, and package. These variables dictate how the code identifies its location on the filesystem, determines whether it" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-name-file-and-package-explained">Python
+<strong>name</strong>, <strong>file</strong>, and
+<strong>package</strong> Explained</h1>
+<p>When Python executes a script, its runtime environment automatically
+assigns specific values to built-in attributes, primarily
+<code>__file__</code>, <code>__name__</code>, and
+<code>__package__</code>. These variables dictate how the code
+identifies its location on the filesystem, determines whether it is
+running as a standalone entry point or an imported library, and resolves
+relative imports within an existing namespace.</p>
+<h3 id="the-role-of-__name__">The Role of <code>__name__</code></h3>
+<p>The <code>__name__</code> attribute identifies the module's execution
+context:</p>
+<ul>
+<li><strong>Direct Execution:</strong> When a script is executed
+directly from the terminal (e.g., <code>python script.py</code>), Python
+assigns <code>__name__ = "__main__"</code>. This triggers code guarded
+by the <code>if __name__ == "__main__":</code> idiom.</li>
+<li><strong>Imported Execution:</strong> When imported into another
+script via <code>import my_module</code>, <code>__name__</code> is set
+to the module's actual name (e.g., <code>"my_module"</code>), or its
+fully qualified dotted path (e.g.,
+<code>"package.submodule"</code>).</li>
+<li><strong>Module Execution Flag:</strong> When run with the
+<code>-m</code> switch (e.g., <code>python -m package.script</code>),
+<code>__name__</code> is still set to <code>"__main__"</code>, making it
+the top-level execution scope while retaining its package context.</li>
+</ul>
+<h3 id="the-role-of-__file__">The Role of <code>__file__</code></h3>
+<p>The <code>__file__</code> attribute contains the path of the script
+currently being loaded by the interpreter:</p>
+<ul>
+<li><strong>File-Based Execution:</strong> If Python loads the module
+from a file on disk, <code>__file__</code> contains the path to that
+file. Since Python 3.9, direct execution resolves <code>__file__</code>
+to an absolute path if invoked with an absolute path, or keeps it
+consistent with how the path was passed.</li>
+<li><strong>Dynamic Execution:</strong> If code is evaluated dynamically
+via <code>eval()</code>, <code>exec()</code>, or within an interactive
+REPL session, <code>__file__</code> is not defined by default, raising a
+<code>NameError</code> if accessed directly unless manually
+injected.</li>
+<li><strong>Built-in and C-Extensions:</strong> Modules built directly
+into the Python interpreter or compiled C extensions may lack a
+<code>__file__</code> attribute pointing to source files.</li>
+</ul>
+<h3 id="the-role-of-__package__">The Role of
+<code>__package__</code></h3>
+<p>The <code>__package__</code> attribute manages the parent package
+namespace, which Python uses to calculate explicit relative imports
+(such as <code>from . import sibling</code>):</p>
+<ul>
+<li><strong>Direct Script Execution:</strong> When executing
+<code>python script.py</code>, Python sets <code>__package__</code> to
+<code>None</code> (or an empty string in older versions). Because no
+package namespace is defined, any relative import statement in that file
+will fail with an <code>ImportError</code>.</li>
+<li><strong>Package Execution via <code>-m</code>:</strong> Running
+<code>python -m mypkg.script</code> initializes <code>__package__</code>
+to the parent package name (<code>"mypkg"</code>). This allows relative
+imports inside <code>script.py</code> to resolve correctly.</li>
+<li><strong>Imported Modules:</strong> When a module is imported
+normally within a package hierarchy, <code>__package__</code> is set to
+the name of its immediate parent package. For top-level modules outside
+of any directory containing an <code>__init__.py</code>,
+<code>__package__</code> is set to an empty string <code>""</code>.</li>
+</ul>
+<h3 id="processing-sequence-during-initialization">Processing Sequence
+During Initialization</h3>
+<ol type="1">
+<li><strong>Loader Initialization:</strong> Python's import machinery
+(<code>importlib</code>) identifies whether the target is a script,
+module, or package.</li>
+<li><strong>Namespace Creation:</strong> A module object is created
+along with an internal dictionary (<code>__dict__</code>).</li>
+<li><strong>Attribute Population:</strong> Python populates
+<code>__file__</code> with the file system location,
+<code>__name__</code> with either the module path or
+<code>"__main__"</code>, and <code>__package__</code> based on the
+module's position within the package tree.</li>
+<li><strong>Code Execution:</strong> The interpreter runs the module's
+compiled bytecode sequentially within this initialized namespace.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

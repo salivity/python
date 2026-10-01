@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear and Inspect functools.lru_cache in Python - python</title>
+    <meta name="description" content="Python's built-in functools.lrucache decorator provides an efficient way to cache expensive function calls using a Least Recently Used (LRU) algorithm. To maintain and optimize an application using this decorator, developers often need to evaluate cache">
+    <link rel="canonical" href="https://salivity.github.io/python/article/clear-and-inspect-functools-lru-cache-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Clear and Inspect functools.lru_cache in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/clear-and-inspect-functools-lru-cache-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's built-in functools.lrucache decorator provides an efficient way to cache expensive function calls using a Least Recently Used (LRU) algorithm. To maintain and optimize an application using this decorator, developers often need to evaluate cache" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="clear-and-inspect-functoolslru_cache-in-python">Clear and
+Inspect functools.lru_cache in Python</h1>
+<p>Python's built-in <code>functools.lru_cache</code> decorator provides
+an efficient way to cache expensive function calls using a Least
+Recently Used (LRU) algorithm. To maintain and optimize an application
+using this decorator, developers often need to evaluate cache efficiency
+and reset stored results. This article demonstrates how to inspect
+runtime cache metrics using <code>cache_info()</code> and how to clear
+cached entries on demand using <code>cache_clear()</code>.</p>
+<h3 id="inspecting-cache-metrics-with-cache_info">Inspecting Cache
+Metrics with <code>cache_info()</code></h3>
+<p>Functions wrapped with <code>functools.lru_cache</code> are augmented
+with a <code>cache_info()</code> method. Calling this method returns a
+named tuple displaying the current performance statistics of the
+cache:</p>
+<ul>
+<li><strong><code>hits</code></strong>: The number of times the function
+looked up an existing cached result.</li>
+<li><strong><code>misses</code></strong>: The number of times the
+function executed because the result was not in the cache.</li>
+<li><strong><code>maxsize</code></strong>: The maximum capacity
+configured for the cache (or <code>None</code> if unlimited).</li>
+<li><strong><code>currsize</code></strong>: The current number of items
+stored in the cache.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> functools</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">@functools.lru_cache</span>(maxsize<span class="op">=</span><span class="dv">128</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_user_data(user_id: <span class="bu">int</span>):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Simulated database or API call</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {<span class="st">&quot;user_id&quot;</span>: user_id, <span class="st">&quot;status&quot;</span>: <span class="st">&quot;active&quot;</span>}</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate some hits and misses</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>fetch_user_data(<span class="dv">1</span>)  <span class="co"># Miss</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>fetch_user_data(<span class="dv">2</span>)  <span class="co"># Miss</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>fetch_user_data(<span class="dv">1</span>)  <span class="co"># Hit</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>fetch_user_data(<span class="dv">1</span>)  <span class="co"># Hit</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Inspect the cache metrics</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>info <span class="op">=</span> fetch_user_data.cache_info()</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(info)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: CacheInfo(hits=2, misses=2, maxsize=128, currsize=2)</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Access individual attributes</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>hit_rate <span class="op">=</span> info.hits <span class="op">/</span> (info.hits <span class="op">+</span> info.misses)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Hit Rate: </span><span class="sc">{</span>hit_rate<span class="sc">:.2%}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<h3 id="inspecting-cache-configuration-with-cache_parameters">Inspecting
+Cache Configuration with <code>cache_parameters()</code></h3>
+<p>In Python 3.9 and newer, decorated functions also expose
+<code>cache_parameters()</code>. This method returns a dictionary
+showing the initial configuration arguments without running the cache
+logic:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>params <span class="op">=</span> fetch_user_data.cache_parameters()</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(params)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: {&#39;maxsize&#39;: 128, &#39;typed&#39;: False}</span></span></code></pre></div>
+<h3 id="clearing-the-cache-with-cache_clear">Clearing the Cache with
+<code>cache_clear()</code></h3>
+<p>When the underlying data changes or memory needs to be freed, you can
+invalidate all stored results using the <code>cache_clear()</code>
+method. This resets the cache storage and sets <code>hits</code>,
+<code>misses</code>, and <code>currsize</code> back to zero.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Clear all cached results</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>fetch_user_data.cache_clear()</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify the cache has been reset</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(fetch_user_data.cache_info())</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: CacheInfo(hits=0, misses=0, maxsize=128, currsize=0)</span></span></code></pre></div>
+<h3 id="bypassing-the-cache">Bypassing the Cache</h3>
+<p>If you need to execute the original, un-cached function directly
+without resetting the cache or recording a miss, access the underlying
+callable via the <code>__wrapped__</code> attribute:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calls the original function directly without caching the result</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>raw_result <span class="op">=</span> fetch_user_data.__wrapped__(<span class="dv">1</span>)</span></code></pre></div></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

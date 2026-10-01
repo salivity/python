@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQLAlchemy 2.0: Uniting ORM with Declarative Python - python</title>
+    <meta name="description" content="SQLAlchemy 2.0 marks a monumental evolution in Python database tooling by fully harmonizing traditional Object-Relational Mapping (ORM) with modern, type-annotated declarative Python syntax. Historically, SQLAlchemy maintained a functional divide between">
+    <link rel="canonical" href="https://salivity.github.io/python/article/sql-alchemy-2-0-uniting-orm-with-declarative-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SQLAlchemy 2.0: Uniting ORM with Declarative Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/sql-alchemy-2-0-uniting-orm-with-declarative-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="SQLAlchemy 2.0 marks a monumental evolution in Python database tooling by fully harmonizing traditional Object-Relational Mapping (ORM) with modern, type-annotated declarative Python syntax. Historically, SQLAlchemy maintained a functional divide between" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="sqlalchemy-20-uniting-orm-with-declarative-python">SQLAlchemy
+2.0: Uniting ORM with Declarative Python</h1>
+<p>SQLAlchemy 2.0 marks a monumental evolution in Python database
+tooling by fully harmonizing traditional Object-Relational Mapping (ORM)
+with modern, type-annotated declarative Python syntax. Historically,
+SQLAlchemy maintained a functional divide between its SQL abstraction
+Core and high-level ORM, often requiring redundant declarations and
+external type stubs. SQLAlchemy 2.0 eliminates this friction by
+leveraging Python’s native typing system (PEP 484), unifying the Core
+and ORM querying paradigms, and modernizing model definitions to be both
+expressive and statically verifiable.</p>
+<h3 id="native-type-annotations-with-mapped-and-mapped_column">Native
+Type Annotations with <code>Mapped</code> and
+<code>mapped_column</code></h3>
+<p>The most visible shift in SQLAlchemy 2.0 is the introduction of
+<code>Mapped</code> and <code>mapped_column()</code>. In legacy
+versions, models relied heavily on the <code>Column</code> construct,
+which offered limited support for static analysis tools like Mypy and
+IDE autocompletion:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Legacy SQLAlchemy 1.4 style</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> User(Base):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    __tablename__ <span class="op">=</span> <span class="st">&quot;users&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">id</span> <span class="op">=</span> Column(Integer, primary_key<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    name <span class="op">=</span> Column(String(<span class="dv">50</span>), nullable<span class="op">=</span><span class="va">False</span>)</span></code></pre></div>
+<p>SQLAlchemy 2.0 replaces this convention with standard Python type
+annotations. By declaring attributes using <code>Mapped[T]</code>, the
+class definition communicates directly with Python type checkers:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sqlalchemy.orm <span class="im">import</span> DeclarativeBase, Mapped, mapped_column</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sqlalchemy <span class="im">import</span> String</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Base(DeclarativeBase):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> User(Base):</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    __tablename__ <span class="op">=</span> <span class="st">&quot;users&quot;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">id</span>: Mapped[<span class="bu">int</span>] <span class="op">=</span> mapped_column(primary_key<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    name: Mapped[<span class="bu">str</span>] <span class="op">=</span> mapped_column(String(<span class="dv">50</span>))</span></code></pre></div>
+<p>Under this pattern, Python types infer standard database types
+automatically (e.g., <code>int</code> defaults to integer,
+<code>str</code> to <code>VARCHAR</code>), while
+<code>mapped_column</code> accepts underlying database-specific
+overrides. This makes models cleaner, enforces compile-time type safety,
+and removes the need for supplementary plugins to make IDE
+autocompletion work.</p>
+<h3 id="the-class-based-declarativebase">The Class-Based
+<code>DeclarativeBase</code></h3>
+<p>SQLAlchemy 2.0 shifts away from using dynamic factory functions like
+<code>declarative_base()</code> in favor of standard class inheritance
+using <code>DeclarativeBase</code>. Defining a base class natively
+inside Python ensures that static type checkers and linters understand
+the class hierarchy from root to leaf. It also provides a central hub to
+declare custom type maps, base configurations, and common model
+behaviors using standard object-oriented patterns rather than monkey
+patching or dynamic runtime metaprogramming.</p>
+<h3 id="unified-query-syntax-merging-core-and-orm">Unified Query Syntax:
+Merging Core and ORM</h3>
+<p>Previously, SQLAlchemy forced developers to choose between two
+querying styles: the Core <code>select()</code> syntax or the ORM
+<code>session.query()</code> syntax. This created cognitive overhead and
+code duplication across applications.</p>
+<p>SQLAlchemy 2.0 unifies these paradigms by adopting the
+<code>select()</code> construct as the universal syntax for both Core
+and ORM operations:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Modern 2.0 query executed through ORM Session</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>stmt <span class="op">=</span> select(User).where(User.name <span class="op">==</span> <span class="st">&quot;Alice&quot;</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>users <span class="op">=</span> session.scalars(stmt).<span class="bu">all</span>()</span></code></pre></div>
+<p>This alignment treats ORM models as first-class citizens inside SQL
+expressions. The statement itself (<code>select()</code>) remains
+decoupled from execution, enabling consistent query composition across
+raw SQL projections, Core metadata, and mapped ORM objects.</p>
+<h3 id="dataclass-style-mapping">Dataclass-Style Mapping</h3>
+<p>Modern Python emphasizes lightweight, data-centric classes through
+the standard <code>dataclasses</code> module. SQLAlchemy 2.0 adopts this
+philosophy via <code>MappedAsDataclass</code>, allowing models to
+inherit the full capabilities of standard Python dataclasses—such as
+auto-generated <code>__init__</code>, <code>__repr__</code>, and default
+value assignments—without requiring custom boilerplate.</p>
+<p>By aligning with Python's typing ecosystem and standardizing query
+mechanics, SQLAlchemy 2.0 transforms declarative mapping from a
+proprietary database DSL into an idiomatic, statically checked extension
+of Python itself.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

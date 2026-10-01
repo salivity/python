@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python enum.Flag Bitwise Operations Guide - python</title>
+    <meta name="description" content="Python's enum.Flag class provides a specialized enumeration type designed to support bitwise operations like union, intersection, symmetric difference, and inversion. Unlike standard Enum types, which represent distinct and mutually exclusive states, enu">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-enum-flag-bitwise-operations-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python enum.Flag Bitwise Operations Guide - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-enum-flag-bitwise-operations-guide" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's enum.Flag class provides a specialized enumeration type designed to support bitwise operations like union, intersection, symmetric difference, and inversion. Unlike standard Enum types, which represent distinct and mutually exclusive states, enu" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-enumflag-bitwise-operations-guide">Python enum.Flag
+Bitwise Operations Guide</h1>
+<p>Python's <code>enum.Flag</code> class provides a specialized
+enumeration type designed to support bitwise operations like union,
+intersection, symmetric difference, and inversion. Unlike standard
+<code>Enum</code> types, which represent distinct and mutually exclusive
+states, <code>enum.Flag</code> members can be combined using bitwise
+operators (<code>|</code>, <code>&amp;</code>, <code>^</code>,
+<code>~</code>) to represent sets of options, permissions, or feature
+toggles. This article covers how <code>enum.Flag</code> implements these
+operations, how to define flag enumerations, and how Python handles
+combined flag instances.</p>
+<h2 id="defining-an-enumflag">Defining an <code>enum.Flag</code></h2>
+<p>To use bitwise operations, members of an <code>enum.Flag</code>
+subclass should typically have integer values that are powers of two
+(<span class="math inline">\(1, 2, 4, 8, \dots\)</span>). Python's
+<code>enum.auto()</code> helper automatically assigns successive powers
+of two when used inside an <code>enum.Flag</code> definition.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> enum <span class="im">import</span> Flag, auto</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Permission(Flag):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    READ <span class="op">=</span> auto()     <span class="co"># 1</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    WRITE <span class="op">=</span> auto()    <span class="co"># 2</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    EXECUTE <span class="op">=</span> auto()  <span class="co"># 4</span></span></code></pre></div>
+<h2 id="how-bitwise-operations-work">How Bitwise Operations Work</h2>
+<p><code>enum.Flag</code> overrides Python's standard bitwise magic
+methods—<code>__or__</code>, <code>__and__</code>, <code>__xor__</code>,
+and <code>__invert__</code>. When these operators are used between flag
+members, Python performs the operation on the underlying integer values
+and returns a new composite instance of the same <code>Flag</code>
+class.</p>
+<h3 id="union-">Union (<code>|</code>)</h3>
+<p>The bitwise OR operator (<code>|</code>) creates a union of flags.
+The resulting member represents a combination where any bit set in
+either operand is set in the result.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>read_write <span class="op">=</span> Permission.READ <span class="op">|</span> Permission.WRITE</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(read_write)  <span class="co"># Output: Permission.READ|WRITE</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(read_write.value)  <span class="co"># Output: 3</span></span></code></pre></div>
+<h3 id="intersection-">Intersection (<code>&amp;</code>)</h3>
+<p>The bitwise AND operator (<code>&amp;</code>) performs an
+intersection, retaining only the flags common to both operands. This is
+commonly used to mask or check for specific permissions.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>user_perms <span class="op">=</span> Permission.READ <span class="op">|</span> Permission.WRITE</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>check_read <span class="op">=</span> user_perms <span class="op">&amp;</span> Permission.READ</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(check_read)  <span class="co"># Output: Permission.READ</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>check_exec <span class="op">=</span> user_perms <span class="op">&amp;</span> Permission.EXECUTE</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(check_exec)  <span class="co"># Output: Permission(0)</span></span></code></pre></div>
+<p>An empty intersection results in a pseudo-member with a value of
+<code>0</code>. You can optionally define an explicit zero-value member
+(such as <code>NONE = 0</code>) to represent the empty set cleanly.</p>
+<h3 id="symmetric-difference-">Symmetric Difference
+(<code>^</code>)</h3>
+<p>The bitwise XOR operator (<code>^</code>) toggles states. It returns
+flags that are set in one operand but not in both.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>active_flags <span class="op">=</span> Permission.READ <span class="op">|</span> Permission.WRITE</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>toggled <span class="op">=</span> active_flags <span class="op">^</span> Permission.WRITE</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(toggled)  <span class="co"># Output: Permission.READ</span></span></code></pre></div>
+<h3 id="inversion-">Inversion (<code>~</code>)</h3>
+<p>The bitwise NOT operator (<code>~</code>) inverts a flag, returning
+all members of the enumeration except those present in the target flag.
+In Python 3.11 and later, <code>~</code> is constrained to the valid
+flags defined within the enumeration boundary rather than producing
+negative integers.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>not_read <span class="op">=</span> <span class="op">~</span>Permission.READ</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(not_read)  <span class="co"># Output: Permission.WRITE|EXECUTE</span></span></code></pre></div>
+<h2 id="membership-testing">Membership Testing</h2>
+<p><code>enum.Flag</code> instances support the <code>in</code> operator
+to verify whether a specific flag is part of a combined flag
+instance:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>user_perms <span class="op">=</span> Permission.READ <span class="op">|</span> Permission.EXECUTE</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(Permission.READ <span class="kw">in</span> user_perms)     <span class="co"># Output: True</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(Permission.WRITE <span class="kw">in</span> user_perms)    <span class="co"># Output: False</span></span></code></pre></div>
+<h2 id="internal-representation-and-deconstruction">Internal
+Representation and Deconstruction</h2>
+<p>When flags are combined, Python uses the underlying integer value to
+dynamically construct a compound member name separated by the pipe
+character (<code>|</code>). Flag instances are iterable, allowing easy
+inspection of individual components within a compound flag:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> Permission.READ <span class="op">|</span> Permission.EXECUTE</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> perm <span class="kw">in</span> combined:</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(perm)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Output:</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Permission.READ</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Permission.EXECUTE</span></span></code></pre></div>
+<p>This underlying bitmask structure enables high-performance flag
+checks while retaining the readability and type safety of Python
+enumerations.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding Python Wheels and ABI Tags - python</title>
+    <meta name="description" content="This article explains what Python wheel packages with platform-specific Application Binary Interface (ABI) tags are and why they are necessary for distributing Python C extensions. It breaks down the components of the wheel filename tag system, details t">
+    <link rel="canonical" href="https://salivity.github.io/python/article/understanding-python-wheels-and-abi-tags">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding Python Wheels and ABI Tags - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/understanding-python-wheels-and-abi-tags" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains what Python wheel packages with platform-specific Application Binary Interface (ABI) tags are and why they are necessary for distributing Python C extensions. It breaks down the components of the wheel filename tag system, details t" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-python-wheels-and-abi-tags">Understanding Python
+Wheels and ABI Tags</h1>
+<p>This article explains what Python wheel packages with
+platform-specific Application Binary Interface (ABI) tags are and why
+they are necessary for distributing Python C extensions. It breaks down
+the components of the wheel filename tag system, details the low-level
+interactions between Python and compiled native code, and outlines how
+these tags prevent system crashes by ensuring binary compatibility.</p>
+<p>A Python wheel (<code>.whl</code>) is a built-package format that
+enables faster installations compared to traditional source
+distributions (<code>sdist</code>). When a package contains only pure
+Python code, a single wheel can often run on any platform and any
+version of Python. However, packages containing C extensions require
+pre-compiled native code, transforming the wheel into a
+platform-specific binary that must precisely match the target
+system.</p>
+<p>The compatibility of a wheel is determined by standard tags embedded
+in its filename, structured as:</p>
+<p><code>{distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-{platform tag}.whl</code></p>
+<p>For example, a wheel named
+<code>example_pkg-1.0.0-cp311-cp311-manylinux_2_17_x86_64.whl</code>
+explicitly defines its compatibility:</p>
+<ul>
+<li><strong>Python Tag (<code>cp311</code>):</strong> Indicates the
+implementation and version, here representing CPython 3.11.</li>
+<li><strong>ABI Tag (<code>cp311</code>):</strong> Specifies the
+Application Binary Interface required at runtime.</li>
+<li><strong>Platform Tag (<code>manylinux_2_17_x86_64</code>):</strong>
+Defines the target operating system, glibc baseline, and CPU
+architecture.</li>
+</ul>
+<p>An ABI defines the interface between two binary program modules at
+the machine-code level. While an API (Application Programming Interface)
+ensures that source code compiles without errors, an ABI dictates how
+data structures are laid out in memory, how functions are invoked, and
+how registers and stack frames are managed.</p>
+<p>Platform-specific ABI tags are strictly required for C extensions due
+to several low-level dependencies:</p>
+<ol type="1">
+<li><p><strong>CPython Internal Changes:</strong> C extensions interface
+directly with CPython's internal C structs. The memory layout, object
+headers, and internal flags of these structures frequently change
+between minor releases of Python (such as between 3.10 and 3.11). A C
+extension compiled against Python 3.10 that attempts to run on Python
+3.11 will read and write to incorrect memory offsets, immediately
+triggering segmentation faults or silent memory corruption.</p></li>
+<li><p><strong>CPU Architecture Differences:</strong> C code compiles
+down to native machine instructions. Binaries compiled for an
+<code>x86_64</code> processor cannot execute on an <code>arm64</code>
+(aarch64) system because the underlying instruction sets and register
+configurations are fundamentally incompatible.</p></li>
+<li><p><strong>Operating System and Runtime Linkage:</strong> C
+extensions are dynamic libraries (<code>.so</code> on Linux,
+<code>.pyd</code>/<code>.dll</code> on Windows, and <code>.dylib</code>
+on macOS). These libraries depend on system-level runtimes, such as the
+C standard library (glibc, musl, or MSVCRT). A binary linked against
+modern Linux system libraries cannot resolve symbols on Windows or older
+Linux environments.</p></li>
+</ol>
+<p>Python offers an alternative known as the Limited API, which produces
+wheels tagged with <code>abi3</code>. When developers restrict their C
+extensions to this stable subset of the CPython API, a single wheel
+compiled for Python 3.8 can run on Python 3.9, 3.10, and newer. However,
+even <code>abi3</code> wheels still require platform and architecture
+tags because the underlying compiled machine code remains tied to a
+specific OS and CPU.</p>
+<p>Platform-specific ABI tags allow the Python package installer
+(<code>pip</code>) to verify that a pre-compiled wheel matches the host
+system's exact Python version, compiler runtime, and architecture. If a
+matching wheel is unavailable, the installer falls back to compiling the
+source distribution locally, protecting the environment from runtime
+execution failures.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

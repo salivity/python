@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synchronize State with Python threading.Condition - python</title>
+    <meta name="description" content="In Python's threading module, threading.Condition allows multiple threads to coordinate by waiting for specific state changes before proceeding. Rather than having threads constantly poll a shared resource—wasting CPU cycles—a condition variable enab">
+    <link rel="canonical" href="https://salivity.github.io/python/article/synchronize-state-with-python-threading-condition">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Synchronize State with Python threading.Condition - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/synchronize-state-with-python-threading-condition" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python's threading module, threading.Condition allows multiple threads to coordinate by waiting for specific state changes before proceeding. Rather than having threads constantly poll a shared resource—wasting CPU cycles—a condition variable enab" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="synchronize-state-with-python-threadingcondition">Synchronize
+State with Python threading.Condition</h1>
+<p>In Python's <code>threading</code> module,
+<code>threading.Condition</code> allows multiple threads to coordinate
+by waiting for specific state changes before proceeding. Rather than
+having threads constantly poll a shared resource—wasting CPU cycles—a
+condition variable enables threads to suspend execution until another
+thread modifies the shared state and signals them. This article explains
+the internal mechanics of <code>threading.Condition</code>, breaks down
+the wait-and-notify workflow, and demonstrates the standard design
+pattern required to synchronize application state reliably.</p>
+<h3 id="the-underlying-lock-architecture">The Underlying Lock
+Architecture</h3>
+<p>Every <code>threading.Condition</code> object is intrinsically tied
+to an underlying lock, which is an <code>RLock</code> (reentrant lock)
+by default, though a standard <code>Lock</code> can be passed explicitly
+during initialization. The condition variable cannot alter or inspect
+shared state without first acquiring this lock.</p>
+<p>The lock ensures mutual exclusion when checking or modifying the
+shared state, while the condition object manages the queue of threads
+sleeping while waiting for a particular state predicate to become
+true.</p>
+<h3 id="the-core-methods-wait-notify-and-notify_all">The Core Methods:
+<code>wait()</code>, <code>notify()</code>, and
+<code>notify_all()</code></h3>
+<p>Thread synchronization through a condition variable relies on three
+primary methods, all of which require the calling thread to currently
+hold the associated lock:</p>
+<ol type="1">
+<li><strong><code>wait(timeout=None)</code></strong>: Releases the
+underlying lock and blocks the thread, placing it into an internal wait
+queue. When another thread later notifies this sleeping thread,
+<code>wait()</code> wakes up and automatically re-acquires the lock
+before returning.</li>
+<li><strong><code>notify(n=1)</code></strong>: Wakes up up to
+<code>n</code> threads currently suspended in the <code>wait()</code>
+queue. The notified threads do not immediately resume execution; they
+move from the waiting queue to a state where they contend to re-acquire
+the lock once the notifying thread releases it.</li>
+<li><strong><code>notify_all()</code></strong>: Wakes up all threads
+currently waiting on the condition variable. This is typically used when
+a state change could potentially satisfy the conditions for multiple
+waiting threads simultaneously.</li>
+</ol>
+<h3 id="the-standard-synchronization-pattern">The Standard
+Synchronization Pattern</h3>
+<p>Because threads release the lock when calling <code>wait()</code> and
+must re-acquire it upon waking, the shared state may change between the
+moment a thread is notified and the moment it successfully re-acquires
+the lock. Another thread might intervene and invalidate the
+condition.</p>
+<p>Consequently, waiting threads must always evaluate the predicate
+inside a <code>while</code> loop, never an <code>if</code>
+statement.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> threading</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>queue <span class="op">=</span> []</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>MAX_ITEMS <span class="op">=</span> <span class="dv">5</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>condition <span class="op">=</span> threading.Condition()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> consumer():</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> condition:</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Always check state in a while loop</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">while</span> <span class="bu">len</span>(queue) <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            condition.wait()</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        item <span class="op">=</span> queue.pop(<span class="dv">0</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Consumed: </span><span class="sc">{</span>item<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        condition.notify_all()</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> producer(item):</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> condition:</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">while</span> <span class="bu">len</span>(queue) <span class="op">&gt;=</span> MAX_ITEMS:</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>            condition.wait()</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        queue.append(item)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Produced: </span><span class="sc">{</span>item<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        condition.notify_all()</span></code></pre></div>
+<h3 id="state-synchronization-flow">State Synchronization Flow</h3>
+<p>The typical execution flow between two threads synchronizes state as
+follows:</p>
+<ol type="1">
+<li><strong>Acquisition</strong>: Thread A acquires the lock using
+<code>with condition:</code> to inspect the state.</li>
+<li><strong>Suspension</strong>: The state is not ready (for example,
+the queue is empty). Thread A calls <code>condition.wait()</code>. This
+atomically releases the lock and suspends Thread A.</li>
+<li><strong>Modification</strong>: Thread B acquires the now-free lock
+using <code>with condition:</code>, modifies the shared state (adds an
+item to the queue), and calls <code>condition.notify()</code>.</li>
+<li><strong>Handoff</strong>: Thread B exits its context manager,
+releasing the lock.</li>
+<li><strong>Resumption</strong>: Thread A re-acquires the lock, exits
+the <code>condition.wait()</code> call, re-evaluates the
+<code>while</code> condition, confirms the state is now valid, and
+completes its operation safely.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

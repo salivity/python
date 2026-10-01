@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python NamedTemporaryFile Cross-Platform Persistence - python</title>
+    <meta name="description" content="Python's tempfile.NamedTemporaryFile provides a way to generate temporary files with accessible filesystem names, but its persistence and file-locking behaviors diverge sharply across operating systems. This article examines how the delete and deleteoncl">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-named-temporary-file-cross-platform-persistence">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python NamedTemporaryFile Cross-Platform Persistence - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-named-temporary-file-cross-platform-persistence" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's tempfile.NamedTemporaryFile provides a way to generate temporary files with accessible filesystem names, but its persistence and file-locking behaviors diverge sharply across operating systems. This article examines how the delete and deleteoncl" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-namedtemporaryfile-cross-platform-persistence">Python
+NamedTemporaryFile Cross-Platform Persistence</h1>
+<p>Python's <code>tempfile.NamedTemporaryFile</code> provides a way to
+generate temporary files with accessible filesystem names, but its
+persistence and file-locking behaviors diverge sharply across operating
+systems. This article examines how the <code>delete</code> and
+<code>delete_on_close</code> parameters control file lifecycle, why
+underlying OS semantics—specifically between POSIX systems and
+Windows—cause contrasting accessibility behaviors, and how to structure
+cross-platform code that safely shares and persists temporary files.</p>
+<h3 id="the-default-lifecycle-and-the-delete-parameter">The Default
+Lifecycle and the <code>delete</code> Parameter</h3>
+<p>By default, <code>tempfile.NamedTemporaryFile(delete=True)</code>
+creates a file that exists only as long as its file object remains open.
+The moment the file is closed—either explicitly via
+<code>.close()</code> or implicitly when exiting a context manager—the
+file is unlinked and removed from the filesystem.</p>
+<p>Setting <code>delete=False</code> disables automated deletion upon
+closing, delegating lifecycle management to the developer. The file will
+persist on the filesystem until explicitly removed using
+<code>os.unlink()</code> or <code>os.remove()</code>. While this
+behavior is consistent across all platforms, how the file can be
+accessed while still open depends entirely on the host operating
+system.</p>
+<h3 id="posix-vs-windows-file-locking-and-re-opening">POSIX vs. Windows:
+File Locking and Re-opening</h3>
+<p>The primary challenge in cross-platform persistence lies in OS-level
+file locking semantics when attempting to access the temporary file by
+its <code>name</code> attribute while it is still open:</p>
+<ul>
+<li><strong>POSIX (Linux and macOS):</strong> File descriptors and
+filesystem names are loosely coupled. A file opened by
+<code>NamedTemporaryFile</code> can immediately be reopened by name by
+another process, thread, or function, even before the original handle is
+closed. If unlinked while still open, POSIX semantics retain the file
+data in storage until the last open file descriptor is closed, ensuring
+stable read/write operations without locking conflicts.</li>
+<li><strong>Windows:</strong> The Windows kernel prevents opening an
+existing file if another process already holds an open handle without
+shared read/write/delete permissions. Python's underlying C runtime
+opens files without the <code>FILE_SHARE_DELETE</code> flag enabled for
+subsequent opens by name. Consequently, attempting to open a
+<code>NamedTemporaryFile</code> by its path while it remains open in
+Python raises a <code>PermissionError</code>.</li>
+</ul>
+<h3 id="cross-platform-persistence-in-python-312">Cross-Platform
+Persistence in Python 3.12+</h3>
+<p>Python 3.12 introduced the <code>delete_on_close</code> parameter to
+resolve the cross-platform discrepancy. This decouples closing the file
+handle from deleting the underlying file:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tempfile</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> tempfile.NamedTemporaryFile(delete<span class="op">=</span><span class="va">True</span>, delete_on_close<span class="op">=</span><span class="va">False</span>) <span class="im">as</span> temp_file:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    temp_file.write(<span class="st">b&quot;Cross-platform data&quot;</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    temp_file.close()  <span class="co"># Closes the handle, releasing Windows locks</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># The file still persists on disk across all OS platforms</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    file_path <span class="op">=</span> Path(temp_file.name)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    content <span class="op">=</span> file_path.read_bytes()</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># The file is automatically unlinked upon exiting the context manager</span></span></code></pre></div>
+<p>By setting <code>delete_on_close=False</code> alongside
+<code>delete=True</code>, the file descriptor can be closed safely to
+release platform-specific locks on Windows, while preserving automatic
+cleanup once the context manager terminates on both Windows and
+POSIX.</p>
+<h3 id="handling-persistence-in-python-311-and-earlier">Handling
+Persistence in Python 3.11 and Earlier</h3>
+<p>For environments running Python 3.11 or older, achieving
+cross-platform persistence requires manually managing the lifecycle
+using <code>delete=False</code> combined with a
+<code>try...finally</code> block:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tempfile</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>temp <span class="op">=</span> tempfile.NamedTemporaryFile(delete<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    temp.write(<span class="st">b&quot;Legacy cross-platform data&quot;</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    temp.close()  <span class="co"># Handle closed; Windows lock released</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Safely re-open by name on any OS</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> <span class="bu">open</span>(temp.name, <span class="st">&quot;rb&quot;</span>) <span class="im">as</span> reader:</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        data <span class="op">=</span> reader.read()</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="cf">finally</span>:</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Explicit persistence cleanup</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> os.path.exists(temp.name):</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        os.unlink(temp.name)</span></code></pre></div>
+<h3 id="storage-locations-and-durability">Storage Locations and
+Durability</h3>
+<p>Beyond process lifecycles, physical persistence is bound to
+platform-specific temporary storage locations determined by
+<code>tempfile.gettempdir()</code>:</p>
+<ul>
+<li><strong>Linux/POSIX:</strong> Typically points to <code>/tmp</code>,
+<code>/var/tmp</code>, or paths defined by environment variables
+(<code>TMPDIR</code>, <code>TEMP</code>, <code>TMP</code>). In modern
+Linux distributions, <code>/tmp</code> is often mounted as
+<code>tmpfs</code> (a volatile, RAM-backed filesystem), meaning files do
+not survive a system reboot even if <code>delete=False</code> is
+set.</li>
+<li><strong>Windows:</strong> Defaults to user-specific directories such
+as <code>C:\Users\&lt;User&gt;\AppData\Local\Temp</code> (via
+<code>LOCALAPPDATA</code> or <code>TEMP</code>). These paths reside on
+persistent non-volatile disk storage, persisting across reboots unless
+pruned by OS storage management utilities.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

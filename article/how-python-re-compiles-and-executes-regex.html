@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python re Compiles and Executes Regex - python</title>
+    <meta name="description" content="Python’s re module processes regular expressions through a multi-stage pipeline: parsing the string pattern, compiling it into custom bytecode, and executing that bytecode using an internal backtracking engine implemented in C. To optimize performance,">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-re-compiles-and-executes-regex">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python re Compiles and Executes Regex - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-re-compiles-and-executes-regex" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s re module processes regular expressions through a multi-stage pipeline: parsing the string pattern, compiling it into custom bytecode, and executing that bytecode using an internal backtracking engine implemented in C. To optimize performance," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-re-compiles-and-executes-regex">How Python re
+Compiles and Executes Regex</h1>
+<p>Python’s <code>re</code> module processes regular expressions through
+a multi-stage pipeline: parsing the string pattern, compiling it into
+custom bytecode, and executing that bytecode using an internal
+backtracking engine implemented in C. To optimize performance, Python
+automatically caches compiled patterns in memory. Understanding this
+compilation and execution lifecycle demystifies how patterns are
+transformed from human-readable expressions into machine-level
+instructions and explains the engine's matching behavior and performance
+characteristics.</p>
+<h3 id="1-parsing-the-pattern">1. Parsing the Pattern</h3>
+<p>When a regular expression string is passed to
+<code>re.compile()</code>—or directly to helper functions like
+<code>re.search()</code>—it first reaches the internal
+<code>sre_parse</code> module. This module performs lexical analysis and
+parsing:</p>
+<ul>
+<li><strong>Tokenization:</strong> The raw pattern string is broken down
+into constituent tokens, identifying escape sequences, character
+classes, quantifiers, assertions, and literal characters.</li>
+<li><strong>Abstract Syntax Tree (AST):</strong> The parser constructs a
+hierarchical tree structure representing the logical relationships of
+the pattern. For instance, <code>a|b*</code> is parsed into a branch
+node containing a literal <code>a</code> on one side and a zero-or-more
+repetition node of <code>b</code> on the other.</li>
+<li><strong>Validation:</strong> Syntax errors, such as unbalanced
+parentheses, invalid group names, or malformed range specifications, are
+caught and raised as <code>re.error</code> exceptions during this
+phase.</li>
+</ul>
+<h3 id="2-compilation-into-bytecode">2. Compilation into Bytecode</h3>
+<p>Once the AST is validated, the <code>sre_compile</code> module
+translates the tree into a sequence of low-level instructions:</p>
+<ul>
+<li><strong>Opcode Generation:</strong> The compiler flattens the AST
+into a linear array of 32-bit (or 64-bit, depending on the architecture)
+integer opcodes. These opcodes represent low-level operations such as
+<code>LITERAL</code>, <code>IN</code> (for character sets),
+<code>SUBPATTERN</code>, <code>REPEAT</code>, and
+<code>SUCCESS</code>.</li>
+<li><strong>Flag Application:</strong> Regex flags like
+<code>re.IGNORECASE</code>, <code>re.DOTALL</code>, or
+<code>re.MULTILINE</code> directly modify how these opcodes are
+generated. For example, <code>re.IGNORECASE</code> translates character
+comparisons into specific case-folding instructions.</li>
+<li><strong>Wrapper Construction:</strong> The compiled bytecode array,
+along with metadata such as group count, index mappings, and pattern
+flags, is packaged into a native <code>re.Pattern</code> object.</li>
+</ul>
+<h3 id="3-automatic-pattern-caching">3. Automatic Pattern Caching</h3>
+<p>Compiling regex is computationally expensive compared to execution.
+To minimize overhead, Python includes a built-in cache:</p>
+<ul>
+<li>Whenever an expression is compiled without explicitly using
+<code>re.compile()</code>, Python passes the pattern and flags as a key
+to an internal LRU-style cache dictionary (<code>re._cache</code>).</li>
+<li>The cache typically stores up to 512 compiled patterns.</li>
+<li>If a pattern has already been parsed and compiled, the
+<code>Pattern</code> object is retrieved from the cache instantly,
+bypassing the lexing, AST construction, and bytecode compilation stages
+entirely.</li>
+</ul>
+<h3 id="4-execution-via-the-sre-engine">4. Execution via the SRE
+Engine</h3>
+<p>The compiled bytecode is executed by Python's underlying regex
+virtual machine, implemented in C within the <code>_sre.c</code>
+extension:</p>
+<ul>
+<li><strong>Virtual Machine Execution:</strong> The SRE engine treats
+the compiled opcodes as a instruction stream, matching the instructions
+against the target string via pointers.</li>
+<li><strong>Backtracking (NFA):</strong> Python uses a Traditional
+Non-deterministic Finite Automaton (NFA) algorithm. When the engine
+encounters branches (<code>|</code>) or greedy/non-greedy quantifiers
+(<code>*</code>, <code>+</code>, <code>?</code>), it saves the current
+execution state and string position on a stack.</li>
+<li><strong>Path Exploration:</strong> The engine proceeds along the
+first matching path. If it encounters a failure further along the
+string, it pops the previous state from the stack (backtracks) and
+attempts the next viable path.</li>
+<li><strong>Result Generation:</strong> If the engine reaches a
+<code>SUCCESS</code> opcode, execution halts, and the start and end
+offsets of all captured groups are returned inside a
+<code>re.Match</code> object. If all backtrack points are exhausted
+without reaching <code>SUCCESS</code>, the engine returns
+<code>None</code>.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

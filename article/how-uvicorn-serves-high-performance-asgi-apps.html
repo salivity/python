@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Uvicorn Serves High-Performance ASGI Apps - python</title>
+    <meta name="description" content="This article provides an in-depth look at how Uvicorn functions as an ultra-fast ASGI web server implementation for Python. It covers the limitations of legacy interfaces, the architectural advantages of the Asynchronous Server Gateway Interface (ASGI),">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-uvicorn-serves-high-performance-asgi-apps">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Uvicorn Serves High-Performance ASGI Apps - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-uvicorn-serves-high-performance-asgi-apps" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an in-depth look at how Uvicorn functions as an ultra-fast ASGI web server implementation for Python. It covers the limitations of legacy interfaces, the architectural advantages of the Asynchronous Server Gateway Interface (ASGI)," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-uvicorn-serves-high-performance-asgi-apps">How Uvicorn
+Serves High-Performance ASGI Apps</h1>
+<p>This article provides an in-depth look at how Uvicorn functions as an
+ultra-fast ASGI web server implementation for Python. It covers the
+limitations of legacy interfaces, the architectural advantages of the
+Asynchronous Server Gateway Interface (ASGI), the internal C-based
+components that power Uvicorn's speed, and how it handles concurrency to
+achieve performance comparable to Node.js and Go.</p>
+<h3 id="the-shift-from-wsgi-to-asgi">The Shift from WSGI to ASGI</h3>
+<p>Historically, the Python web ecosystem relied on the Web Server
+Gateway Interface (WSGI). WSGI was designed around a synchronous
+request-response model, where each incoming HTTP connection occupies a
+dedicated worker thread or process until the response completes. This
+model struggles under heavy I/O-bound workloads, such as slow database
+queries, external API calls, or persistent connections like
+WebSockets.</p>
+<p>ASGI (Asynchronous Server Gateway Interface) was created as the
+spiritual successor to WSGI. It provides a standardized interface
+between async-capable Python web servers, frameworks, and applications.
+ASGI supports Python’s native <code>async/await</code> syntax, allowing
+a single process to handle thousands of concurrent connections by
+yielding execution during idle I/O operations instead of blocking system
+resources.</p>
+<h3 id="the-internal-architecture-of-uvicorn">The Internal Architecture
+of Uvicorn</h3>
+<p>Uvicorn is not a full-stack web framework; it is an ASGI web server
+implementation designed specifically for minimal overhead and maximum
+throughput. Its speed relies on two core C-based components:</p>
+<ul>
+<li><strong>uvloop</strong>: A fast, drop-in replacement for the default
+Python <code>asyncio</code> event loop. Built on top of
+<code>libuv</code> (the same C library that drives Node.js),
+<code>uvloop</code> reduces event loop overhead and accelerates socket
+read/write operations to near-C speeds.</li>
+<li><strong>httptools</strong>: A Python binding for the C-based HTTP
+parser used in Node.js. It allows Uvicorn to parse incoming HTTP
+protocol streams, headers, and payloads with minimal CPU cycle
+consumption compared to pure-Python parsers.</li>
+</ul>
+<h3 id="the-request-lifecycle-in-uvicorn">The Request Lifecycle in
+Uvicorn</h3>
+<p>When a client initiates a connection, Uvicorn processes it through an
+optimized event-driven pipeline:</p>
+<ol type="1">
+<li><strong>Connection Acceptance</strong>: The underlying
+<code>libuv</code> event loop accepts the incoming TCP connection
+asynchronously.</li>
+<li><strong>Protocol Parsing</strong>: Data packets are fed directly
+into <code>httptools</code>, which parses the raw bytes into structured
+HTTP data without allocating unnecessary Python objects.</li>
+<li><strong>Scope Creation</strong>: Uvicorn constructs an ASGI
+connection <code>scope</code>—a standard Python dictionary containing
+metadata about the request (HTTP method, headers, path, client address,
+and protocol type).</li>
+<li><strong>Invoking the Application</strong>: Uvicorn invokes the
+target ASGI application (such as FastAPI or Starlette) as an
+asynchronous callable, passing the <code>scope</code>, a
+<code>receive</code> awaitable (for reading the request body), and a
+<code>send</code> awaitable (for returning responses).</li>
+<li><strong>Non-blocking Execution</strong>: The application processes
+the request. If the application waits for I/O (e.g., an asynchronous
+database query), it yields control back to <code>uvloop</code>, which
+immediately services other active requests.</li>
+<li><strong>Response Streaming</strong>: The application calls
+<code>send()</code> with HTTP headers and body chunks. Uvicorn
+translates these calls into raw network packets and sends them across
+the socket.</li>
+</ol>
+<h3 id="concurrency-and-multi-core-scaling">Concurrency and Multi-Core
+Scaling</h3>
+<p>Because Python processes are subject to the Global Interpreter Lock
+(GIL), a single Uvicorn instance runs on a single CPU core. While one
+instance can handle tens of thousands of concurrent I/O-bound requests
+via its event loop, it cannot utilize multiple processor cores for
+CPU-bound tasks.</p>
+<p>To achieve production-grade scale, Uvicorn is typically deployed
+using a process-manager model. Administrators run multiple Uvicorn
+worker processes behind a process manager such as Gunicorn (using the
+<code>UvicornWorker</code> class) or within containerized environments
+like Kubernetes. In this configuration, incoming traffic is
+load-balanced across multiple Uvicorn instances, allowing applications
+to leverage all available CPU cores while maintaining low latency and
+non-blocking I/O execution.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

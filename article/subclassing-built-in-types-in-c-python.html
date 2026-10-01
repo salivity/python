@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subclassing Built-in Types in CPython - python</title>
+    <meta name="description" content="Subclassing built-in types like list or dict directly in CPython introduces subtle bugs and unexpected behaviors because CPython's underlying C implementations bypass overridden Python methods. This article explains why direct subclassing fails to trigge">
+    <link rel="canonical" href="https://salivity.github.io/python/article/subclassing-built-in-types-in-c-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Subclassing Built-in Types in CPython - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/subclassing-built-in-types-in-c-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Subclassing built-in types like list or dict directly in CPython introduces subtle bugs and unexpected behaviors because CPython's underlying C implementations bypass overridden Python methods. This article explains why direct subclassing fails to trigge" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="subclassing-built-in-types-in-cpython">Subclassing Built-in
+Types in CPython</h1>
+<p>Subclassing built-in types like <code>list</code> or
+<code>dict</code> directly in CPython introduces subtle bugs and
+unexpected behaviors because CPython's underlying C implementations
+bypass overridden Python methods. This article explains why direct
+subclassing fails to trigger custom logic during internal operations and
+details the recommended alternatives, such as the
+<code>collections</code> module, to build robust custom data
+structures.</p>
+<h2 id="the-mechanism-c-level-method-dispatch">The Mechanism: C-Level
+Method Dispatch</h2>
+<p>CPython implements built-in data types in optimized C code. When a
+built-in method calls another method on the same object, it rarely uses
+the standard Python dynamic dispatch (Method Resolution Order). Instead,
+it calls fast C-level function pointers defined in the type's underlying
+C structs (such as <code>tp_as_mapping</code> or
+<code>tp_as_sequence</code>).</p>
+<p>Because these internal C routines do not look up attributes
+dynamically through the instance's method resolution order, overridden
+methods written in Python are simply ignored by other built-in
+methods.</p>
+<h2 id="example-broken-method-overrides-in-dict">Example: Broken Method
+Overrides in <code>dict</code></h2>
+<p>If you subclass <code>dict</code> and override
+<code>__setitem__</code> to enforce custom logic, that logic only
+executes when using direct square-bracket assignment:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CustomDict(<span class="bu">dict</span>):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__setitem__</span>(<span class="va">self</span>, key, value):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__setitem__</span>(key, <span class="ss">f&quot;modified_</span><span class="sc">{</span>value<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> CustomDict()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>d[<span class="st">&#39;a&#39;</span>] <span class="op">=</span> <span class="st">&#39;test&#39;</span>          <span class="co"># Calls CustomDict.__setitem__ -&gt; &#39;modified_test&#39;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>d.update({<span class="st">&#39;b&#39;</span>: <span class="st">&#39;test&#39;</span>})  <span class="co"># Calls C-level dict.update -&gt; &#39;test&#39; (bypasses override)</span></span></code></pre></div>
+<p>In this scenario, <code>d['a']</code> reflects the modified value,
+but <code>d['b']</code> does not. The built-in
+<code>dict.update()</code> implementation directly accesses the internal
+hash table in C rather than routing the insertion through the Python
+<code>__setitem__</code> method. The same problem occurs during
+instantiation: passing initial values via
+<code>CustomDict(b='test')</code> also bypasses your custom
+<code>__setitem__</code>.</p>
+<p>A similar problem occurs with <code>list</code>. Overriding
+<code>__getitem__</code> will affect index-based access, but built-in
+methods like <code>extend()</code>, list slicing, or internal iteration
+in C extensions will bypass your implementation.</p>
+<h2 id="memory-and-structural-changes">Memory and Structural
+Changes</h2>
+<p>Directly subclassing a built-in type also alters its memory
+layout:</p>
+<ul>
+<li><strong>Introduction of <code>__dict__</code></strong>: Built-in
+types do not have an instance <code>__dict__</code> by default to
+conserve memory. Subclassing them automatically adds an instance
+dictionary to hold dynamic attributes, increasing memory overhead per
+instance unless explicit <code>__slots__ = ()</code> is declared.</li>
+<li><strong>Immutability Constraints</strong>: Subclassing immutable
+types like <code>int</code>, <code>str</code>, or <code>tuple</code>
+requires overriding <code>__new__</code> instead of
+<code>__init__</code>, because the underlying object is already
+immutable by the time <code>__init__</code> is called.</li>
+</ul>
+<h2
+id="the-standard-solution-collectionsuserdict-and-collectionsuserlist">The
+Standard Solution: <code>collections.UserDict</code> and
+<code>collections.UserList</code></h2>
+<p>To solve this problem, Python provides wrapper classes in the
+standard library: <code>collections.UserDict</code>,
+<code>collections.UserList</code>, and
+<code>collections.UserString</code>.</p>
+<p>Unlike the built-ins, these classes are implemented in pure Python.
+They store an underlying built-in instance in a <code>.data</code>
+attribute and route all operations through standard Python methods:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> collections <span class="im">import</span> UserDict</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ReliableDict(UserDict):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__setitem__</span>(<span class="va">self</span>, key, value):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__setitem__</span>(key, <span class="ss">f&quot;modified_</span><span class="sc">{</span>value<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> ReliableDict()</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>d[<span class="st">&#39;a&#39;</span>] <span class="op">=</span> <span class="st">&#39;test&#39;</span>          <span class="co"># &#39;modified_test&#39;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>d.update({<span class="st">&#39;b&#39;</span>: <span class="st">&#39;test&#39;</span>})  <span class="co"># &#39;modified_test&#39;</span></span></code></pre></div>
+<p>Because <code>UserDict.update()</code> is written in Python, it
+delegates its operations to <code>__setitem__</code>, ensuring your
+custom behavior is uniformly applied.</p>
+<h2 id="the-alternative-collectionsabc">The Alternative:
+<code>collections.abc</code></h2>
+<p>When you need total control over data storage rather than wrapping a
+standard container, inherit from the Abstract Base Classes in
+<code>collections.abc</code> (such as <code>MutableMapping</code> or
+<code>MutableSequence</code>). Implementing the required abstract
+methods ensures that your class behaves like a native container while
+providing full control over dispatch, validation, and storage.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

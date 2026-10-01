@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python 3.13 Removed Modules Under PEP 594 - python</title>
+    <meta name="description" content="Python 3.13 permanently removed 19 legacy standard library modules as the final implementation phase of PEP 594, titled "Removing dead batteries from the standard library." First marked as deprecated in Python 3.11, these modules were eliminated to trim">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-3-13-removed-modules-under-pep-594">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python 3.13 Removed Modules Under PEP 594 - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-3-13-removed-modules-under-pep-594" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python 3.13 permanently removed 19 legacy standard library modules as the final implementation phase of PEP 594, titled "Removing dead batteries from the standard library." First marked as deprecated in Python 3.11, these modules were eliminated to trim" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-313-removed-modules-under-pep-594">Python 3.13 Removed
+Modules Under PEP 594</h1>
+<p>Python 3.13 permanently removed 19 legacy standard library modules as
+the final implementation phase of PEP 594, titled "Removing dead
+batteries from the standard library." First marked as deprecated in
+Python 3.11, these modules were eliminated to trim unmaintained code,
+reduce security vulnerabilities, and eliminate obsolete protocols and
+historical platform dependencies. Below is the complete breakdown of
+every module permanently removed in Python 3.13 alongside recommended
+modern replacements.</p>
+<h3 id="audio-and-multimedia-modules">Audio and Multimedia Modules</h3>
+<ul>
+<li><strong><code>aifc</code></strong>: Handled reading and writing of
+AIFF and AIFC audio formats.
+<ul>
+<li><em>Replacement:</em> Use third-party libraries such as
+<code>soundfile</code> or <code>scipy.io.wavfile</code>.</li>
+</ul></li>
+<li><strong><code>audioop</code></strong>: Provided low-level operations
+on raw sound data chunks.
+<ul>
+<li><em>Replacement:</em> For projects unable to refactor immediate
+audio transformations, use the community-maintained drop-in package
+<code>audioop-lts</code> on PyPI, or migrate to libraries like
+<code>numpy</code> or <code>pydub</code>.</li>
+</ul></li>
+<li><strong><code>chunk</code></strong>: Provided an interface for
+reading IFF-chunked data.
+<ul>
+<li><em>Replacement:</em> Custom file parsers or specialized media
+libraries.</li>
+</ul></li>
+<li><strong><code>imghdr</code></strong>: Determined the file format of
+image byte streams.
+<ul>
+<li><em>Replacement:</em> Use <code>filetype</code>,
+<code>puremagic</code>, or the <code>Pillow</code> library.</li>
+</ul></li>
+<li><strong><code>ossaudiodev</code></strong>: Linux and FreeBSD Open
+Sound System (OSS) audio interface.
+<ul>
+<li><em>Replacement:</em> Use modern audio drivers via libraries like
+<code>sounddevice</code> or <code>pygame</code>.</li>
+</ul></li>
+<li><strong><code>sndhdr</code></strong>: Determined the file format of
+various sound files.
+<ul>
+<li><em>Replacement:</em> Use <code>filetype</code> or
+<code>puremagic</code>.</li>
+</ul></li>
+<li><strong><code>sunau</code></strong>: Read and wrote Sun AU and NeXT
+audio files.
+<ul>
+<li><em>Replacement:</em> Modern audio packages such as
+<code>soundfile</code>.</li>
+</ul></li>
+</ul>
+<h3 id="web-mail-and-network-protocols">Web, Mail, and Network
+Protocols</h3>
+<ul>
+<li><strong><code>cgi</code></strong>: Provided Common Gateway Interface
+helpers for HTTP servers.
+<ul>
+<li><em>Replacement:</em> Modern web frameworks (FastAPI, Flask, Django)
+or standalone parsers such as <code>multipart</code> and
+<code>urllib.parse</code>.</li>
+</ul></li>
+<li><strong><code>cgitb</code></strong>: Traceback manager for CGI
+scripts.
+<ul>
+<li><em>Replacement:</em> Standard logging, modern framework error
+handlers, or third-party error trackers like Sentry.</li>
+</ul></li>
+<li><strong><code>mailcap</code></strong>: Handled Unix mailcap files
+used to configure helper applications for MIME types.
+<ul>
+<li><em>Replacement:</em> Use the <code>mimetypes</code> standard
+library module or system-level configuration handling.</li>
+</ul></li>
+<li><strong><code>nntplib</code></strong>: Usenet news transfer protocol
+(NNTP) client.
+<ul>
+<li><em>Replacement:</em> Specialized third-party packages from PyPI if
+NNTP support is still required.</li>
+</ul></li>
+<li><strong><code>telnetlib</code></strong>: Telnet protocol client.
+<ul>
+<li><em>Replacement:</em> Third-party modules such as
+<code>telnetlib3</code> or <code>netmiko</code>.</li>
+</ul></li>
+</ul>
+<h3 id="data-formatting-and-encodings">Data Formatting and
+Encodings</h3>
+<ul>
+<li><strong><code>uu</code></strong>: Provided uuencode and uudecode
+functionality for binary-to-text translation.
+<ul>
+<li><em>Replacement:</em> The standard <code>base64</code> module or
+custom wrappers.</li>
+</ul></li>
+<li><strong><code>xdrlib</code></strong>: Implemented Sun's External
+Data Representation (XDR) standard.
+<ul>
+<li><em>Replacement:</em> Structured binary protocols like Protocol
+Buffers, MessagePack, or custom <code>struct</code>
+implementations.</li>
+</ul></li>
+</ul>
+<h3 id="system-shell-and-platform-specifics">System, Shell, and Platform
+Specifics</h3>
+<ul>
+<li><strong><code>crypt</code></strong>: Handled password hashing on
+Unix systems via the system <code>crypt(3)</code> function.
+<ul>
+<li><em>Replacement:</em> The standard <code>hashlib</code> module for
+modern hashing, or dedicated third-party libraries like
+<code>bcrypt</code>, <code>argon2-cffi</code>, or
+<code>passlib</code>.</li>
+</ul></li>
+<li><strong><code>msilib</code></strong>: Supported the creation of
+Windows Installer (<code>.msi</code>) packages.
+<ul>
+<li><em>Replacement:</em> External tools such as WiX Toolset or
+packaging tools like PyInstaller and Inno Setup.</li>
+</ul></li>
+<li><strong><code>nis</code></strong>: Interface to Sun's Network
+Information Service (Yellow Pages).
+<ul>
+<li><em>Replacement:</em> System-level directory services or LDAP
+libraries like <code>ldap3</code>.</li>
+</ul></li>
+<li><strong><code>pipes</code></strong>: Constructed Unix shell
+execution pipelines.
+<ul>
+<li><em>Replacement:</em> The standard <code>subprocess</code>
+module.</li>
+</ul></li>
+<li><strong><code>spwd</code></strong>: Direct interface to Unix shadow
+password database (<code>/etc/shadow</code>).
+<ul>
+<li><em>Replacement:</em> Modern system authentication modules like PAM
+via <code>python-pam</code>.</li>
+</ul></li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

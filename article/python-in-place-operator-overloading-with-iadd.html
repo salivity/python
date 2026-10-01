@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python In-Place Operator Overloading with __iadd__ - python</title>
+    <meta name="description" content="In Python, in-place operator overloading allows developers to define custom behavior for augmented assignment expressions such as += through the special method iadd. This article explains how Python evaluates augmented assignments, how iadd differentiate">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-in-place-operator-overloading-with-iadd">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python In-Place Operator Overloading with __iadd__ - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-in-place-operator-overloading-with-iadd" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, in-place operator overloading allows developers to define custom behavior for augmented assignment expressions such as += through the special method iadd. This article explains how Python evaluates augmented assignments, how iadd differentiate" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-in-place-operator-overloading-with-iadd">Python In-Place
+Operator Overloading with <strong>iadd</strong></h1>
+<p>In Python, in-place operator overloading allows developers to define
+custom behavior for augmented assignment expressions such as
+<code>+=</code> through the special method <code>__iadd__</code>. This
+article explains how Python evaluates augmented assignments, how
+<code>__iadd__</code> differentiates between mutable and immutable data
+structures, the fallback mechanism to standard addition, and the
+mandatory return requirements for custom implementations.</p>
+<h2 id="how-augmented-assignment-works">How Augmented Assignment
+Works</h2>
+<p>When Python encounters an expression like <code>x += y</code>, it
+does not immediately evaluate it as <code>x = x + y</code>. Instead, it
+first checks if the object referenced by <code>x</code> defines an
+in-place addition method, <code>__iadd__</code>.</p>
+<p>The underlying bytecode execution treats the statement conceptually
+as:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> x.<span class="fu">__iadd__</span>(y)</span></code></pre></div>
+<p>Because of this assignment step, the <code>__iadd__</code> method
+must return an object—almost always <code>self</code> when mutating an
+existing instance—which is then rebound to the target variable name.</p>
+<h2 id="the-fallback-to-__add__">The Fallback to
+<code>__add__</code></h2>
+<p>If a class does not implement <code>__iadd__</code>, or if
+<code>__iadd__</code> returns the singleton <code>NotImplemented</code>,
+Python falls back to standard binary addition. The evaluation order
+proceeds as follows:</p>
+<ol type="1">
+<li>Look for <code>x.__iadd__(y)</code>. If implemented and not
+returning <code>NotImplemented</code>, rebind <code>x</code> to the
+returned result.</li>
+<li>If <code>__iadd__</code> is missing or returns
+<code>NotImplemented</code>, attempt <code>x.__add__(y)</code>.</li>
+<li>If <code>__add__</code> is not implemented or returns
+<code>NotImplemented</code>, attempt the reflected addition method on
+the right operand: <code>y.__radd__(x)</code>.</li>
+<li>If a valid result is returned from <code>__add__</code> or
+<code>__radd__</code>, rebind <code>x</code> to that new object.</li>
+<li>If all options return <code>NotImplemented</code>, Python raises a
+<code>TypeError</code>.</li>
+</ol>
+<p>This fallback ensures that any type supporting standard addition
+(<code>+</code>) automatically supports augmented addition
+(<code>+=</code>) without requiring explicit implementation of
+<code>__iadd__</code>.</p>
+<h2 id="mutability-and-in-place-behavior">Mutability and In-Place
+Behavior</h2>
+<p>The primary purpose of <code>__iadd__</code> is performance
+optimization through mutation.</p>
+<h3 id="mutable-objects">Mutable Objects</h3>
+<p>For mutable objects like lists, creating a brand-new object on every
+concatenation is computationally expensive. Python’s <code>list</code>
+implements <code>__iadd__</code> to extend the existing list in memory
+rather than allocating a new one:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">2</span>]</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> a</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>a <span class="op">+=</span> [<span class="dv">3</span>]</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(a)  <span class="co"># [1, 2, 3]</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(b)  <span class="co"># [1, 2, 3] (b reflects the mutation because &#39;a&#39; and &#39;b&#39; share identity)</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(a <span class="kw">is</span> b)  <span class="co"># True</span></span></code></pre></div>
+<h3 id="immutable-objects">Immutable Objects</h3>
+<p>Immutable objects such as integers, strings, and tuples cannot be
+modified in place. These types do not implement mutating behavior in
+<code>__iadd__</code>. When executing <code>+=</code> on an immutable
+object, Python either relies on the fallback to <code>__add__</code> or
+returns a new instance from <code>__iadd__</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> x</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>x <span class="op">+=</span> <span class="dv">5</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(x)  <span class="co"># 15</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(y)  <span class="co"># 10</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(x <span class="kw">is</span> y)  <span class="co"># False (a new integer object was assigned to x)</span></span></code></pre></div>
+<h2 id="implementing-__iadd__-in-custom-classes">Implementing
+<code>__iadd__</code> in Custom Classes</h2>
+<p>When defining <code>__iadd__</code> in a custom class, two rules must
+be observed:</p>
+<ol type="1">
+<li><strong>Mutate the internal state</strong> of the current instance
+rather than creating a new one.</li>
+<li><strong>Return <code>self</code></strong> at the end of the method.
+Forgetting to return <code>self</code> causes the variable to be rebound
+to <code>None</code>, since Python assigns the result of the method call
+back to the variable.</li>
+</ol>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Vector:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, x, y):</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.x <span class="op">=</span> x</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.y <span class="op">=</span> y</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__add__</span>(<span class="va">self</span>, other):</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;Standard addition: returns a new instance.&quot;&quot;&quot;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(other, Vector):</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> Vector(<span class="va">self</span>.x <span class="op">+</span> other.x, <span class="va">self</span>.y <span class="op">+</span> other.y)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">NotImplemented</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__iadd__</span>(<span class="va">self</span>, other):</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;In-place addition: mutates self and returns self.&quot;&quot;&quot;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">isinstance</span>(other, Vector):</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.x <span class="op">+=</span> other.x</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.y <span class="op">+=</span> other.y</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">self</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">NotImplemented</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__repr__</span>(<span class="va">self</span>):</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f&quot;Vector(</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>x<span class="sc">}</span><span class="ss">, </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>y<span class="sc">}</span><span class="ss">)&quot;</span></span></code></pre></div>
+<p>If <code>v = Vector(1, 2)</code>, executing
+<code>v += Vector(3, 4)</code> updates the existing <code>v</code>
+coordinates to <code>(4, 6)</code> and maintains its original memory
+address.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

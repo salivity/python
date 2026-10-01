@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>os.fork vs os.spawn in Python: Key Differences - python</title>
+    <meta name="description" content="When managing sub-processes in Unix using Python, os.fork() and os.spawn() represent two fundamentally different approaches to process creation. While os.fork() duplicates the existing parent Python process and its runtime state via Unix's copy-on-write">
+    <link rel="canonical" href="https://salivity.github.io/python/article/os-fork-vs-os-spawn-in-python-key-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="os.fork vs os.spawn in Python: Key Differences - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/os-fork-vs-os-spawn-in-python-key-differences" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When managing sub-processes in Unix using Python, os.fork() and os.spawn() represent two fundamentally different approaches to process creation. While os.fork() duplicates the existing parent Python process and its runtime state via Unix's copy-on-write" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="osfork-vs-osspawn-in-python-key-differences">os.fork vs os.spawn
+in Python: Key Differences</h1>
+<p>When managing sub-processes in Unix using Python,
+<code>os.fork()</code> and <code>os.spawn()</code> represent two
+fundamentally different approaches to process creation. While
+<code>os.fork()</code> duplicates the existing parent Python process and
+its runtime state via Unix's copy-on-write mechanism,
+<code>os.spawn()</code> creates a new process to execute an external
+program directly, functioning as a wrapper around the traditional
+fork-and-exec routine. Understanding their differences is essential for
+managing process state, memory, and application stability.</p>
+<h2 id="how-osfork-works">How <code>os.fork()</code> Works</h2>
+<p>The <code>os.fork()</code> system call is native to Unix-like
+operating systems. When invoked, it clones the calling process
+entirely:</p>
+<ul>
+<li><strong>State Duplication:</strong> The child process receives an
+exact duplicate of the parent process's address space, including memory,
+file descriptors, and execution state at the exact moment of the
+call.</li>
+<li><strong>Execution Continuation:</strong> Both parent and child
+processes continue execution from the instruction immediately following
+the <code>fork()</code> call.</li>
+<li><strong>Return Values:</strong> Python distinguishes between the two
+processes using the return value of <code>os.fork()</code>:
+<ul>
+<li>Returns <code>0</code> inside the child process.</li>
+<li>Returns the child’s Process ID (PID) inside the parent process.</li>
+<li>Raises an <code>OSError</code> if the process creation fails.</li>
+</ul></li>
+</ul>
+<p>Because <code>os.fork()</code> copies the entire Python runtime, it
+carries risks in multi-threaded programs. Threads existing prior to the
+fork are not copied to the child process, which can lead to deadlocks if
+a thread was holding an internal lock (such as memory allocators or the
+Global Interpreter Lock) at the time of the fork.</p>
+<h2 id="how-osspawn-works">How <code>os.spawn()</code> Works</h2>
+<p>The <code>os.spawn()</code> family of functions (such as
+<code>os.spawnl</code>, <code>os.spawnv</code>, <code>os.spawnlp</code>,
+and <code>os.spawnvp</code>) creates a new process specifically to run
+an external executable file, rather than continuing to execute the
+existing Python script.</p>
+<ul>
+<li><strong>Combined Fork and Exec:</strong> Under the hood on Unix
+systems, <code>os.spawn()</code> effectively wraps
+<code>os.fork()</code> followed by an <code>os.exec*()</code> call. It
+creates a child process and immediately replaces that child's process
+image with the specified program.</li>
+<li><strong>Execution Modes:</strong> <code>os.spawn()</code> requires a
+mode flag as its first argument:
+<ul>
+<li><code>os.P_WAIT</code>: The parent process blocks until the spawned
+child process finishes execution, returning the exit code.</li>
+<li><code>os.P_NOWAIT</code> / <code>os.P_NOWAITO</code>: The parent
+process continues execution concurrently, returning the child's
+PID.</li>
+</ul></li>
+<li><strong>Clean Execution State:</strong> Unlike
+<code>os.fork()</code>, the child process does not run the existing
+Python code; it starts fresh by loading the specified binary or script
+from disk.</li>
+</ul>
+<h2 id="core-comparisons">Core Comparisons</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>os.fork()</code></th>
+<th style="text-align: left;"><code>os.spawn()</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Primary Purpose</strong></td>
+<td style="text-align: left;">Duplicates current Python script
+execution</td>
+<td style="text-align: left;">Executes an external binary or
+program</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Execution Point</strong></td>
+<td style="text-align: left;">Continues from the exact line where
+called</td>
+<td style="text-align: left;">Starts execution of the target program
+from its entry point</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Memory State</strong></td>
+<td style="text-align: left;">Clones parent process memory
+(copy-on-write)</td>
+<td style="text-align: left;">Discards parent memory space in child to
+run the target binary</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Portability</strong></td>
+<td style="text-align: left;">Unix-only (Linux, macOS, BSD)</td>
+<td style="text-align: left;">Cross-platform (historically supported on
+Windows and Unix)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Thread Safety</strong></td>
+<td style="text-align: left;">Unsafe in multi-threaded Python
+programs</td>
+<td style="text-align: left;">Safer for external commands, as memory is
+replaced</td>
+</tr>
+</tbody>
+</table>
+<h2 id="modern-best-practices">Modern Best Practices</h2>
+<p>While both methods exist in Python's standard library,
+<code>os.spawn()</code> is largely considered legacy. Python officially
+recommends using the higher-level <code>subprocess</code> module
+(<code>subprocess.run()</code>, <code>subprocess.Popen()</code>) for
+running external executables, as it offers better error handling,
+input/output piping, and cross-platform consistency. For parallel Python
+task execution, the <code>multiprocessing</code> module is preferred
+over manual <code>os.fork()</code> calls.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

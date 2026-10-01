@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python TypedDict: Required vs NotRequired Keys - python</title>
+    <meta name="description" content="Python's typing.TypedDict allows developers to define types for dictionary keys and values, but early versions struggled with mixing mandatory and optional keys without cumbersome inheritance patterns. Introduced in Python 3.11 via PEP 655 (and available">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-typed-dict-required-vs-not-required-keys">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python TypedDict: Required vs NotRequired Keys - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-typed-dict-required-vs-not-required-keys" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's typing.TypedDict allows developers to define types for dictionary keys and values, but early versions struggled with mixing mandatory and optional keys without cumbersome inheritance patterns. Introduced in Python 3.11 via PEP 655 (and available" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-typeddict-required-vs-notrequired-keys">Python TypedDict:
+Required vs NotRequired Keys</h1>
+<p>Python's <code>typing.TypedDict</code> allows developers to define
+types for dictionary keys and values, but early versions struggled with
+mixing mandatory and optional keys without cumbersome inheritance
+patterns. Introduced in Python 3.11 via PEP 655 (and available in
+earlier versions via <code>typing_extensions</code>),
+<code>typing.Required</code> and <code>typing.NotRequired</code> solve
+this issue. This article explains how these type qualifiers define key
+optionality on a per-field basis, how they interact with the
+<code>total</code> parameter, and how they differ from
+<code>typing.Optional</code>.</p>
+<h3 id="the-limitation-of-the-total-parameter">The Limitation of the
+<code>total</code> Parameter</h3>
+<p>Before <code>Required</code> and <code>NotRequired</code>,
+optionality in a <code>TypedDict</code> was controlled exclusively at
+the class level through the <code>total</code> boolean flag:</p>
+<ul>
+<li>When <code>total=True</code> (the default), every defined key must
+be present in the dictionary.</li>
+<li>When <code>total=False</code>, all keys are optional and can be
+omitted.</li>
+</ul>
+<p>To create a dictionary where some keys were required and others were
+optional, developers had to create two separate <code>TypedDict</code>
+classes and inherit one from the other:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypedDict</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> UserBase(TypedDict):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    name: <span class="bu">str</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> User(UserBase, total<span class="op">=</span><span class="va">False</span>):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    email: <span class="bu">str</span></span></code></pre></div>
+<p>This approach led to boilerplate code, reduced readability, and
+scaled poorly for complex schemas.</p>
+<h3 id="explicit-optionality-with-required-and-notrequired">Explicit
+Optionality with <code>Required</code> and <code>NotRequired</code></h3>
+<p>PEP 655 introduced <code>Required</code> and <code>NotRequired</code>
+as type qualifiers to declare optionality directly on individual keys
+within a single <code>TypedDict</code> definition.</p>
+<h4 id="using-notrequired-in-a-standard-typeddict-totaltrue">Using
+<code>NotRequired</code> in a Standard <code>TypedDict</code>
+(<code>total=True</code>)</h4>
+<p>Because <code>total=True</code> is the default behavior, every field
+is required unless explicitly marked with <code>NotRequired</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypedDict, NotRequired</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> UserProfile(TypedDict):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    user_id: <span class="bu">int</span>              <span class="co"># Mandatory</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    username: <span class="bu">str</span>             <span class="co"># Mandatory</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    bio: NotRequired[<span class="bu">str</span>]     <span class="co"># Optional key</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    avatar_url: NotRequired[<span class="bu">str</span>]  <span class="co"># Optional key</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Valid: bio and avatar_url are omitted</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>user_1: UserProfile <span class="op">=</span> {</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;user_id&quot;</span>: <span class="dv">1</span>,</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;username&quot;</span>: <span class="st">&quot;jdoe&quot;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Valid: bio is included</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>user_2: UserProfile <span class="op">=</span> {</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;user_id&quot;</span>: <span class="dv">2</span>,</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;username&quot;</span>: <span class="st">&quot;asmith&quot;</span>,</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;bio&quot;</span>: <span class="st">&quot;Software engineer&quot;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="using-required-in-a-partial-typeddict-totalfalse">Using
+<code>Required</code> in a Partial <code>TypedDict</code>
+(<code>total=False</code>)</h4>
+<p>When <code>total=False</code> is specified, all fields are optional
+by default. You can use <code>Required</code> to specify which
+individual fields must always be present.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypedDict, Required</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> APIRequest(TypedDict, total<span class="op">=</span><span class="va">False</span>):</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    endpoint: Required[<span class="bu">str</span>]   <span class="co"># Mandatory key</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    payload: <span class="bu">dict</span>             <span class="co"># Optional key</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    timeout: <span class="bu">int</span>              <span class="co"># Optional key</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Valid: endpoint is provided, others are omitted</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>request: APIRequest <span class="op">=</span> {</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;endpoint&quot;</span>: <span class="st">&quot;/api/v1/users&quot;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="notrequiredt-vs-optionalt"><code>NotRequired[T]</code> vs.
+<code>Optional[T]</code></h3>
+<p>A common point of confusion is the distinction between
+<code>NotRequired[T]</code> and <code>Optional[T]</code> (or
+<code>T | None</code>). They address different concepts in type
+checking:</p>
+<ul>
+<li><strong><code>NotRequired[T]</code></strong> defines the presence of
+the <strong>key</strong>. The key itself can either exist in the
+dictionary or be omitted entirely. If the key exists, its value must
+match type <code>T</code>.</li>
+<li><strong><code>Optional[T]</code></strong> defines the type of the
+<strong>value</strong>. The key <strong>must</strong> still exist in the
+dictionary, but its value can be either <code>T</code> or
+<code>None</code>.</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypedDict, Optional, NotRequired</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Settings(TypedDict):</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    theme: Optional[<span class="bu">str</span>]        <span class="co"># Key MUST exist, value can be str or None</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    notifications: NotRequired[<span class="bu">bool</span>]  <span class="co"># Key MAY be absent, value must be bool</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Valid</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>s1: Settings <span class="op">=</span> {<span class="st">&quot;theme&quot;</span>: <span class="va">None</span>}</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Valid</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>s2: Settings <span class="op">=</span> {<span class="st">&quot;theme&quot;</span>: <span class="st">&quot;dark&quot;</span>, <span class="st">&quot;notifications&quot;</span>: <span class="va">True</span>}</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Type Error: &quot;theme&quot; key is missing</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>s3: Settings <span class="op">=</span> {<span class="st">&quot;notifications&quot;</span>: <span class="va">False</span>}</span></code></pre></div>
+<p>If you want a key that can be omitted <strong>and</strong> accept a
+<code>None</code> value when present, you combine both:
+<code>NotRequired[Optional[str]]</code>.</p>
+<h3 id="inspecting-optionality-at-runtime">Inspecting Optionality at
+Runtime</h3>
+<p>Python tracks <code>Required</code> and <code>NotRequired</code> keys
+in special class attributes: <code>__required_keys__</code> and
+<code>__optional_keys__</code>. These frozensets allow libraries,
+serializers, and runtime validation tools to inspect which fields must
+be present.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(UserProfile.__required_keys__)  <span class="co"># frozenset({&#39;user_id&#39;, &#39;username&#39;})</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(UserProfile.__optional_keys__)  <span class="co"># frozenset({&#39;bio&#39;, &#39;avatar_url&#39;})</span></span></code></pre></div>
+<p>Using <code>typing.Required</code> and
+<code>typing.NotRequired</code> eliminates the need for multi-class
+inheritance workarounds and provides precise, readable control over
+dictionary schemas in Python type systems.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

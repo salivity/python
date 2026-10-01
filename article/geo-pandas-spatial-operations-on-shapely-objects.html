@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoPandas Spatial Operations on Shapely Objects - python</title>
+    <meta name="description" content="GeoPandas extends the Python geospatial stack by wrapping Shapely geometric objects inside pandas data structures (GeoSeries and GeoDataFrame). While Shapely provides the foundation for individual geometric objects (such as points, linestrings, and polyg">
+    <link rel="canonical" href="https://salivity.github.io/python/article/geo-pandas-spatial-operations-on-shapely-objects">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="GeoPandas Spatial Operations on Shapely Objects - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/geo-pandas-spatial-operations-on-shapely-objects" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="GeoPandas extends the Python geospatial stack by wrapping Shapely geometric objects inside pandas data structures (GeoSeries and GeoDataFrame). While Shapely provides the foundation for individual geometric objects (such as points, linestrings, and polyg" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="geopandas-spatial-operations-on-shapely-objects">GeoPandas
+Spatial Operations on Shapely Objects</h1>
+<p>GeoPandas extends the Python geospatial stack by wrapping Shapely
+geometric objects inside pandas data structures (<code>GeoSeries</code>
+and <code>GeoDataFrame</code>). While Shapely provides the foundation
+for individual geometric objects (such as points, linestrings, and
+polygons), GeoPandas applies these operations across entire datasets
+using vectorized operations. This article outlines the core spatial
+operations supported by GeoPandas, ranging from basic geometric
+measurements and spatial predicates to complex spatial joins, overlays,
+and aggregations.</p>
+<h2 id="geometric-measurements-and-properties">Geometric Measurements
+and Properties</h2>
+<p>GeoPandas exposes standard geometric properties directly as
+vectorized attributes on <code>GeoSeries</code> and
+<code>GeoDataFrame</code> objects:</p>
+<ul>
+<li><strong><code>area</code></strong>: Computes the 2D surface area of
+polygon or multipolygon geometries.</li>
+<li><strong><code>length</code></strong>: Calculates the perimeter of
+polygon geometries or the length of line geometries.</li>
+<li><strong><code>bounds</code></strong>: Returns a DataFrame containing
+the minimum and maximum coordinate values (<code>minx</code>,
+<code>miny</code>, <code>maxx</code>, <code>maxy</code>) for each
+geometry.</li>
+<li><strong><code>total_bounds</code></strong>: Returns an array with
+the overall bounding box of the entire series.</li>
+<li><strong><code>distance(other)</code></strong>: Calculates the
+minimum Euclidean distance from each geometry in the series to another
+geometry or aligned series.</li>
+</ul>
+<h2 id="geometric-transformations-and-constructors">Geometric
+Transformations and Constructors</h2>
+<p>GeoPandas allows you to construct new geometries from existing ones
+element-by-element:</p>
+<ul>
+<li><strong><code>buffer(distance)</code></strong>: Generates a new
+polygon representing all points within a specified distance of the
+geometry.</li>
+<li><strong><code>centroid</code></strong>: Computes the geometric
+center point of each geometry.</li>
+<li><strong><code>representative_point()</code></strong>: Returns a
+point guaranteed to lie within the geometry (unlike centroids, which can
+fall outside concave polygons).</li>
+<li><strong><code>convex_hull</code></strong>: Computes the smallest
+convex polygon that encloses all points of the geometry.</li>
+<li><strong><code>envelope</code></strong>: Returns the minimum
+axis-aligned bounding rectangle containing each geometry.</li>
+<li><strong><code>simplify(tolerance)</code></strong>: Reduces the
+number of vertices in geometries using algorithms such as
+Douglas-Peucker.</li>
+<li><strong><code>boundary</code></strong>: Extracts the
+lower-dimensional boundary of each geometry (e.g., lines from polygons,
+points from lines).</li>
+</ul>
+<h2 id="spatial-predicates-binary-relationships">Spatial Predicates
+(Binary Relationships)</h2>
+<p>Spatial predicates evaluate the topological relationship between two
+geometries and return boolean values. GeoPandas vectorizes these
+operations against single geometries or aligned series:</p>
+<ul>
+<li><strong><code>intersects(other)</code></strong>: Returns
+<code>True</code> if geometries share any point in common.</li>
+<li><strong><code>contains(other)</code></strong>: Returns
+<code>True</code> if no points of the other geometry lie outside the
+base geometry.</li>
+<li><strong><code>within(other)</code></strong>: Returns
+<code>True</code> if the base geometry lies entirely inside the other
+geometry.</li>
+<li><strong><code>crosses(other)</code></strong>: Returns
+<code>True</code> if geometries intersect, but neither fully contains
+the other.</li>
+<li><strong><code>touches(other)</code></strong>: Returns
+<code>True</code> if geometries have at least one common boundary point,
+but their interiors do not intersect.</li>
+<li><strong><code>disjoint(other)</code></strong>: Returns
+<code>True</code> if geometries share no points in common.</li>
+<li><strong><code>overlaps(other)</code></strong>: Returns
+<code>True</code> if geometries share interior space of the same
+dimension without one containing the other.</li>
+<li><strong><code>covers(other)</code> /
+<code>covered_by(other)</code></strong>: Similar to
+<code>contains</code> and <code>within</code>, but also includes
+boundaries.</li>
+</ul>
+<h2 id="set-theoretic-operations">Set-Theoretic Operations</h2>
+<p>GeoPandas supports element-wise set operations to produce new
+geometries derived from intersections and differences:</p>
+<ul>
+<li><strong><code>intersection(other)</code></strong>: Generates the
+common portion shared by pairs of geometries.</li>
+<li><strong><code>union(other)</code></strong>: Combines the geometric
+spaces of pairs of geometries.</li>
+<li><strong><code>difference(other)</code></strong>: Subtracts the
+portion of the other geometry from the base geometry.</li>
+<li><strong><code>symmetric_difference(other)</code></strong>: Retains
+regions found in either geometry, excluding their overlap.</li>
+</ul>
+<h2 id="dataset-level-spatial-operations">Dataset-Level Spatial
+Operations</h2>
+<p>Beyond element-wise operations, GeoPandas offers dataset-level tools
+that operate on entire tables:</p>
+<h3 id="spatial-joins-sjoin-and-sjoin_nearest">Spatial Joins
+(<code>sjoin</code> and <code>sjoin_nearest</code>)</h3>
+<ul>
+<li><strong><code>gpd.sjoin()</code></strong>: Merges attributes from
+two <code>GeoDataFrame</code> objects based on their spatial
+relationship (using predicates like <code>intersects</code>,
+<code>within</code>, or <code>contains</code>).</li>
+<li><strong><code>gpd.sjoin_nearest()</code></strong>: Joins attributes
+based on proximity, matching features in one dataset to their nearest
+geometric neighbor in another.</li>
+</ul>
+<h3 id="spatial-overlays-overlay">Spatial Overlays
+(<code>overlay</code>)</h3>
+<ul>
+<li><strong><code>gpd.overlay()</code></strong>: Computes new geometries
+by combining two polygon layers using set-theoretic algorithms
+(<code>intersection</code>, <code>union</code>, <code>difference</code>,
+<code>symmetric_difference</code>, or <code>identity</code>). Unlike
+element-wise methods, <code>overlay</code> computes interactions across
+all intersecting features in the layers.</li>
+</ul>
+<h3 id="spatial-aggregation-dissolve">Spatial Aggregation
+(<code>dissolve</code>)</h3>
+<ul>
+<li><strong><code>GeoDataFrame.dissolve()</code></strong>: Mirrors the
+pandas <code>groupby</code> function, aggregating rows based on common
+column values and merging their associated geometries using Shapely's
+<code>unary_union</code>.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

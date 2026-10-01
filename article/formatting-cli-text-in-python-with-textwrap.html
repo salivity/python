@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formatting CLI Text in Python with textwrap - python</title>
+    <meta name="description" content="Building command-line interface (CLI) applications in Python often requires presenting long strings, help menus, or multiline messages to the user in a clean, readable fashion. The built-in textwrap module provides automated text formatting utilities des">
+    <link rel="canonical" href="https://salivity.github.io/python/article/formatting-cli-text-in-python-with-textwrap">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Formatting CLI Text in Python with textwrap - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/formatting-cli-text-in-python-with-textwrap" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Building command-line interface (CLI) applications in Python often requires presenting long strings, help menus, or multiline messages to the user in a clean, readable fashion. The built-in textwrap module provides automated text formatting utilities des" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="formatting-cli-text-in-python-with-textwrap">Formatting CLI Text
+in Python with textwrap</h1>
+<p>Building command-line interface (CLI) applications in Python often
+requires presenting long strings, help menus, or multiline messages to
+the user in a clean, readable fashion. The built-in
+<code>textwrap</code> module provides automated text formatting
+utilities designed to wrap, fill, indent, and trim text blocks. This
+article explains the primary purposes of <code>textwrap</code> in Python
+CLI tools, highlighting its essential functions and how it improves the
+terminal user experience.</p>
+<h3 id="preventing-awkward-terminal-line-breaks">Preventing Awkward
+Terminal Line Breaks</h3>
+<p>By default, terminal emulators wrap lines strictly by character
+limits. When a long string reaches the edge of a terminal window,
+standard output splits words arbitrarily across two lines, severely
+reducing readability.</p>
+<p>The primary purpose of <code>textwrap</code> is word-aware wrapping.
+It ensures that line breaks occur at natural whitespace boundaries or
+hyphens rather than mid-word.</p>
+<h3 id="key-functions-and-their-cli-applications">Key Functions and
+Their CLI Applications</h3>
+<p>The <code>textwrap</code> module provides a set of high-level
+convenience functions tailored to common formatting needs:</p>
+<ul>
+<li><strong><code>textwrap.fill(text, width=70)</code></strong>: Wraps a
+single paragraph and returns a single string containing the wrapped
+lines separated by newline characters (<code>\n</code>). In a CLI, this
+is used to format long descriptions or error messages to match standard
+reading widths.</li>
+<li><strong><code>textwrap.wrap(text, width=70)</code></strong>: Similar
+to <code>fill()</code>, but returns a Python list of strings, with each
+string representing a single line. This is useful when you need to
+process or style lines individually before printing.</li>
+<li><strong><code>textwrap.dedent(text)</code></strong>: Removes any
+common leading whitespace from every line in a multiline string. In CLI
+development, help messages and documentation are frequently written as
+multiline docstrings, which naturally carry indentation from the
+surrounding code. Using <code>dedent()</code> allows developers to keep
+readable source code without outputting unnecessary leading spaces to
+the terminal.</li>
+<li><strong><code>textwrap.indent(text, prefix)</code></strong>: Adds a
+specific prefix (such as spaces, tabs, or symbols like
+<code>&gt; </code>) to the start of selected lines. This is ideal for
+rendering nested lists, code snippets, or block quotes within a CLI
+output.</li>
+<li><strong><code>textwrap.shorten(text, width, placeholder="...")</code></strong>:
+Truncates a string to fit within a designated character limit,
+collapsing whitespace and appending an ellipsis while still breaking
+only on word boundaries. This is practical for CLI tables, summary
+views, and status listings where column width is constrained.</li>
+</ul>
+<h3 id="dynamic-layouts-using-terminal-width">Dynamic Layouts Using
+Terminal Width</h3>
+<p>Hardcoding line lengths can cause visual inconsistencies on different
+screens. When combined with Python’s <code>os.get_terminal_size()</code>
+or <code>shutil.get_terminal_size()</code>, <code>textwrap</code> can
+dynamically adapt output to fit the user's current terminal
+dimensions:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> shutil</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> textwrap</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>terminal_width <span class="op">=</span> shutil.get_terminal_size().columns</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>wrapped_text <span class="op">=</span> textwrap.fill(long_message, width<span class="op">=</span><span class="bu">min</span>(terminal_width, <span class="dv">80</span>))</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(wrapped_text)</span></code></pre></div>
+<p>By capping the width to an upper limit (such as 80 characters) or
+expanding to the terminal's boundary, applications maintain a balanced
+reading flow.</p>
+<h3 id="consistent-indentation-for-help-menus">Consistent Indentation
+for Help Menus</h3>
+<p>CLI interfaces often require hierarchical visual structures, such as
+command lists where descriptions appear indented beneath command names.
+The <code>TextWrapper</code> class allows fine-grained control via
+parameters like <code>initial_indent</code> and
+<code>subsequent_indent</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>wrapper <span class="op">=</span> textwrap.TextWrapper(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    width<span class="op">=</span><span class="dv">60</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    initial_indent<span class="op">=</span><span class="st">&quot;  --help: &quot;</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    subsequent_indent<span class="op">=</span><span class="st">&quot;          &quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(wrapper.fill(<span class="st">&quot;Displays this help message and exits the application.&quot;</span>))</span></code></pre></div>
+<p>This ensures that wrapped lines align with the start of the
+description rather than resetting to the left margin, producing standard
+POSIX-style command line help output.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

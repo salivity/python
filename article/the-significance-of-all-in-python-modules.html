@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Significance of __all__ in Python Modules - python</title>
+    <meta name="description" content="The all variable in Python is a special module-level list of strings that explicitly defines the public interface of a module or package. By declaring all, developers control which symbols—such as functions, classes, and variables—are exported when a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/the-significance-of-all-in-python-modules">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="The Significance of __all__ in Python Modules - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/the-significance-of-all-in-python-modules" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The all variable in Python is a special module-level list of strings that explicitly defines the public interface of a module or package. By declaring all, developers control which symbols—such as functions, classes, and variables—are exported when a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="the-significance-of-all-in-python-modules">The Significance of
+<strong>all</strong> in Python Modules</h1>
+<p>The <code>__all__</code> variable in Python is a special module-level
+list of strings that explicitly defines the public interface of a module
+or package. By declaring <code>__all__</code>, developers control which
+symbols—such as functions, classes, and variables—are exported when a
+consumer uses wildcard imports like <code>from module import *</code>.
+Beyond restricting namespace pollution during imports,
+<code>__all__</code> serves as clear documentation for a module's
+intended public API, prevents accidental exposure of internal utilities,
+and guides static analysis tools, IDEs, and automated documentation
+generators.</p>
+<h3 id="controlling-wildcard-imports">Controlling Wildcard Imports</h3>
+<p>By default, when a script executes <code>from module import *</code>,
+Python imports all names defined in the module that do not begin with an
+underscore (<code>_</code>). While prefixing helper functions with an
+underscore denotes them as private, this default behavior can still
+unintentionally expose imported third-party libraries or standard
+library modules that were only brought in to support the module's
+implementation.</p>
+<p>When <code>__all__</code> is defined, Python ignores the default
+underscore-based rule and exports <em>only</em> the names explicitly
+listed in the collection:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># math_tools.py</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math  <span class="co"># Internal dependency</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="va">__all__</span> <span class="op">=</span> [<span class="st">&#39;add&#39;</span>, <span class="st">&#39;calculate_circle_area&#39;</span>]</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> add(a, b):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">+</span> b</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calculate_circle_area(radius):</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> math.pi <span class="op">*</span> (radius <span class="op">**</span> <span class="dv">2</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _internal_helper():</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<p>Executing <code>from math_tools import *</code> imports only
+<code>add</code> and <code>calculate_circle_area</code>. Neither
+<code>_internal_helper</code> nor the imported <code>math</code> library
+enters the calling namespace, ensuring the importer's environment
+remains clean and free of naming collisions.</p>
+<h3 id="defining-an-explicit-public-api">Defining an Explicit Public
+API</h3>
+<p>Python emphasizes readability and explicit declarations. While PEP 8
+generally discourages the use of wildcard imports in production code,
+<code>__all__</code> remains valuable as a formal contract. It
+explicitly signals to other developers which components are stable,
+supported, and meant for consumption, and which are implementation
+details subject to change.</p>
+<h3 id="managing-package-level-exports">Managing Package-Level
+Exports</h3>
+<p>In multi-file packages containing an <code>__init__.py</code> file,
+<code>__all__</code> plays a critical role in structuring how submodules
+are exposed. If a user runs <code>from package import *</code>, Python
+does not automatically import all submodules found in the package
+directory; it only imports submodules explicitly listed in the
+<code>__init__.py</code>'s <code>__all__</code> sequence. This prevents
+expensive or unnecessary imports from running automatically when the
+package is initialized.</p>
+<h3 id="tooling-linters-and-static-analysis">Tooling, Linters, and
+Static Analysis</h3>
+<p>Modern development workflows rely heavily on automated tooling. Type
+checkers (such as Mypy and Pyright), linters (like Flake8 and Ruff), and
+documentation generators (such as Sphinx) interpret <code>__all__</code>
+to understand a library's structure:</p>
+<ul>
+<li><strong>Re-exporting Symbols:</strong> In typed Python, importing a
+symbol into an <code>__init__.py</code> file does not automatically mark
+it as re-exported. Listing the symbol in <code>__all__</code> informs
+type checkers that the export is intentional, silencing "unused import"
+warnings.</li>
+<li><strong>Auto-Documentation:</strong> Tools like Sphinx and
+<code>pydoc</code> use <code>__all__</code> to determine which objects
+to include in generated API documentation, omitting internal logic
+automatically.</li>
+<li><strong>Code Completion:</strong> IDEs leverage <code>__all__</code>
+to refine code-completion suggestions, prioritizing public API members
+over internal imports.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

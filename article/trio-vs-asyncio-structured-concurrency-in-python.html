@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trio vs Asyncio: Structured Concurrency in Python - python</title>
+    <meta name="description" content="This article examines how the third-party library Trio compares to Python's built-in asyncio regarding structured concurrency. While Trio was designed from its inception around strict structured concurrency using its "nursery" paradigm, asyncio originall">
+    <link rel="canonical" href="https://salivity.github.io/python/article/trio-vs-asyncio-structured-concurrency-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Trio vs Asyncio: Structured Concurrency in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/trio-vs-asyncio-structured-concurrency-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines how the third-party library Trio compares to Python's built-in asyncio regarding structured concurrency. While Trio was designed from its inception around strict structured concurrency using its "nursery" paradigm, asyncio originall" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="trio-vs-asyncio-structured-concurrency-in-python">Trio vs
+Asyncio: Structured Concurrency in Python</h1>
+<p>This article examines how the third-party library Trio compares to
+Python's built-in <code>asyncio</code> regarding structured concurrency.
+While Trio was designed from its inception around strict structured
+concurrency using its "nursery" paradigm, <code>asyncio</code>
+originally relied on detached, fire-and-forget tasks before later
+retrofitting structured concurrency through
+<code>asyncio.TaskGroup</code> in Python 3.11. The following sections
+break down the core principles, architectural differences, error
+propagation, and practical implications of both approaches.</p>
+<h2 id="understanding-structured-concurrency">Understanding Structured
+Concurrency</h2>
+<p>Structured concurrency is an asynchronous programming paradigm where
+concurrent tasks are bound to explicit control-flow scopes. Just as
+structured programming replaced arbitrary <code>goto</code> statements
+with explicit blocks like <code>if</code>, <code>while</code>, and
+functions, structured concurrency eliminates unmanaged, free-floating
+background tasks. If a code block initiates concurrent operations, that
+block cannot exit until all initiated operations have terminated. This
+guarantees that background operations do not silently outlive their
+parent context, leak resources, or drop unhandled exceptions.</p>
+<h2 id="trio-structured-concurrency-as-an-invariant">Trio: Structured
+Concurrency as an Invariant</h2>
+<p>Trio was built by Nathaniel J. Smith specifically to implement
+structured concurrency in Python. In Trio, structured concurrency is not
+an optional feature; it is an enforced invariant of the runtime.</p>
+<h3 id="the-nursery-pattern">The Nursery Pattern</h3>
+<p>Trio enforces task containment through a concept called a
+<em>nursery</em>. You cannot spawn a background task globally in Trio;
+tasks must be spawned inside a nursery context:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> trio</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> child():</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> trio.sleep(<span class="dv">1</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="cf">with</span> trio.open_nursery() <span class="im">as</span> nursery:</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        nursery.start_soon(child)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        nursery.start_soon(child)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># The block will not exit until both child tasks finish</span></span></code></pre></div>
+<p>The <code>async with trio.open_nursery()</code> block serves as the
+task boundary. Execution cannot proceed past the block until all tasks
+registered to <code>nursery</code> complete.</p>
+<h3 id="strict-cancellation-and-error-handling">Strict Cancellation and
+Error Handling</h3>
+<p>If any task inside a nursery raises an unhandled exception, Trio
+automatically:</p>
+<ol type="1">
+<li>Cancels all other tasks running inside that nursery.</li>
+<li>Waits for those tasks to exit and clean up.</li>
+<li>Propagates the exception (or combines multiple exceptions using an
+<code>ExceptionGroup</code>) up the call stack to the parent.</li>
+</ol>
+<p>Trio's cancellation mechanism uses unified cancellation scopes rather
+than ad-hoc flags or low-level exception injection, making cancellation
+deterministic and reliable.</p>
+<h2 id="asyncio-an-evolution-from-unstructured-to-structured">Asyncio:
+An Evolution from Unstructured to Structured</h2>
+<p>Historically, Python's <code>asyncio</code> was built around an
+unstructured paradigm heavily influenced by older event-driven
+frameworks.</p>
+<h3 id="the-legacy-model">The Legacy Model</h3>
+<p>Prior to Python 3.11, the standard way to run concurrent code in
+<code>asyncio</code> was via functions like
+<code>asyncio.create_task()</code> or <code>asyncio.gather()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> child():</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> asyncio.sleep(<span class="dv">1</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    task <span class="op">=</span> asyncio.create_task(child())</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># task runs independently in the background; main can exit without waiting</span></span></code></pre></div>
+<p>This model permits "fire-and-forget" execution. If an unhandled
+exception occurs in a task created via <code>create_task()</code>, it
+often gets logged to <code>stderr</code> after garbage collection,
+rather than being handled deterministically by the code that created it.
+Similarly, managing cancellation across multiple tasks traditionally
+required writing complex boilerplate using
+<code>asyncio.gather(..., return_exceptions=True)</code>.</p>
+<h3 id="the-modern-model-asynciotaskgroup">The Modern Model:
+<code>asyncio.TaskGroup</code></h3>
+<p>Recognizing the limitations of unstructured tasks, Python 3.11
+introduced <code>asyncio.TaskGroup</code>, an API directly inspired by
+Trio's nurseries:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> child():</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> asyncio.sleep(<span class="dv">1</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="cf">with</span> asyncio.TaskGroup() <span class="im">as</span> tg:</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        tg.create_task(child())</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        tg.create_task(child())</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Exits only after both tasks complete</span></span></code></pre></div>
+<p>If one task within a <code>TaskGroup</code> raises an exception, the
+remaining tasks are cancelled, and all unhandled exceptions are raised
+together via <code>ExceptionGroup</code>.</p>
+<h2 id="key-differences-between-trio-and-asyncio">Key Differences
+Between Trio and Asyncio</h2>
+<h3 id="1-enforcement-vs-convention">1. Enforcement vs. Convention</h3>
+<ul>
+<li><strong>Trio:</strong> Mandates structured concurrency. There is no
+public API equivalent to <code>create_task()</code> that allows spawning
+tasks outside an explicit nursery.</li>
+<li><strong>Asyncio:</strong> Treats structured concurrency as an opt-in
+pattern. Legacy APIs (<code>asyncio.create_task()</code>,
+<code>asyncio.gather()</code>, <code>asyncio.shield()</code>) remain
+fully accessible and widely used, meaning codebases often mix structured
+and unstructured patterns.</li>
+</ul>
+<h3 id="2-cancellation-semantics">2. Cancellation Semantics</h3>
+<ul>
+<li><strong>Trio:</strong> Features clear cancellation semantics
+centered around checkpoints. Every blocking call is a checkpoint where
+cancellation can occur. If a task is cancelled, cancellation stays
+active throughout the scope unless explicitly shielded using a dedicated
+cancellation scope.</li>
+<li><strong>Asyncio:</strong> Implements cancellation by injecting a
+<code>CancelledError</code> into the coroutine. Because
+<code>asyncio.CancelledError</code> inherits from
+<code>BaseException</code> (as of Python 3.8), improper exception
+handling or third-party libraries catching <code>BaseException</code>
+can inadvertently swallow or delay cancellation signals.</li>
+</ul>
+<h3 id="3-api-surface-and-cognitive-load">3. API Surface and Cognitive
+Load</h3>
+<ul>
+<li><strong>Trio:</strong> Has a minimal, consistent API designed
+specifically around structured concurrency. Features like timeouts,
+deadlines, and shields all use the same unified <code>CancelScope</code>
+abstraction.</li>
+<li><strong>Asyncio:</strong> Has a larger, dual API surface resulting
+from a decade of backward compatibility. Developers must choose between
+older functions like <code>asyncio.wait()</code>,
+<code>asyncio.gather()</code>, and modern <code>TaskGroup</code>
+constructs, each with differing cancellation and error propagation
+behaviors.</li>
+</ul>
+<h3 id="4-ecosystem-and-compatibility">4. Ecosystem and
+Compatibility</h3>
+<ul>
+<li><strong>Trio:</strong> Requires a Trio-native ecosystem (e.g.,
+<code>asks</code> or <code>httpx</code> for HTTP,
+<code>trio-websocket</code>). While libraries like <code>anyio</code>
+bridge compatibility, Trio's ecosystem is smaller than
+<code>asyncio</code>'s.</li>
+<li><strong>Asyncio:</strong> Standard library inclusion guarantees
+universal availability and extensive support from modern asynchronous
+frameworks (such as FastAPI, aiohttp, and Tortoise ORM).</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<p>Trio offers an uncompromising, mathematically sound implementation of
+structured concurrency where unstructured execution is structurally
+forbidden. <code>asyncio</code>, starting with Python 3.11's
+<code>TaskGroup</code>, successfully brings the core benefits of
+structured concurrency to the standard library, but maintains backward
+compatibility with older, unstructured patterns. For strict safety and
+cleaner cancellation mechanics, Trio remains the benchmark, while
+<code>asyncio</code> provides a practical implementation of the same
+principles within the standard library.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

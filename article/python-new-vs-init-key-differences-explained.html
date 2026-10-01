@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python __new__ vs __init__: Key Differences Explained - python</title>
+    <meta name="description" content="In Python object-oriented programming, creating an object is a two-step process involving the new and init methods. While developers commonly treat init as the constructor, the primary functional difference is that new is responsible for creating and ret">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-new-vs-init-key-differences-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python __new__ vs __init__: Key Differences Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-new-vs-init-key-differences-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python object-oriented programming, creating an object is a two-step process involving the new and init methods. While developers commonly treat init as the constructor, the primary functional difference is that new is responsible for creating and ret" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-new-vs-init-key-differences-explained">Python
+<strong>new</strong> vs <strong>init</strong>: Key Differences
+Explained</h1>
+<p>In Python object-oriented programming, creating an object is a
+two-step process involving the <code>__new__</code> and
+<code>__init__</code> methods. While developers commonly treat
+<code>__init__</code> as the constructor, the primary functional
+difference is that <code>__new__</code> is responsible for creating and
+returning a new instance of a class, whereas <code>__init__</code> is
+responsible for initializing that newly created instance with data.</p>
+<h2 id="the-core-distinction">The Core Distinction</h2>
+<p>The instantiation process triggers both methods sequentially when you
+call a class:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>instance <span class="op">=</span> MyClass(arg1, arg2)</span></code></pre></div>
+<p>Behind the scenes, Python translates this call into:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>instance <span class="op">=</span> MyClass.<span class="fu">__new__</span>(MyClass, arg1, arg2)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">isinstance</span>(instance, MyClass):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    MyClass.<span class="fu">__init__</span>(instance, arg1, arg2)</span></code></pre></div>
+<h3 id="__new__-the-true-constructor"><code>__new__</code>: The True
+Constructor</h3>
+<ul>
+<li><strong>Role:</strong> Allocates memory and constructs the actual
+object.</li>
+<li><strong>Arguments:</strong> Takes the class itself
+(<code>cls</code>) as its first parameter, followed by any arguments
+passed to the class constructor.</li>
+<li><strong>Return Value:</strong> Must return a newly created object
+instance (typically by calling
+<code>super().__new__(cls, ...)</code>).</li>
+<li><strong>Execution:</strong> It is a static method (handled specially
+by the interpreter so you don't need the <code>@staticmethod</code>
+decorator) that runs <strong>before</strong> <code>__init__</code>.</li>
+</ul>
+<h3 id="__init__-the-initializer"><code>__init__</code>: The
+Initializer</h3>
+<ul>
+<li><strong>Role:</strong> Configures the instance by assigning initial
+attributes and running setup logic.</li>
+<li><strong>Arguments:</strong> Takes the newly created instance
+(<code>self</code>) as its first parameter, along with constructor
+arguments.</li>
+<li><strong>Return Value:</strong> Must return <code>None</code>.
+Returning any value other than <code>None</code> raises a
+<code>TypeError</code>.</li>
+<li><strong>Execution:</strong> It is an instance method that runs
+<strong>after</strong> <code>__new__</code> has successfully returned an
+instance of the class.</li>
+</ul>
+<h2 id="key-behavioral-differences">Key Behavioral Differences</h2>
+<h3 id="1-conditional-execution-of-__init__">1. Conditional Execution of
+<code>__init__</code></h3>
+<p><code>__init__</code> is only invoked if <code>__new__</code> returns
+an instance of the class in which it is defined. If <code>__new__</code>
+returns an instance of a different class, or returns an existing
+instance from a cache, Python bypasses <code>__init__</code> entirely
+for that call.</p>
+<h3 id="2-when-to-override-__new__">2. When to Override
+<code>__new__</code></h3>
+<p>In standard day-to-day Python programming, overriding
+<code>__init__</code> is sufficient. You only need to override
+<code>__new__</code> in specialized scenarios:</p>
+<ul>
+<li><strong>Subclassing Immutable Types:</strong> Built-in immutable
+types such as <code>int</code>, <code>str</code>, <code>float</code>, or
+<code>tuple</code> cannot be modified in <code>__init__</code> because
+their values are fixed at creation time. Customizing them requires
+intercepting creation inside <code>__new__</code>.</li>
+<li><strong>Implementing Design Patterns:</strong> Patterns like the
+<strong>Singleton</strong> (restricting a class to a single instance) or
+<strong>Object Pooling</strong> require controlling whether a new object
+is actually created or if an existing reference is returned.</li>
+<li><strong>Metaclasses and Code Generation:</strong> Intercepting
+object generation dynamically before the instance comes into
+existence.</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>__new__</code></th>
+<th style="text-align: left;"><code>__init__</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Purpose</strong></td>
+<td style="text-align: left;">Creates the object instance</td>
+<td style="text-align: left;">Initializes the created object</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>First Parameter</strong></td>
+<td style="text-align: left;"><code>cls</code> (the class)</td>
+<td style="text-align: left;"><code>self</code> (the instance)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Return Value</strong></td>
+<td style="text-align: left;">The newly created instance</td>
+<td style="text-align: left;"><code>None</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Execution Order</strong></td>
+<td style="text-align: left;">First</td>
+<td style="text-align: left;">Second</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Common Use Case</strong></td>
+<td style="text-align: left;">Singletons, immutable subclasses</td>
+<td style="text-align: left;">Setting instance attributes</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

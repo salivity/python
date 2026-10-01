@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Subgenerator Return Values Explained - python</title>
+    <meta name="description" content="When a Python subgenerator completes its execution using a return statement, the returned value becomes the evaluation result of the yield from expression in the delegating generator. Under the hood, Python accomplishes this by raising a StopIteration ex">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-subgenerator-return-values-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Subgenerator Return Values Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-subgenerator-return-values-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When a Python subgenerator completes its execution using a return statement, the returned value becomes the evaluation result of the yield from expression in the delegating generator. Under the hood, Python accomplishes this by raising a StopIteration ex" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-subgenerator-return-values-explained">Python Subgenerator
+Return Values Explained</h1>
+<p>When a Python subgenerator completes its execution using a
+<code>return</code> statement, the returned value becomes the evaluation
+result of the <code>yield from</code> expression in the delegating
+generator. Under the hood, Python accomplishes this by raising a
+<code>StopIteration</code> exception where the returned value is stored
+in the exception's <code>value</code> attribute, which the
+<code>yield from</code> syntax automatically intercepts and
+extracts.</p>
+<h3 id="how-yield-from-captures-return-values">How
+<code>yield from</code> Captures Return Values</h3>
+<p>In Python, generators can yield intermediate values to the caller and
+optionally return a final value upon termination. When a delegating
+generator calls a subgenerator using <code>yield from</code>, it
+establishes a bidirectional pipe. The caller receives all values yielded
+by the subgenerator. Once the subgenerator finishes by executing a
+<code>return &lt;value&gt;</code> statement, the delegation finishes,
+and the value is assigned directly to the variable receiving the
+<code>yield from</code> expression.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> subgenerator():</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">yield</span> <span class="st">&quot;A&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">yield</span> <span class="st">&quot;B&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;Finished successfully&quot;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> delegator():</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> <span class="cf">yield</span> <span class="cf">from</span> subgenerator()</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Result captured in delegator: </span><span class="sc">{</span>result<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> item <span class="kw">in</span> delegator():</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Yielded: </span><span class="sc">{</span>item<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>Output:</p>
+<pre class="text"><code>Yielded: A
+Yielded: B
+Result captured in delegator: Finished successfully</code></pre>
+<p>If the subgenerator finishes without an explicit <code>return</code>
+statement, it implicitly returns <code>None</code>, making
+<code>None</code> the resulting value of the <code>yield from</code>
+expression.</p>
+<h3 id="the-underlying-mechanism-stopiterationvalue">The Underlying
+Mechanism: <code>StopIteration.value</code></h3>
+<p>Understanding how this works manually highlights why
+<code>yield from</code> behaves the way it does. When a generator
+function returns, Python raises a <code>StopIteration</code> exception
+to signal the end of the iteration sequence. The argument passed to
+<code>return</code> is placed inside the <code>value</code> attribute of
+the exception instance.</p>
+<p>When driving a generator manually with <code>next()</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>gen <span class="op">=</span> subgenerator()</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">next</span>(gen))  <span class="co"># Prints &#39;A&#39;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">next</span>(gen))  <span class="co"># Prints &#39;B&#39;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">next</span>(gen)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">StopIteration</span> <span class="im">as</span> exc:</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(exc.value)  <span class="co"># Prints &#39;Finished successfully&#39;</span></span></code></pre></div>
+<p>The <code>yield from</code> construct automates this manual handling.
+It intercepts the <code>StopIteration</code>, extracts
+<code>exc.value</code>, and provides that value as the outcome of the
+expression, allowing clean composition of coroutines and nested
+generators.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

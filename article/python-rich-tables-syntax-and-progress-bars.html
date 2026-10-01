@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Rich: Tables, Syntax, and Progress Bars - python</title>
+    <meta name="description" content="The Python Rich library transforms standard command-line interfaces by introducing advanced formatting, vibrant color, and structured visual elements to terminal output. This article examines how developers can leverage Rich to replace plain text with el">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-rich-tables-syntax-and-progress-bars">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Rich: Tables, Syntax, and Progress Bars - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-rich-tables-syntax-and-progress-bars" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Python Rich library transforms standard command-line interfaces by introducing advanced formatting, vibrant color, and structured visual elements to terminal output. This article examines how developers can leverage Rich to replace plain text with el" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-rich-tables-syntax-and-progress-bars">Python Rich:
+Tables, Syntax, and Progress Bars</h1>
+<p>The Python <code>Rich</code> library transforms standard command-line
+interfaces by introducing advanced formatting, vibrant color, and
+structured visual elements to terminal output. This article examines how
+developers can leverage <code>Rich</code> to replace plain text with
+elegant, responsive terminal tables, readable syntax-highlighted code
+snippets, and fully interactive, multi-task progress bars.</p>
+<h2 id="dynamic-terminal-tables">Dynamic Terminal Tables</h2>
+<p>The <code>rich.table</code> module allows developers to construct
+structured tabular data directly in the terminal without manual spacing
+calculations.</p>
+<p>Key capabilities include:</p>
+<ul>
+<li><strong>Automatic Column Sizing:</strong> Tables automatically
+compute column widths based on cell content and terminal dimensions,
+wrapping text cleanly when space is constrained.</li>
+<li><strong>Custom Box Styles:</strong> A wide variety of border presets
+exist, including standard grid lines, rounded corners, heavy borders,
+minimalist lines, or pure ASCII options for legacy terminal
+compatibility.</li>
+<li><strong>Granular Styling:</strong> Individual styles (color, bold,
+italic, dim) can be applied to entire columns, specific rows, individual
+cells, or headers and footers.</li>
+<li><strong>Alignment and Padding:</strong> Columns can be aligned left,
+right, or centered, with custom horizontal and vertical padding.</li>
+<li><strong>Nested Renderables:</strong> Table cells are not limited to
+plain text; they can contain other <code>Rich</code> elements, such as
+syntax blocks, progress bars, or nested tables.</li>
+</ul>
+<h2 id="robust-syntax-highlighting">Robust Syntax Highlighting</h2>
+<p>Built on top of the <code>Pygments</code> engine,
+<code>rich.syntax</code> brings text editor-grade code visualization to
+command-line interfaces.</p>
+<p>Key capabilities include:</p>
+<ul>
+<li><strong>Broad Language Support:</strong> Syntax highlighting
+supports hundreds of programming, markup, and configuration languages,
+including Python, JSON, YAML, HTML, SQL, and C.</li>
+<li><strong>Theme Customization:</strong> Developers can choose from
+popular color schemes (such as Monokai, Dracula, or Solarized) or create
+custom themes to match specific terminal environments.</li>
+<li><strong>Line Numbering and Highlighting:</strong> Lines can be
+numbered automatically, with options to specify a starting line offset
+and highlight specific lines of interest.</li>
+<li><strong>Automatic Data Formatting:</strong> Beyond explicit code
+blocks, using <code>rich.print()</code> automatically pretty-prints and
+color-codes native Python data structures such as dictionaries, lists,
+and tuples, making debugging significantly faster.</li>
+</ul>
+<h2 id="customizable-progress-bars">Customizable Progress Bars</h2>
+<p>The <code>rich.progress</code> module provides visual feedback for
+long-running processes, moving far beyond basic text counters.</p>
+<p>Key capabilities include:</p>
+<ul>
+<li><strong>Simple Integration:</strong> For basic use cases, the
+<code>track()</code> function wraps any standard Python iterable to
+display a functioning progress bar with a single line of code.</li>
+<li><strong>Multiple Concurrent Tasks:</strong> The
+<code>Progress</code> class can track multiple asynchronous or threaded
+tasks simultaneously, displaying separate bars for each concurrent
+process.</li>
+<li><strong>Modular Columns:</strong> Bars are constructed from
+independent column components. Developers can mix and match elements
+such as task descriptions, progress indicators, percentage complete,
+time elapsed, estimated time remaining (ETA), and transfer speed
+metrics.</li>
+<li><strong>Transient Displays:</strong> Progress bars can be configured
+to disappear once completed, leaving the terminal clean for subsequent
+outputs.</li>
+<li><strong>Custom Spinners:</strong> Indeterminate tasks where the
+total duration is unknown can display smooth animated spinners instead
+of percentage-based bars.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

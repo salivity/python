@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python dis.code_info: Inspect Code Object Metadata - python</title>
+    <meta name="description" content="The dis.codeinfo() function in Python's built-in dis (disassembler) module generates a formatted, human-readable string summarizing the metadata of a compiled code object. When Python executes source code, it first compiles it into bytecode wrapped insid">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-dis-code-info-inspect-code-object-metadata">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python dis.code_info: Inspect Code Object Metadata - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-dis-code-info-inspect-code-object-metadata" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The dis.codeinfo() function in Python's built-in dis (disassembler) module generates a formatted, human-readable string summarizing the metadata of a compiled code object. When Python executes source code, it first compiles it into bytecode wrapped insid" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-discode_info-inspect-code-object-metadata">Python
+dis.code_info: Inspect Code Object Metadata</h1>
+<p>The <code>dis.code_info()</code> function in Python's built-in
+<code>dis</code> (disassembler) module generates a formatted,
+human-readable string summarizing the metadata of a compiled code
+object. When Python executes source code, it first compiles it into
+bytecode wrapped inside a code object (<code>types.CodeType</code>),
+which contains critical execution instructions, variable counts, and
+scoping parameters. Instead of manually inspecting numerous internal
+attributes prefixed with <code>co_</code>, developers can pass a
+function, generator, method, or code object directly into
+<code>dis.code_info()</code> to instantly see a structured breakdown of
+how Python's virtual machine manages that code.</p>
+<h3 id="what-discode_info-does">What <code>dis.code_info()</code>
+Does</h3>
+<p>When invoked, <code>dis.code_info(x)</code> first extracts the
+underlying code object from the provided target <code>x</code>. If
+<code>x</code> is already a code object, it uses it directly; if
+<code>x</code> is a function or method, it retrieves the object stored
+in the <code>__code__</code> attribute. It then parses the internal
+fields of the code object and returns a multi-line formatted string.</p>
+<h3 id="key-metadata-displayed">Key Metadata Displayed</h3>
+<p>The output returned by <code>dis.code_info()</code> groups code
+attributes into specific structural details:</p>
+<ul>
+<li><strong>Name and Origin:</strong> Displays the name of the code
+block (<code>co_name</code>), the file path where it was defined
+(<code>co_filename</code>), and the line number where the definition
+begins (<code>co_firstlineno</code>).</li>
+<li><strong>Argument Counts:</strong> Shows total positional arguments
+(<code>co_argcount</code>), positional-only arguments
+(<code>co_posonlyargcount</code>), and keyword-only arguments
+(<code>co_kwonlyargcount</code>).</li>
+<li><strong>Locals and Stack Requirements:</strong> Reports the total
+number of local variables allocated (<code>co_nlocals</code>) and the
+maximum runtime evaluation stack depth needed by the virtual machine
+(<code>co_stacksize</code>).</li>
+<li><strong>Compiler Flags:</strong> Translates the raw bitmask integer
+<code>co_flags</code> into human-readable compiler flags, identifying
+features such as whether the code is optimized (<code>OPTIMIZED</code>),
+creates a new local namespace (<code>NEWLOCALS</code>), accepts
+<code>*args</code> (<code>VARARGS</code>) or <code>**kwargs</code>
+(<code>VARKEYWORDS</code>), or represents a generator or coroutine.</li>
+<li><strong>Constants and Identifiers:</strong> Lists all literal values
+loaded by bytecode (<code>co_consts</code>) and global or external names
+accessed within the scope (<code>co_names</code>).</li>
+<li><strong>Variable Collections:</strong> Categorizes variable names
+into parameters and local variables (<code>co_varnames</code>), closure
+cell variables (<code>co_cellvars</code>), and free variables resolved
+from enclosing scopes (<code>co_freevars</code>).</li>
+</ul>
+<h3 id="practical-example">Practical Example</h3>
+<p>Consider the following function and how <code>dis.code_info()</code>
+summarizes its internal configuration:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> dis</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calculate_tax(subtotal: <span class="bu">float</span>, <span class="op">*</span>, rate: <span class="bu">float</span> <span class="op">=</span> <span class="fl">0.05</span>) <span class="op">-&gt;</span> <span class="bu">float</span>:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    flat_fee <span class="op">=</span> <span class="fl">2.0</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> (subtotal <span class="op">*</span> rate) <span class="op">+</span> flat_fee</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(dis.code_info(calculate_tax))</span></code></pre></div>
+<p>Running this code produces output structured like this:</p>
+<pre class="text"><code>Name:              calculate_tax
+Filename:          example.py
+Argument count:    1
+Positional-only arguments: 0
+Kw-only arguments: 1
+Number of locals:  3
+Stack size:        3
+Flags:             OPTIMIZED, NEWLOCALS
+Constants:
+   0: None
+   1: 2.0
+Names:
+Variable names:
+   0: subtotal
+   1: rate
+   2: flat_fee</code></pre>
+<h3 id="why-use-discode_info">Why Use <code>dis.code_info()</code></h3>
+<p>Directly inspecting <code>co_</code> attributes requires memorizing
+low-level attribute names and decoding bitwise flag masks manually.
+<code>dis.code_info()</code> automates this interpretation, making it an
+essential diagnostic tool for:</p>
+<ol type="1">
+<li><strong>Debugging Closures and Scopes:</strong> Verifying whether a
+variable is properly classified as a local variable, a cell variable, or
+a free variable across nested functions.</li>
+<li><strong>Performance Analysis:</strong> Checking stack depth
+requirements and total local variable slots to understand memory
+allocations per frame.</li>
+<li><strong>Compiler Tooling and Metaprogramming:</strong> Verifying
+code dynamically compiled with the built-in <code>compile()</code>
+function to ensure parameters and flags match expectations before
+execution.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

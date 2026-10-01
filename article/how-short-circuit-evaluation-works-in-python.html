@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Short-Circuit Evaluation Works in Python - python</title>
+    <meta name="description" content="In Python, compound boolean expressions using and and or operators rely on short-circuit evaluation, a mechanism where the interpreter stops evaluating expressions as soon as the final boolean outcome is determined. Rather than always returning a strict">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-short-circuit-evaluation-works-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Short-Circuit Evaluation Works in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-short-circuit-evaluation-works-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, compound boolean expressions using and and or operators rely on short-circuit evaluation, a mechanism where the interpreter stops evaluating expressions as soon as the final boolean outcome is determined. Rather than always returning a strict" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-short-circuit-evaluation-works-in-python">How Short-Circuit
+Evaluation Works in Python</h1>
+<p>In Python, compound boolean expressions using <code>and</code> and
+<code>or</code> operators rely on short-circuit evaluation, a mechanism
+where the interpreter stops evaluating expressions as soon as the final
+boolean outcome is determined. Rather than always returning a strict
+<code>True</code> or <code>False</code>, Python returns the actual value
+of the operand that determined the result. Understanding this behavior
+allows developers to write more efficient code, prevent runtime errors,
+and write idiomatic expressions.</p>
+<h2 id="truth-value-testing">Truth Value Testing</h2>
+<p>Before understanding short-circuiting, it is essential to recognize
+Python's concept of "truthiness." Every Python object can be tested for
+truth value:</p>
+<ul>
+<li><strong>Falsy values:</strong> <code>False</code>,
+<code>None</code>, numeric zeros (<code>0</code>, <code>0.0</code>),
+empty sequences (<code>""</code>, <code>()</code>, <code>[]</code>), and
+empty mappings (<code>{}</code>).</li>
+<li><strong>Truthy values:</strong> Everything else, including non-zero
+numbers and non-empty collections.</li>
+</ul>
+<h2 id="the-and-operator">The <code>and</code> Operator</h2>
+<p>In an expression <code>A and B</code>, Python evaluates the left
+operand (<code>A</code>) first:</p>
+<ol type="1">
+<li>If <code>A</code> evaluates to falsy, the overall expression can
+never be true. Python immediately stops and returns <code>A</code>
+without evaluating <code>B</code>.</li>
+<li>If <code>A</code> evaluates to truthy, Python must evaluate
+<code>B</code> to determine the outcome. It evaluates and returns
+<code>B</code>.</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># &#39;A&#39; is falsy: stops immediately and returns 0</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> <span class="dv">0</span> <span class="kw">and</span> <span class="st">&quot;hello&quot;</span>  <span class="co"># result is 0</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># &#39;A&#39; is truthy: evaluates and returns the second operand</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">2</span>] <span class="kw">and</span> <span class="st">&quot;hello&quot;</span>  <span class="co"># result is &#39;hello&#39;</span></span></code></pre></div>
+<p>In chained expressions such as <code>A and B and C</code>, evaluation
+proceeds left-to-right. Execution stops at the first falsy operand and
+returns it. If all operands are truthy, the final operand is
+returned.</p>
+<h2 id="the-or-operator">The <code>or</code> Operator</h2>
+<p>In an expression <code>A or B</code>, Python evaluates the left
+operand (<code>A</code>) first:</p>
+<ol type="1">
+<li>If <code>A</code> evaluates to truthy, the overall expression is
+already guaranteed to be true. Python immediately stops and returns
+<code>A</code> without evaluating <code>B</code>.</li>
+<li>If <code>A</code> evaluates to falsy, Python evaluates and returns
+<code>B</code>.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># &#39;A&#39; is truthy: stops immediately and returns &#39;apple&#39;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> <span class="st">&quot;apple&quot;</span> <span class="kw">or</span> <span class="st">&quot;banana&quot;</span>  <span class="co"># result is &#39;apple&#39;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># &#39;A&#39; is falsy: evaluates and returns the second operand</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> <span class="va">None</span> <span class="kw">or</span> <span class="st">&quot;fallback&quot;</span>  <span class="co"># result is &#39;fallback&#39;</span></span></code></pre></div>
+<p>In chained expressions like <code>A or B or C</code>, execution halts
+at the first truthy value encountered and returns it. If none are
+truthy, the last falsy value is returned.</p>
+<h2 id="operator-precedence-in-compound-expressions">Operator Precedence
+in Compound Expressions</h2>
+<p>When combining <code>and</code> and <code>or</code> without
+parentheses, Python follows standard operator precedence:</p>
+<ol type="1">
+<li><code>not</code> has the highest precedence.</li>
+<li><code>and</code> has intermediate precedence.</li>
+<li><code>or</code> has the lowest precedence.</li>
+</ol>
+<p>Because <code>and</code> binds tighter than <code>or</code>, the
+expression:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>A <span class="kw">or</span> B <span class="kw">and</span> C</span></code></pre></div>
+<p>is evaluated internally as:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>A <span class="kw">or</span> (B <span class="kw">and</span> C)</span></code></pre></div>
+<p>If <code>A</code> is truthy, neither <code>B</code> nor
+<code>C</code> will ever be executed due to short-circuiting at the
+<code>or</code> level. Using explicit parentheses is recommended to
+avoid ambiguity in complex statements.</p>
+<h2 id="practical-applications">Practical Applications</h2>
+<h3 id="1-guarding-against-errors">1. Guarding Against Errors</h3>
+<p>Short-circuit evaluation is frequently used to safely check
+attributes, list bounds, or avoid division by zero:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Prevents ZeroDivisionError if count is 0</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>average <span class="op">=</span> count <span class="op">&gt;</span> <span class="dv">0</span> <span class="kw">and</span> total <span class="op">/</span> count</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Prevents AttributeError if user is None</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>name <span class="op">=</span> user <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="kw">and</span> user.name</span></code></pre></div>
+<h3 id="2-default-values">2. Default Values</h3>
+<p>The <code>or</code> operator provides a concise syntax for assigning
+fallback values when working with potentially empty inputs:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>user_input <span class="op">=</span> <span class="st">&quot;&quot;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>display_name <span class="op">=</span> user_input <span class="kw">or</span> <span class="st">&quot;Anonymous&quot;</span>  <span class="co"># display_name is &#39;Anonymous&#39;</span></span></code></pre></div>
+<h3 id="3-avoiding-costly-operations">3. Avoiding Costly Operations</h3>
+<p>Functions with heavy computational costs or network calls can be
+placed second to ensure they only run when strictly necessary:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> is_cached <span class="kw">or</span> fetch_from_database():</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<p>If <code>is_cached</code> is <code>True</code>,
+<code>fetch_from_database()</code> is never called.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

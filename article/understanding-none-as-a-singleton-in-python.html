@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding None as a Singleton in Python - python</title>
+    <meta name="description" content="In Python, None is the standard constant used to signal the absence of a value or an empty state, implemented strictly as a singleton instance of the NoneType class. This article examines how Python internally defines None within the CPython runtime, why">
+    <link rel="canonical" href="https://salivity.github.io/python/article/understanding-none-as-a-singleton-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding None as a Singleton in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/understanding-none-as-a-singleton-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, None is the standard constant used to signal the absence of a value or an empty state, implemented strictly as a singleton instance of the NoneType class. This article examines how Python internally defines None within the CPython runtime, why" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-none-as-a-singleton-in-python">Understanding None
+as a Singleton in Python</h1>
+<p>In Python, <code>None</code> is the standard constant used to signal
+the absence of a value or an empty state, implemented strictly as a
+singleton instance of the <code>NoneType</code> class. This article
+examines how Python internally defines <code>None</code> within the
+CPython runtime, why only a single instance exists across the
+interpreter's lifecycle, the technical distinction between identity and
+equality checks, and how the interpreter enforces its immutability.</p>
+<h3 id="the-singleton-nature-of-none">The Singleton Nature of
+<code>None</code></h3>
+<p>A singleton is a design pattern that restricts the instantiation of a
+class to a single object. In Python, <code>None</code> is an absolute
+singleton: there is only one <code>None</code> object created when the
+Python interpreter starts, and it persists until the process
+terminates.</p>
+<p>Regardless of where, when, or how many times you assign
+<code>None</code> to a variable, every variable points to the exact same
+location in memory.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(a <span class="kw">is</span> b)        <span class="co"># True</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">id</span>(a) <span class="op">==</span> <span class="bu">id</span>(b)) <span class="co"># True</span></span></code></pre></div>
+<p>Because <code>None</code> is a singleton, checking for it requires
+checking object identity rather than value equality.</p>
+<h3 id="implementation-in-cpython">Implementation in CPython</h3>
+<p>Under the hood in CPython (the reference implementation of Python
+written in C), <code>None</code> is defined as a static object.</p>
+<ol type="1">
+<li><strong>The C Struct</strong>: In the CPython source code
+(<code>object.h</code> and <code>object.c</code>), <code>None</code> is
+defined as a <code>PyObject</code> structure named
+<code>_Py_NoneStruct</code>.</li>
+<li><strong>The Macro</strong>: The C API provides a global macro,
+<code>Py_None</code>, which points directly to the address of
+<code>_Py_NoneStruct</code>:
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#define Py_None </span><span class="op">(&amp;</span><span class="pp">_Py_NoneStruct</span><span class="op">)</span></span></code></pre></div></li>
+<li><strong>Reference Handling</strong>: Whenever a Python function does
+not explicitly return a value, the interpreter returns
+<code>Py_None</code>. In earlier versions of Python, every reference to
+<code>None</code> incremented its reference count via
+<code>Py_INCREF(Py_None)</code>. Starting in Python 3.12,
+<code>None</code> was converted into an "immortal object," meaning its
+reference count remains effectively constant, avoiding memory bus
+contention across multi-threaded applications.</li>
+</ol>
+<h3 id="preventing-re-instantiation">Preventing Re-instantiation</h3>
+<p>Python enforces the singleton pattern by preventing user-level
+creation of <code>NoneType</code> instances. The class of
+<code>None</code> is <code>NoneType</code>, accessible via
+<code>type(None)</code>.</p>
+<p>If you attempt to call <code>NoneType()</code> directly to create a
+new instance, Python raises a <code>TypeError</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>NoneType <span class="op">=</span> <span class="bu">type</span>(<span class="va">None</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>new_instance <span class="op">=</span> NoneType()</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># TypeError: cannot create &#39;NoneType&#39; instances</span></span></code></pre></div>
+<p>Furthermore, <code>None</code> is a reserved keyword in Python. You
+cannot reassign it, shadow it in local scopes, or bind a new value to
+the identifier:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="va">None</span> <span class="op">=</span> <span class="dv">5</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># SyntaxError: cannot assign to None</span></span></code></pre></div>
+<h3 id="identity-is-vs-equality-">Identity (<code>is</code>) vs.
+Equality (<code>==</code>)</h3>
+<p>Because <code>None</code> is guaranteed to be a singleton, the
+recommended and idiomatic way to test whether a value is
+<code>None</code> is the <code>is</code> operator, not
+<code>==</code>.</p>
+<ul>
+<li><strong><code>val is None</code></strong>: Checks pointer equality.
+It evaluates whether the memory address of <code>val</code> is identical
+to the address of <code>_Py_NoneStruct</code>. This is an extremely
+fast, <span class="math inline">\(O(1)\)</span> CPU instruction that
+cannot be overridden by user classes.</li>
+<li><strong><code>val == None</code></strong>: Invokes the
+<code>__eq__()</code> method on the object bound to <code>val</code>.
+This carries performance overhead and introduces potential bugs if a
+custom class implements <code>__eq__()</code> to return
+<code>True</code> when evaluated against <code>None</code>.</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> FaultyComparison:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__eq__</span>(<span class="va">self</span>, other):</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">True</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>obj <span class="op">=</span> FaultyComparison()</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(obj <span class="op">==</span> <span class="va">None</span>) <span class="co"># True (Misleading)</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(obj <span class="kw">is</span> <span class="va">None</span>) <span class="co"># False (Accurate)</span></span></code></pre></div>
+<p>Using <code>is</code> guarantees that the comparison checks for the
+actual, unique singleton object defined by the interpreter.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

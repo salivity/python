@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Bisect Module: Binary Search and Insertion - python</title>
+    <meta name="description" content="The Python bisect module provides specialized tools for maintaining lists in sorted order without having to repeatedly resort them after every insertion. By implementing standard binary search algorithms, the module locates positions in logarithmic time,">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-bisect-module-binary-search-and-insertion">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Bisect Module: Binary Search and Insertion - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-bisect-module-binary-search-and-insertion" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Python bisect module provides specialized tools for maintaining lists in sorted order without having to repeatedly resort them after every insertion. By implementing standard binary search algorithms, the module locates positions in logarithmic time," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-bisect-module-binary-search-and-insertion">Python Bisect
+Module: Binary Search and Insertion</h1>
+<p>The Python <code>bisect</code> module provides specialized tools for
+maintaining lists in sorted order without having to repeatedly resort
+them after every insertion. By implementing standard binary search
+algorithms, the module locates positions in logarithmic time, enabling
+fast lookups and sequence manipulations. This article explains how
+<code>bisect</code> functions internally, the distinction between its
+left and right search variants, how insertion works, and the performance
+characteristics associated with standard Python lists.</p>
+<h2 id="how-binary-search-operates-in-bisect">How Binary Search Operates
+in Bisect</h2>
+<p>At its core, the <code>bisect</code> module implements a bisection
+algorithm that operates on pre-sorted sequences. Instead of checking
+elements sequentially from left to right (which takes linear time, <span
+class="math inline">\(O(n)\)</span>), it compares the target value
+against the middle element of the search window.</p>
+<p>If the target is smaller than the midpoint, the algorithm discards
+the upper half; if larger, it discards the lower half. It repeats this
+division until it narrows down the exact insertion index, completing the
+search in <span class="math inline">\(O(\log n)\)</span> time.</p>
+<h2 id="finding-insertion-points-bisect_left-vs-bisect_right">Finding
+Insertion Points: <code>bisect_left</code> vs.
+<code>bisect_right</code></h2>
+<p>The module provides two primary inspection functions to locate where
+an element should be placed to preserve order:</p>
+<ul>
+<li><strong><code>bisect_left(a, x)</code></strong>: Returns an
+insertion index such that if <code>x</code> already exists in
+<code>a</code>, the returned index will be to the left of (before) any
+existing entries of <code>x</code>.</li>
+<li><strong><code>bisect_right(a, x)</code></strong> (or the alias
+<strong><code>bisect</code></strong>): Returns an insertion index such
+that if <code>x</code> already exists in <code>a</code>, the returned
+index will be to the right of (after) any existing entries of
+<code>x</code>.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> bisect</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> [<span class="dv">10</span>, <span class="dv">20</span>, <span class="dv">20</span>, <span class="dv">20</span>, <span class="dv">30</span>]</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Locate insertion point for an existing value</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>idx_left <span class="op">=</span> bisect.bisect_left(data, <span class="dv">20</span>)   <span class="co"># Returns 1 (before existing 20s)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>idx_right <span class="op">=</span> bisect.bisect_right(data, <span class="dv">20</span>) <span class="co"># Returns 4 (after existing 20s)</span></span></code></pre></div>
+<p>Both functions accept optional <code>lo</code> and <code>hi</code>
+arguments to restrict the search to a specific slice of the list.</p>
+<h2 id="inserting-elements-insort_left-and-insort_right">Inserting
+Elements: <code>insort_left</code> and <code>insort_right</code></h2>
+<p>Finding an index is only the first step; modifying the sequence
+requires inserting the value. The <code>insort</code> functions combine
+the search and insertion steps:</p>
+<ul>
+<li><strong><code>insort_left(a, x)</code></strong>: Finds the index
+using <code>bisect_left</code> and executes
+<code>a.insert(index, x)</code>.</li>
+<li><strong><code>insort_right(a, x)</code></strong> (or
+<strong><code>insort</code></strong>): Finds the index using
+<code>bisect_right</code> and executes
+<code>a.insert(index, x)</code>.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> bisect</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>numbers <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">7</span>]</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>bisect.insort(numbers, <span class="dv">5</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: [1, 3, 4, 5, 7]</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(numbers)</span></code></pre></div>
+<h2 id="computational-complexity-and-limitations">Computational
+Complexity and Limitations</h2>
+<p>While the search phase is efficient at <span
+class="math inline">\(O(\log n)\)</span>, the actual insertion step is
+bounded by the underlying data structure.</p>
+<p>Python lists are dynamic arrays stored in contiguous memory blocks.
+Inserting an element into an arbitrary index requires shifting every
+subsequent element to the right by one position. Consequently,
+<code>insort</code> runs in <span class="math inline">\(O(n)\)</span>
+time due to the list insertion step, even though locating the insertion
+point takes only <span class="math inline">\(O(\log n)\)</span>
+comparisons.</p>
+<h2 id="using-the-key-parameter">Using the <code>key</code>
+Parameter</h2>
+<p>Starting in Python 3.10, all functions in the <code>bisect</code>
+module support a <code>key</code> argument. This allows binary searching
+and inserting on lists of complex objects sorted by a specific attribute
+or transformation function:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> bisect</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>records <span class="op">=</span> [(<span class="st">&quot;Alice&quot;</span>, <span class="dv">85</span>), (<span class="st">&quot;Bob&quot;</span>, <span class="dv">90</span>), (<span class="st">&quot;Charlie&quot;</span>, <span class="dv">95</span>)]</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Find insertion point based on the score (the second tuple element)</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>idx <span class="op">=</span> bisect.bisect_left(records, <span class="dv">90</span>, key<span class="op">=</span><span class="kw">lambda</span> x: x[<span class="dv">1</span>])  <span class="co"># Returns 1</span></span></code></pre></div>
+<p>The <code>key</code> function is applied lazily to elements during
+comparisons, maintaining the <span class="math inline">\(O(\log
+n)\)</span> search efficiency without requiring full list
+transformations.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

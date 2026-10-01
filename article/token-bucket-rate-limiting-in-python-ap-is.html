@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Bucket Rate Limiting in Python APIs - python</title>
+    <meta name="description" content="This article explores how to implement rate limiting in Python API endpoints using the token bucket algorithm. It covers the core mechanics of the algorithm, demonstrates a direct in-memory Python implementation utilizing lazy evaluation, and illustrates">
+    <link rel="canonical" href="https://salivity.github.io/python/article/token-bucket-rate-limiting-in-python-ap-is">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Token Bucket Rate Limiting in Python APIs - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/token-bucket-rate-limiting-in-python-ap-is" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how to implement rate limiting in Python API endpoints using the token bucket algorithm. It covers the core mechanics of the algorithm, demonstrates a direct in-memory Python implementation utilizing lazy evaluation, and illustrates" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="token-bucket-rate-limiting-in-python-apis">Token Bucket Rate
+Limiting in Python APIs</h1>
+<p>This article explores how to implement rate limiting in Python API
+endpoints using the token bucket algorithm. It covers the core mechanics
+of the algorithm, demonstrates a direct in-memory Python implementation
+utilizing lazy evaluation, and illustrates how to integrate this logic
+into web frameworks like FastAPI to protect endpoints from abuse and
+traffic spikes.</p>
+<h3 id="the-mechanics-of-the-token-bucket-algorithm">The Mechanics of
+the Token Bucket Algorithm</h3>
+<p>The token bucket algorithm controls the rate of traffic based on a
+simple metaphor:</p>
+<ol type="1">
+<li><strong>Bucket Capacity:</strong> A bucket holds a maximum number of
+tokens, defining the burst capacity.</li>
+<li><strong>Refill Rate:</strong> Tokens are added to the bucket at a
+constant rate per second until the bucket reaches its maximum
+capacity.</li>
+<li><strong>Consumption:</strong> Each incoming request requires one or
+more tokens to proceed. If sufficient tokens are present, the request
+consumes them and is processed. If the bucket is empty, the API denies
+the request, typically returning an
+<code>HTTP 429 Too Many Requests</code> status.</li>
+</ol>
+<p>Instead of running background threads to increment tokens
+continuously, efficient implementations use lazy evaluation. The
+algorithm calculates how many tokens should have accumulated since the
+last request based on the elapsed time.</p>
+<h3 id="pure-python-implementation">Pure Python Implementation</h3>
+<p>Below is a thread-safe, in-memory implementation of the token bucket
+using <code>time.monotonic()</code> for reliable time measurement.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> threading</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> TokenBucket:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, capacity: <span class="bu">int</span>, refill_rate: <span class="bu">float</span>):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.capacity <span class="op">=</span> capacity</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.refill_rate <span class="op">=</span> refill_rate  <span class="co"># Tokens added per second</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.tokens <span class="op">=</span> <span class="bu">float</span>(capacity)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.last_refill <span class="op">=</span> time.monotonic()</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.lock <span class="op">=</span> threading.Lock()</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> consume(<span class="va">self</span>, tokens: <span class="bu">int</span> <span class="op">=</span> <span class="dv">1</span>) <span class="op">-&gt;</span> <span class="bu">bool</span>:</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">with</span> <span class="va">self</span>.lock:</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>            now <span class="op">=</span> time.monotonic()</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>            elapsed <span class="op">=</span> now <span class="op">-</span> <span class="va">self</span>.last_refill</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Add tokens based on elapsed time</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.tokens <span class="op">=</span> <span class="bu">min</span>(</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>                <span class="va">self</span>.capacity, </span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>                <span class="va">self</span>.tokens <span class="op">+</span> elapsed <span class="op">*</span> <span class="va">self</span>.refill_rate</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>            )</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.last_refill <span class="op">=</span> now</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="va">self</span>.tokens <span class="op">&gt;=</span> tokens:</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>                <span class="va">self</span>.tokens <span class="op">-=</span> tokens</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span> <span class="va">True</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">False</span></span></code></pre></div>
+<h3 id="integrating-with-an-api-framework-fastapi">Integrating with an
+API Framework (FastAPI)</h3>
+<p>In modern Python web frameworks like FastAPI, rate limiting can be
+applied per client IP address using a dependency injection pattern.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastapi <span class="im">import</span> FastAPI, HTTPException, Request, status</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> collections <span class="im">import</span> defaultdict</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> FastAPI()</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Global store for buckets keyed by client IP</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>buckets <span class="op">=</span> defaultdict(<span class="kw">lambda</span>: TokenBucket(capacity<span class="op">=</span><span class="dv">10</span>, refill_rate<span class="op">=</span><span class="fl">2.0</span>))</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> rate_limiter(request: Request):</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    client_ip <span class="op">=</span> request.client.host</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    bucket <span class="op">=</span> buckets[client_ip]</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> bucket.consume(<span class="dv">1</span>):</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> HTTPException(</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            status_code<span class="op">=</span>status.HTTP_429_TOO_MANY_REQUESTS,</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>            detail<span class="op">=</span><span class="st">&quot;Rate limit exceeded. Try again later.&quot;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="at">@app.get</span>(<span class="st">&quot;/data&quot;</span>, dependencies<span class="op">=</span>[Depends(rate_limiter)])</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_data():</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {<span class="st">&quot;message&quot;</span>: <span class="st">&quot;Request allowed&quot;</span>}</span></code></pre></div>
+<h3 id="scaling-beyond-a-single-process">Scaling Beyond a Single
+Process</h3>
+<p>The in-memory approach operates within a single Python process. When
+running multi-worker ASGI/WSGI servers (such as Gunicorn or Uvicorn
+workers) or across multiple server instances, each process maintains an
+independent state, undermining the rate limit.</p>
+<p>To scale horizontally:</p>
+<ul>
+<li><strong>Redis Storage:</strong> Maintain bucket state (last
+timestamp and token count) in a centralized Redis datastore.</li>
+<li><strong>Atomic Operations:</strong> Use Redis Lua scripts to fetch
+the current count, calculate elapsed time, update the tokens, and
+approve or deny the request in a single atomic transaction.</li>
+<li><strong>Third-Party Libraries:</strong> Production environments
+often use established tools like <code>slowapi</code> or Redis-backed
+Celery limiters, which abstract these synchronization challenges while
+employing token bucket or sliding window algorithms under the hood.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

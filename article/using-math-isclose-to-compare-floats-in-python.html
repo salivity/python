@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using math.isclose() to Compare Floats in Python - python</title>
+    <meta name="description" content="Comparing floating-point numbers in Python using the standard equality operator (==) frequently leads to unexpected bugs due to hardware-level binary representation errors. The purpose of Python's math.isclose() function is to safely compare two floating">
+    <link rel="canonical" href="https://salivity.github.io/python/article/using-math-isclose-to-compare-floats-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using math.isclose() to Compare Floats in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/using-math-isclose-to-compare-floats-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Comparing floating-point numbers in Python using the standard equality operator (==) frequently leads to unexpected bugs due to hardware-level binary representation errors. The purpose of Python's math.isclose() function is to safely compare two floating" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-mathisclose-to-compare-floats-in-python">Using
+math.isclose() to Compare Floats in Python</h1>
+<p>Comparing floating-point numbers in Python using the standard
+equality operator (<code>==</code>) frequently leads to unexpected bugs
+due to hardware-level binary representation errors. The purpose of
+Python's <code>math.isclose()</code> function is to safely compare two
+floating-point numbers by checking if they are "close" to each other
+within an acceptable margin of error. This article explains why
+floating-point inaccuracies happen, how <code>math.isclose()</code>
+works, and how to use it effectively in your code.</p>
+<h3 id="the-problem-with-direct-float-comparison">The Problem with
+Direct Float Comparison</h3>
+<p>Computers represent floating-point numbers in base-2 (binary)
+according to the IEEE 754 standard. Because certain base-10 fractions
+(like 0.1 or 0.2) cannot be represented cleanly in finite binary digits,
+small rounding inaccuracies occur.</p>
+<p>For example:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="fl">0.1</span> <span class="op">+</span> <span class="fl">0.2</span> <span class="op">==</span> <span class="fl">0.3</span>)  <span class="co"># Outputs: False</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="fl">0.1</span> <span class="op">+</span> <span class="fl">0.2</span>)         <span class="co"># Outputs: 0.30000000000000004</span></span></code></pre></div>
+<p>Because <code>0.1 + 0.2</code> evaluates to slightly more than
+<code>0.3</code>, testing equality with <code>==</code> returns
+<code>False</code>.</p>
+<h3 id="the-solution-mathisclose">The Solution:
+<code>math.isclose()</code></h3>
+<p>Introduced in Python 3.5, <code>math.isclose()</code> determines
+whether two values are considered equal by verifying if the difference
+between them falls within a specified tolerance threshold.</p>
+<p>The function signature is:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>math.isclose(a, b, <span class="op">*</span>, rel_tol<span class="op">=</span><span class="fl">1e-09</span>, abs_tol<span class="op">=</span><span class="fl">0.0</span>)</span></code></pre></div>
+<p>The parameters function as follows:</p>
+<ul>
+<li><strong><code>a</code> and <code>b</code></strong>: The two numeric
+values being compared.</li>
+<li><strong><code>rel_tol</code> (Relative Tolerance)</strong>: The
+maximum allowed difference relative to the larger absolute value of
+<code>a</code> or <code>b</code>. The default value is
+<code>1e-09</code>, meaning the values must match within 9 decimal
+places. This is ideal for most general comparisons where numbers vary in
+scale.</li>
+<li><strong><code>abs_tol</code> (Absolute Tolerance)</strong>: A fixed
+maximum difference regardless of the magnitude of the numbers. The
+default is <code>0.0</code>. This parameter is necessary when comparing
+values that are very close to zero.</li>
+</ul>
+<h3 id="practical-example">Practical Example</h3>
+<p>Here is how <code>math.isclose()</code> resolves standard
+floating-point equality errors:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> <span class="fl">0.1</span> <span class="op">+</span> <span class="fl">0.2</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> <span class="fl">0.3</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Standard equality fails</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(a <span class="op">==</span> b)  <span class="co"># False</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># math.isclose succeeds</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(math.isclose(a, b))  <span class="co"># True</span></span></code></pre></div>
+<h3 id="when-to-use-abs_tol">When to Use <code>abs_tol</code></h3>
+<p>When comparing numbers near zero, relative tolerance alone is often
+insufficient. For instance, comparing <code>1e-10</code> to
+<code>0.0</code> will fail with the default <code>rel_tol</code> because
+the relative difference relative to the larger number is 100%. In such
+cases, define <code>abs_tol</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Fails with default parameters</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(math.isclose(<span class="fl">1e-10</span>, <span class="fl">0.0</span>))  <span class="co"># False</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Succeeds with an explicit absolute tolerance</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(math.isclose(<span class="fl">1e-10</span>, <span class="fl">0.0</span>, abs_tol<span class="op">=</span><span class="fl">1e-9</span>))  <span class="co"># True</span></span></code></pre></div>
+<h3 id="conclusion">Conclusion</h3>
+<p>Direct equality (<code>==</code>) should almost never be used with
+floating-point calculations in Python. By using
+<code>math.isclose()</code>, you account for underlying binary precision
+limitations, ensuring your conditional checks and tests behave reliably
+and as expected.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

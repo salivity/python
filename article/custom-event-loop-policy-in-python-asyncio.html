@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Event Loop Policy in Python asyncio - python</title>
+    <meta name="description" content="This article explains how to implement a custom event loop policy in Python using asyncio.AbstractEventLoopPolicy. It outlines the core responsibilities of an event loop policy, the specific methods required to subclass the abstract interface, and a prac">
+    <link rel="canonical" href="https://salivity.github.io/python/article/custom-event-loop-policy-in-python-asyncio">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Custom Event Loop Policy in Python asyncio - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/custom-event-loop-policy-in-python-asyncio" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to implement a custom event loop policy in Python using asyncio.AbstractEventLoopPolicy. It outlines the core responsibilities of an event loop policy, the specific methods required to subclass the abstract interface, and a prac" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="custom-event-loop-policy-in-python-asyncio">Custom Event Loop
+Policy in Python asyncio</h1>
+<p>This article explains how to implement a custom event loop policy in
+Python using <code>asyncio.AbstractEventLoopPolicy</code>. It outlines
+the core responsibilities of an event loop policy, the specific methods
+required to subclass the abstract interface, and a practical
+implementation example showing how to configure and activate the policy
+within your application.</p>
+<h2 id="understanding-event-loop-policies">Understanding Event Loop
+Policies</h2>
+<p>In Python's <code>asyncio</code>, an event loop policy is a global
+object that manages how event loops are created, accessed, and destroyed
+across different OS threads. By default, <code>asyncio</code> uses an
+internal default policy (<code>DefaultEventLoopPolicy</code>) tailored
+to the platform.</p>
+<p>Creating a custom policy allows developers to:</p>
+<ul>
+<li>Substitute the standard event loop with a custom or third-party
+implementation (such as <code>uvloop</code>).</li>
+<li>Modify how loops are bound to OS threads.</li>
+<li>Add lifecycle hooks, profiling, or custom logging to loop creation
+and destruction.</li>
+</ul>
+<h2 id="key-methods-of-abstracteventlooppolicy">Key Methods of
+<code>AbstractEventLoopPolicy</code></h2>
+<p>To create a custom policy, you must subclass
+<code>asyncio.AbstractEventLoopPolicy</code> and implement the following
+core abstract methods:</p>
+<ul>
+<li><code>get_event_loop()</code>: Returns the current event loop for
+the current context/thread. Raises a <code>RuntimeError</code> if no
+loop is set and the policy does not create one automatically.</li>
+<li><code>set_event_loop(loop)</code>: Sets the current event loop for
+the current context/thread to <code>loop</code>. Accepting
+<code>None</code> allows unsetting the current loop.</li>
+<li><code>new_event_loop()</code>: Creates and returns a new event loop
+instance according to the policy's rules.</li>
+</ul>
+<p>If you are targeting POSIX systems and handling subprocesses in older
+Python versions, methods like <code>get_child_watcher()</code> and
+<code>set_child_watcher()</code> may also be relevant, though child
+watchers are deprecated starting in Python 3.12.</p>
+<h2 id="implementing-a-custom-policy">Implementing a Custom Policy</h2>
+<p>Below is an implementation of a custom event loop policy. This
+example implements thread-local storage for managing independent loops
+per thread and wraps the standard
+<code>asyncio.SelectorEventLoop</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> threading</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CustomEventLoopPolicy(asyncio.AbstractEventLoopPolicy):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._local <span class="op">=</span> threading.local()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_event_loop(<span class="va">self</span>) <span class="op">-&gt;</span> asyncio.AbstractEventLoop:</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;Get the event loop for the current thread.&quot;&quot;&quot;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        loop <span class="op">=</span> <span class="bu">getattr</span>(<span class="va">self</span>._local, <span class="st">&quot;loop&quot;</span>, <span class="va">None</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> loop <span class="kw">is</span> <span class="va">None</span> <span class="kw">or</span> loop.is_closed():</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Automatically create a new loop if one does not exist</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>            new_loop <span class="op">=</span> <span class="va">self</span>.new_event_loop()</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.set_event_loop(new_loop)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> new_loop</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> loop</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> set_event_loop(<span class="va">self</span>, loop: asyncio.AbstractEventLoop <span class="op">|</span> <span class="va">None</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;Set the event loop for the current thread.&quot;&quot;&quot;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> loop <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="kw">and</span> <span class="kw">not</span> <span class="bu">isinstance</span>(loop, asyncio.AbstractEventLoop):</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">TypeError</span>(<span class="ss">f&quot;Expected AbstractEventLoop, got </span><span class="sc">{</span><span class="bu">type</span>(loop)<span class="sc">.</span><span class="va">__name__</span><span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._local.loop <span class="op">=</span> loop</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> new_event_loop(<span class="va">self</span>) <span class="op">-&gt;</span> asyncio.AbstractEventLoop:</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;Create and return a new event loop.&quot;&quot;&quot;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Custom loop initialization logic can be placed here</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;CustomEventLoopPolicy: Initializing a new event loop.&quot;</span>)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> asyncio.SelectorEventLoop()</span></code></pre></div>
+<h3 id="inheriting-from-defaulteventlooppolicy">Inheriting from
+<code>DefaultEventLoopPolicy</code></h3>
+<p>If you only need to override loop creation while keeping default
+thread-binding and process-watching logic, you can subclass
+<code>asyncio.DefaultEventLoopPolicy</code> instead:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> OptimizedEventLoopPolicy(asyncio.DefaultEventLoopPolicy):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> new_event_loop(<span class="va">self</span>) <span class="op">-&gt;</span> asyncio.AbstractEventLoop:</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Creating custom optimized loop...&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> asyncio.SelectorEventLoop()</span></code></pre></div>
+<h2 id="registering-and-using-the-policy">Registering and Using the
+Policy</h2>
+<p>To activate the custom policy, pass an instance of the class to
+<code>asyncio.set_event_loop_policy()</code> before executing any
+asynchronous tasks or calling <code>asyncio.run()</code>.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    loop <span class="op">=</span> asyncio.get_running_loop()</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Running inside: </span><span class="sc">{</span><span class="bu">type</span>(loop)<span class="sc">.</span><span class="va">__name__</span><span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&quot;__main__&quot;</span>:</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Register the custom policy globally</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    asyncio.set_event_loop_policy(CustomEventLoopPolicy())</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># asyncio.run() creates and manages the loop via the installed policy</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    asyncio.run(main())</span></code></pre></div>
+<p>Once registered, any internal calls made by
+<code>asyncio.get_event_loop()</code>,
+<code>asyncio.new_event_loop()</code>, or high-level runners like
+<code>asyncio.run()</code> will delegate to your custom policy
+implementation.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

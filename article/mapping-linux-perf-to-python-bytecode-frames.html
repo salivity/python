@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapping Linux Perf to Python Bytecode Frames - python</title>
+    <meta name="description" content="Profiling Python applications with Linux perf presents a unique challenge: perf monitors kernel and native CPU instructions, while Python executes dynamically compiled bytecode within a virtual machine. This article explains how Linux perf tracepoints an">
+    <link rel="canonical" href="https://salivity.github.io/python/article/mapping-linux-perf-to-python-bytecode-frames">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mapping Linux Perf to Python Bytecode Frames - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/mapping-linux-perf-to-python-bytecode-frames" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Profiling Python applications with Linux perf presents a unique challenge: perf monitors kernel and native CPU instructions, while Python executes dynamically compiled bytecode within a virtual machine. This article explains how Linux perf tracepoints an" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="mapping-linux-perf-to-python-bytecode-frames">Mapping Linux Perf
+to Python Bytecode Frames</h1>
+<p>Profiling Python applications with Linux <code>perf</code> presents a
+unique challenge: <code>perf</code> monitors kernel and native CPU
+instructions, while Python executes dynamically compiled bytecode within
+a virtual machine. This article explains how Linux <code>perf</code>
+tracepoints and sampling interrupts can be bridged to dynamic CPython
+execution states. It details how to leverage native perf trampolines
+introduced in CPython 3.12, User Statically Defined Tracing (USDT)
+probes, and eBPF-driven frame inspection to associate low-level events
+directly with Python functions, filenames, and bytecode offsets.</p>
+<hr />
+<h3 id="the-challenge-the-native-to-bytecode-gap">The Challenge: The
+Native-to-Bytecode Gap</h3>
+<p>When running standard <code>perf record</code> on a CPython binary,
+stack unwinding only resolves native C symbols:</p>
+<pre class="text"><code>_PyEval_EvalFrameDefault (in libpython3.x.so)
+  └── PyObject_Vectorcall
+        └── ...</code></pre>
+<p>Because CPython executes Python bytecode inside an evaluation loop
+(historically <code>eval_frame</code> or
+<code>_PyEval_EvalFrameDefault</code>), the native CPU instruction
+pointer (<code>RIP</code>/<code>PC</code>) points to the machine code of
+the interpreter rather than the Python source code. To map kernel
+tracepoints (e.g., <code>sched:sched_switch</code>, page faults, system
+calls) to Python bytecode, you must map the active
+<code>PyFrameObject</code> (or <code>_PyInterpreterFrame</code> in
+Python 3.11+) to the hardware instruction pointer at the moment the
+tracepoint fires.</p>
+<hr />
+<h3
+id="method-1-python-312-native-perf-support-perf-maps-and-trampolines">Method
+1: Python 3.12+ Native Perf Support (Perf Maps and Trampolines)</h3>
+<p>CPython 3.12 introduced native support for Linux <code>perf</code>
+via runtime trampoline generation. Instead of calling the evaluation
+loop generically, Python generates tiny JIT-like native trampolines for
+each Python code object.</p>
+<h4 id="1-how-it-works">1. How It Works</h4>
+<p>When a Python function is executed:</p>
+<ol type="1">
+<li>CPython writes machine code stubs (trampolines) that call into the
+frame evaluator.</li>
+<li>The runtime registers these addresses and writes entries to
+<code>/tmp/perf-&lt;PID&gt;.map</code> or emits a binary
+<code>jitdump</code> file.</li>
+<li>Linux <code>perf</code> parses
+<code>/tmp/perf-&lt;PID&gt;.map</code> during symbol resolution to map
+instruction addresses directly to Python function names, files, and line
+numbers.</li>
+</ol>
+<h4 id="2-activation">2. Activation</h4>
+<p>Enable trampolines via an environment variable or command-line
+flag:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Via environment variable</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">PYTHONPERFSUPPORT</span><span class="op">=</span>1</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">perf</span> record <span class="at">-F</span> 999 <span class="at">-g</span> <span class="at">--</span> python your_script.py</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Or via the CLI switch</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="ex">perf</span> record <span class="at">-F</span> 999 <span class="at">-g</span> <span class="at">--</span> python <span class="at">-X</span> perf your_script.py</span></code></pre></div>
+<h4 id="3-analyzing-tracepoints">3. Analyzing Tracepoints</h4>
+<p>To trace a specific kernel event (e.g., system calls) correlated with
+Python execution:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">perf</span> record <span class="at">-e</span> raw_syscalls:sys_enter <span class="at">-g</span> <span class="at">--</span> python <span class="at">-X</span> perf your_script.py</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">perf</span> report <span class="at">--stdio</span></span></code></pre></div>
+<p>The call tree will display the Python function name and source file
+interleaved with native C library calls and kernel functions.</p>
+<hr />
+<h3 id="method-2-usdt-tracepoints-in-cpython">Method 2: USDT Tracepoints
+in CPython</h3>
+<p>If CPython is compiled with DTrace/USDT support
+(<code>--with-dtrace</code>), the binary contains static tracepoints
+compiled directly into the interpreter.</p>
+<h4 id="1-available-usdt-probes">1. Available USDT Probes</h4>
+<p>Common probes embedded in the Python runtime include:</p>
+<ul>
+<li><code>python:function__entry</code>: Fires when entering a Python
+frame. Arguments provide the filename, function name, and line
+number.</li>
+<li><code>python:function__return</code>: Fires when exiting a Python
+frame.</li>
+<li><code>python:line</code>: Fires on each bytecode line execution
+(disabled by default due to high overhead).</li>
+</ul>
+<h4 id="2-registering-probes-with-linux-perf">2. Registering Probes with
+Linux Perf</h4>
+<p>You can inspect and register these probes using
+<code>perf</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check for USDT markers in the python binary</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">perf</span> list sdt</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a USDT marker to perf dynamic tracing</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">perf</span> probe <span class="at">-x</span> /usr/bin/python3.11 python:function__entry</span></code></pre></div>
+<p>Once registered, tracepoint events can be recorded alongside hardware
+performance counters or kernel scheduler events to reconstruct frame
+lifecycles.</p>
+<hr />
+<h3 id="method-3-dynamic-bytecode-introspection-via-ebpf">Method 3:
+Dynamic Bytecode Introspection via eBPF</h3>
+<p>For environments running Python versions prior to 3.12 without
+trampolines, eBPF (extended Berkeley Packet Filter) allows out-of-band
+unwinding of the CPython frame structures.</p>
+<h4 id="1-reading-cpython-thread-state">1. Reading CPython Thread
+State</h4>
+<p>In CPython, each OS thread maintains a pointer to a
+<code>PyThreadState</code> struct, which contains a pointer to the
+active frame:</p>
+<ul>
+<li><strong>Python 3.10 and earlier:</strong>
+<code>PyThreadState -&gt; frame</code>
+(<code>PyFrameObject*</code>)</li>
+<li><strong>Python 3.11+:</strong>
+<code>PyThreadState -&gt; current_frame</code>
+(<code>_PyInterpreterFrame*</code>)</li>
+</ul>
+<p>Using an eBPF program attached to a tracepoint (e.g.,
+<code>tracepoint/sched/sched_switch</code>), you can:</p>
+<ol type="1">
+<li>Locate the base address of <code>libpython</code> in user
+space.</li>
+<li>Read the thread-local <code>_PyThreadState_Current</code> symbol
+using <code>bpf_probe_read_user()</code>.</li>
+<li>Traverse the frame linked list back to find:
+<ul>
+<li><code>co_filename</code>:
+<code>frame-&gt;f_code-&gt;co_filename</code></li>
+<li><code>co_name</code>: <code>frame-&gt;f_code-&gt;co_name</code></li>
+<li><code>f_lasti</code>: Current bytecode instruction index inside
+<code>f_code-&gt;co_code</code>.</li>
+</ul></li>
+</ol>
+<h4 id="2-resolving-bytecode-offsets">2. Resolving Bytecode Offsets</h4>
+<p>The <code>f_lasti</code> attribute represents the exact offset within
+the bytecode payload. By extracting the bytecode mapping table
+(<code>co_linetable</code> or <code>co_lnotab</code>), user-space
+consumers of the eBPF perf buffer match the exact <code>f_lasti</code>
+integer to the Python source line.</p>
+<hr />
+<h3 id="comparison-of-methods">Comparison of Methods</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Python 3.12+ <code>-X perf</code></th>
+<th style="text-align: left;">USDT Probes</th>
+<th style="text-align: left;">eBPF Custom Unwinding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Overhead</strong></td>
+<td style="text-align: left;">Low to Medium (~1–3%)</td>
+<td style="text-align: left;">High (if tracing every call)</td>
+<td style="text-align: left;">Minimal</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Setup Complexity</strong></td>
+<td style="text-align: left;">Zero (Built-in)</td>
+<td style="text-align: left;">Recompile with
+<code>--with-dtrace</code></td>
+<td style="text-align: left;">High (requires DWARF knowledge)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Line-level Precision</strong></td>
+<td style="text-align: left;">Yes (in call tree)</td>
+<td style="text-align: left;">Requires <code>python:line</code></td>
+<td style="text-align: left;">Yes (via <code>f_lasti</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>System Event
+Correlation</strong></td>
+<td style="text-align: left;">Native (via <code>perf record</code>)</td>
+<td style="text-align: left;">Via <code>perf</code> /
+<code>bpftrace</code></td>
+<td style="text-align: left;">Full kernel correlation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="recommended-workflow">Recommended Workflow</h3>
+<ol type="1">
+<li>Use <strong>Python 3.12+ with <code>-X perf</code></strong> as the
+default mechanism for profiling CPU hotspots, page faults, and context
+switches alongside Python frames.</li>
+<li>Use <strong>eBPF (or tools like <code>py-spy</code>)</strong> when
+you need non-invasive observation in production environments without
+restarting the target process or modifying runtime flags.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

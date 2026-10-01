@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How multiprocessing.sharedctypes Works in Python - python</title>
+    <meta name="description" content="The multiprocessing.sharedctypes module allows multiple Python processes to access and manipulate the same C-compatible primitive types and arrays directly in memory. By allocating raw ctypes objects from shared memory segments instead of standard proces">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-multiprocessing-sharedctypes-works-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How multiprocessing.sharedctypes Works in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-multiprocessing-sharedctypes-works-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The multiprocessing.sharedctypes module allows multiple Python processes to access and manipulate the same C-compatible primitive types and arrays directly in memory. By allocating raw ctypes objects from shared memory segments instead of standard proces" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-multiprocessingsharedctypes-works-in-python">How
+multiprocessing.sharedctypes Works in Python</h1>
+<p>The <code>multiprocessing.sharedctypes</code> module allows multiple
+Python processes to access and manipulate the same C-compatible
+primitive types and arrays directly in memory. By allocating raw ctypes
+objects from shared memory segments instead of standard process-private
+heap memory, the module enables zero-copy inter-process communication
+without the overhead of serialization. This article details the
+underlying mechanisms, memory allocation strategies, synchronization
+wrappers, and practical implementation patterns that make
+<code>sharedctypes</code> work across process boundaries.</p>
+<h2 id="shared-memory-allocation">Shared Memory Allocation</h2>
+<p>Under the hood, <code>multiprocessing.sharedctypes</code> relies on
+the operating system's shared memory facilities. In Unix-like
+environments, it typically uses anonymous memory mappings
+(<code>mmap</code>) or shared memory objects (<code>shm_open</code>),
+whereas on Windows, it creates named file mapping objects backed by the
+system paging file.</p>
+<p>When a primitive or array is allocated via <code>sharedctypes</code>,
+the runtime:</p>
+<ol type="1">
+<li>Requests a block of shared memory from the operating system sized to
+fit the specified <code>ctypes</code> data type.</li>
+<li>Constructs a <code>ctypes</code> object directly over this raw
+memory address.</li>
+<li>Passes the memory reference or relies on process inheritance (such
+as <code>fork</code> on POSIX systems or handle duplication on Windows)
+so child processes map the identical physical memory pages into their
+own virtual address spaces.</li>
+</ol>
+<p>Because the memory addresses correspond to the same physical RAM, any
+write operation performed by one process is instantly visible to all
+other processes attached to that memory block.</p>
+<h2 id="c-compatible-types-and-the-ctypes-layer">C-Compatible Types and
+the ctypes Layer</h2>
+<p>The module integrates with Python's built-in <code>ctypes</code>
+library to enforce strict memory layouts. Instead of high-level,
+dynamically typed Python objects—which contain interpreter-specific
+metadata, reference counts, and pointers that cannot safely span
+different virtual address spaces—<code>sharedctypes</code> operates
+strictly on flat, contiguous C primitives.</p>
+<p>Supported structures include:</p>
+<ul>
+<li>Standard primitive types (e.g., <code>ctypes.c_int</code>,
+<code>ctypes.c_double</code>, <code>ctypes.c_char</code>)</li>
+<li>Structured types defined via <code>ctypes.Structure</code> and
+<code>ctypes.Union</code></li>
+<li>Fixed-size contiguous arrays of primitives</li>
+</ul>
+<p>By utilizing flat data structures, processes avoid passing pointers
+that reference private virtual memory addresses, eliminating memory
+corruption errors.</p>
+<h2 id="raw-objects-vs-synchronized-wrappers">Raw Objects vs.
+Synchronized Wrappers</h2>
+<p>Concurrency requires synchronization. Modifying raw memory
+concurrently across processes leads to race conditions. To address this,
+<code>multiprocessing.sharedctypes</code> provides two main interfaces:
+raw objects and synchronized wrappers.</p>
+<h3 id="raw-objects">Raw Objects</h3>
+<p>Constructors such as <code>RawValue</code> and <code>RawArray</code>
+allocate ctypes instances in shared memory without any locking
+mechanisms:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing.sharedctypes <span class="im">import</span> RawValue, RawArray</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ctypes</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Allocates an unmanaged shared double and an array of 10 integers</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>shared_num <span class="op">=</span> RawValue(ctypes.c_double, <span class="fl">3.14</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>shared_arr <span class="op">=</span> RawArray(ctypes.c_int, [<span class="dv">0</span>] <span class="op">*</span> <span class="dv">10</span>)</span></code></pre></div>
+<p>These functions offer maximum performance because read and write
+operations incur zero lock overhead. However, the programmer is entirely
+responsible for coordinating access via external synchronization
+primitives (such as <code>multiprocessing.Lock</code> or
+<code>multiprocessing.Semaphore</code>).</p>
+<h3 id="synchronized-objects">Synchronized Objects</h3>
+<p>The standard <code>Value</code> and <code>Array</code> factory
+functions automatically wrap the raw ctypes objects inside
+synchronization proxies (<code>Synchronized</code> and
+<code>SynchronizedArray</code>):</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> multiprocessing.sharedctypes <span class="im">import</span> Value, Array</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ctypes</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Allocates an integer and array protected by recursive locks</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>sync_int <span class="op">=</span> Value(ctypes.c_int, <span class="dv">42</span>, lock<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>sync_arr <span class="op">=</span> Array(ctypes.c_char, <span class="st">b&quot;hello&quot;</span>, lock<span class="op">=</span><span class="va">True</span>)</span></code></pre></div>
+<p>By default, these wrappers instantiate a
+<code>multiprocessing.RLock</code> alongside the shared buffer. When
+interacting with the wrapper, synchronization is handled in two
+ways:</p>
+<ol type="1">
+<li><strong>Implicit Synchronization on Attribute Access:</strong>
+Reading or assigning to the <code>.value</code> attribute automatically
+acquires and releases the underlying lock.</li>
+<li><strong>Explicit Context Management:</strong> The wrapper object
+itself implements the context management protocol
+(<code>__enter__</code> and <code>__exit__</code>), allowing atomic
+blocks:</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> sync_int.get_lock():</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    sync_int.value <span class="op">+=</span> <span class="dv">1</span></span></code></pre></div>
+<h2 id="cross-process-inheritance-and-serialization">Cross-Process
+Inheritance and Serialization</h2>
+<p>When a process spawns a child worker, the shared ctypes reference
+must be passed down.</p>
+<ul>
+<li><strong>Fork (POSIX):</strong> The child process naturally inherits
+the virtual memory mappings of the parent. The pointer remains valid,
+meaning no explicit re-mapping is required.</li>
+<li><strong>Spawn (Windows, macOS default):</strong> The child process
+starts as a fresh interpreter. The runtime serializes a memory reduction
+object that contains the underlying shared memory handle and size. When
+received by the child, the runtime re-maps the shared memory block into
+the child's address space and re-instantiates the <code>ctypes</code>
+object over that memory.</li>
+</ul>
+<p>Because the underlying shared storage is managed directly by OS
+pages, this mechanism completely bypasses Python's Global Interpreter
+Lock (GIL) and avoids pickling entire datasets, making it an efficient
+solution for inter-process communication involving numeric
+computation.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

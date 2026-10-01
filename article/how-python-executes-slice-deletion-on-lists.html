@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Executes Slice Deletion on Lists - python</title>
+    <meta name="description" content="When you run del mylist[start:stop:step], Python removes multiple elements from a mutable sequence in a single, in-place operation. This article explains how Python translates the slice syntax into an internal call, resolves bounds and step sizes, shifts">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-executes-slice-deletion-on-lists">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Executes Slice Deletion on Lists - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-executes-slice-deletion-on-lists" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When you run del mylist[start:stop:step], Python removes multiple elements from a mutable sequence in a single, in-place operation. This article explains how Python translates the slice syntax into an internal call, resolves bounds and step sizes, shifts" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-executes-slice-deletion-on-lists">How Python Executes
+Slice Deletion on Lists</h1>
+<p>When you run <code>del my_list[start:stop:step]</code>, Python
+removes multiple elements from a mutable sequence in a single, in-place
+operation. This article explains how Python translates the slice syntax
+into an internal call, resolves bounds and step sizes, shifts the
+remaining elements in memory, and reallocates the underlying array to
+maintain contiguous storage.</p>
+<hr />
+<h3 id="1-translation-to-the-data-model">1. Translation to the Data
+Model</h3>
+<p>At the bytecode level, the statement
+<code>del my_list[start:stop:step]</code> compiles to the
+<code>DELETE_SUBSCR</code> opcode. The Python virtual machine evaluates
+this by delegating the deletion to the object's special method:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>my_list.<span class="fu">__delitem__</span>(<span class="bu">slice</span>(start, stop, step))</span></code></pre></div>
+<p>For built-in mutable sequences like <code>list</code>, the operation
+is handled in CPython by the C-level function
+<code>list_ass_subscript</code>.</p>
+<hr />
+<h3 id="2-normalizing-the-slice-sliceindices">2. Normalizing the Slice
+(<code>slice.indices</code>)</h3>
+<p>Before deleting any data, Python must determine which indices are
+targeted. A sequence's length is finite, but slice parameters can be
+<code>None</code>, negative, or out of bounds.</p>
+<p>CPython normalizes the slice using the equivalent of the C API
+function <code>PySlice_Unpack</code> (or the Python-level
+<code>slice.indices(len(my_list))</code>). This step computes four
+concrete values:</p>
+<ul>
+<li><strong><code>start</code></strong>: The clamped, positive starting
+index.</li>
+<li><strong><code>stop</code></strong>: The clamped, positive stopping
+index.</li>
+<li><strong><code>step</code></strong>: The stride direction and
+distance (must not be <code>0</code>).</li>
+<li><strong><code>slicelength</code></strong>: The exact number of items
+targeted for removal.</li>
+</ul>
+<p>If <code>slicelength</code> evaluates to <code>0</code>, the
+operation terminates immediately without altering the list.</p>
+<hr />
+<h3 id="3-memory-layout-and-execution-paths">3. Memory Layout and
+Execution Paths</h3>
+<p>Python lists are implemented as dynamically sized arrays of pointers
+(<code>PyObject*</code>). Because an array must remain contiguous in
+memory, removing elements requires two actions: releasing references to
+the removed items and shifting the retained items to close the gaps.</p>
+<p>CPython handles the execution via two distinct paths depending on the
+<code>step</code> value.</p>
+<h4 id="contiguous-slices-step--1-or-omitted">Contiguous Slices
+(<code>step == 1</code> or omitted)</h4>
+<p>When <code>step == 1</code>, all targeted elements sit next to each
+other. CPython optimizes this via the internal
+<code>list_ass_slice</code> routine:</p>
+<ol type="1">
+<li><strong>Decref elements</strong>: Python decrements the reference
+count of every <code>PyObject*</code> in the target range
+<code>[start:stop]</code>. If an object's reference count drops to zero,
+it is deallocated.</li>
+<li><strong>Block memory shift</strong>: The remaining tail of the list
+(elements from <code>stop</code> to the end) is shifted left to fill the
+vacant index range starting at <code>start</code>. This is executed with
+a low-level <code>memmove</code> call, which is highly efficient.</li>
+<li><strong>Update metadata</strong>: The list's size attribute is
+reduced by <code>slicelength</code>.</li>
+</ol>
+<h4 id="extended-slices-step--1">Extended Slices
+(<code>step != 1</code>)</h4>
+<p>When <code>step</code> is greater than 1 or negative, the items to be
+deleted are scattered across the array rather than clustered in a single
+block:</p>
+<ol type="1">
+<li><strong>Targeted traversal</strong>: CPython calculates each index
+to remove based on <code>start + i * step</code>.</li>
+<li><strong>In-place compaction</strong>: Instead of shifting memory
+repeatedly for every individual deleted item, Python walks through the
+array in a single pass. Surviving items are moved forward into their new
+contiguous positions, and targeted items have their reference counts
+decremented.</li>
+<li><strong>Update metadata</strong>: The sequence length is updated
+once the single compaction pass completes.</li>
+</ol>
+<hr />
+<h3 id="4-memory-reallocation-list_resize">4. Memory Reallocation
+(<code>list_resize</code>)</h3>
+<p>Deleting items leaves the underlying memory buffer larger than
+necessary. To avoid excessive memory waste, CPython invokes its internal
+resizing function, <code>list_resize</code>.</p>
+<ul>
+<li><strong>Overallocation buffer</strong>: Python lists intentionally
+allocate extra capacity to allow <span
+class="math inline">\(O(1)\)</span> amortized appends.</li>
+<li><strong>Shrinking threshold</strong>: If the new size falls below
+roughly half of the currently allocated capacity, CPython calls
+<code>realloc</code> to shrink the allocated memory block and return the
+unused memory to the system allocator.</li>
+</ul>
+<hr />
+<h3 id="5-time-and-space-complexity">5. Time and Space Complexity</h3>
+<ul>
+<li><strong>Time Complexity</strong>: <span
+class="math inline">\(O(N)\)</span>, where <span
+class="math inline">\(N\)</span> is the total number of elements in the
+list. Even if deleting only a few elements, Python must shift all
+subsequent elements to maintain a contiguous array.</li>
+<li><strong>Space Complexity</strong>: <span
+class="math inline">\(O(1)\)</span> auxiliary space, as all index
+calculations, item deallocations, and pointer moves occur directly
+within the existing memory allocation.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

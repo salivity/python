@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock vs MagicMock in Python: Key Differences - python</title>
+    <meta name="description" content="In Python's unittest.mock library, both Mock and MagicMock are core classes used to replace real objects during testing, but they handle special "dunder" (magic) methods differently. While MagicMock is a subclass of Mock that comes pre-configured with de">
+    <link rel="canonical" href="https://salivity.github.io/python/article/mock-vs-magic-mock-in-python-key-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mock vs MagicMock in Python: Key Differences - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/mock-vs-magic-mock-in-python-key-differences" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python's unittest.mock library, both Mock and MagicMock are core classes used to replace real objects during testing, but they handle special "dunder" (magic) methods differently. While MagicMock is a subclass of Mock that comes pre-configured with de" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="mock-vs-magicmock-in-python-key-differences">Mock vs MagicMock
+in Python: Key Differences</h1>
+<p>In Python's <code>unittest.mock</code> library, both
+<code>Mock</code> and <code>MagicMock</code> are core classes used to
+replace real objects during testing, but they handle special "dunder"
+(magic) methods differently. While <code>MagicMock</code> is a subclass
+of <code>Mock</code> that comes pre-configured with default
+implementations for most magic methods (such as <code>__len__</code>,
+<code>__iter__</code>, and <code>__enter__</code>), a standard
+<code>Mock</code> does not include these methods by default. This guide
+covers the technical differences between the two classes, practical
+examples of how they behave, and when to use each in your test
+suite.</p>
+<h3 id="the-core-difference-magic-methods">The Core Difference: Magic
+Methods</h3>
+<p>Python relies heavily on special double-underscore methods to
+implement protocols such as iteration, context management, and operator
+overloading.</p>
+<ul>
+<li><strong><code>MagicMock</code></strong>: Has almost all magic
+methods pre-implemented as additional mock instances. This allows it to
+work immediately in contexts like <code>len()</code>, <code>with</code>
+statements, or subscript access (<code>obj[key]</code>).</li>
+<li><strong><code>Mock</code></strong>: Does not implement magic methods
+out of the box. If you attempt to invoke a protocol on a plain
+<code>Mock</code> that relies on an unconfigured magic method, Python
+will raise a <code>TypeError</code>.</li>
+</ul>
+<h3 id="behavior-comparison-in-code">Behavior Comparison in Code</h3>
+<h4 id="1-context-managers-__enter__-and-__exit__">1. Context Managers
+(<code>__enter__</code> and <code>__exit__</code>)</h4>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> unittest.mock <span class="im">import</span> Mock, MagicMock</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Using MagicMock</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> MagicMock() <span class="im">as</span> magic:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;MagicMock works in context managers&quot;</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Using Mock</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> Mock() <span class="im">as</span> plain_mock:</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">TypeError</span> <span class="im">as</span> e:</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Mock fails: </span><span class="sc">{</span>e<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Output: Mock fails: &#39;Mock&#39; object does not support the context manager protocol</span></span></code></pre></div>
+<h4 id="2-sequence-operations-__len__-and-__getitem__">2. Sequence
+Operations (<code>__len__</code> and <code>__getitem__</code>)</h4>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># MagicMock supports len() out of the box</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>magic <span class="op">=</span> MagicMock()</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(magic))  <span class="co"># Output: 0</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plain Mock requires manual definition</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>plain <span class="op">=</span> Mock()</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">len</span>(plain)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">TypeError</span> <span class="im">as</span> e:</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Mock fails: </span><span class="sc">{</span>e<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Output: Mock fails: object of type &#39;Mock&#39; has no len()</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co"># To make Mock work with len(), you must set the method explicitly:</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>plain.<span class="fu">__len__</span> <span class="op">=</span> Mock(return_value<span class="op">=</span><span class="dv">5</span>)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(plain))  <span class="co"># Output: 5</span></span></code></pre></div>
+<h4 id="3-iteration-__iter__">3. Iteration (<code>__iter__</code>)</h4>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>magic <span class="op">=</span> MagicMock()</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># MagicMock is iterable by default (returns an empty iterator)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> item <span class="kw">in</span> magic:</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>plain <span class="op">=</span> Mock()</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Mock raises a TypeError because __iter__ is not defined</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> item <span class="kw">in</span> plain:</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">TypeError</span> <span class="im">as</span> e:</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Mock fails: </span><span class="sc">{</span>e<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Output: Mock fails: &#39;Mock&#39; object is not iterable</span></span></code></pre></div>
+<h3 id="when-to-use-magicmock">When to Use <code>MagicMock</code></h3>
+<p><code>MagicMock</code> is the default choice for most unit testing
+scenarios in Python. Use it when:</p>
+<ul>
+<li>You are mocking file handles, network connections, or database
+sessions used in <code>with</code> statements.</li>
+<li>The code under test expects container-like behavior, such as
+accessing dictionary keys (<code>mock_obj["key"]</code>) or checking
+membership (<code>item in mock_obj</code>).</li>
+<li>You are using patch decorators (<code>@patch</code>), which create
+<code>MagicMock</code> instances by default.</li>
+</ul>
+<h3 id="when-to-use-mock">When to Use <code>Mock</code></h3>
+<p>Use standard <code>Mock</code> when you need fine-grained control or
+when default magic behavior can mask bugs. Use it when:</p>
+<ul>
+<li>You want to verify that an object is <strong>not</strong> treated as
+an iterable, context manager, or callable.</li>
+<li>You are testing defensive programming patterns, such as verifying
+that code raises a <code>TypeError</code> when passed an invalid
+type.</li>
+<li>You prefer to explicitly define every supported attribute and method
+to prevent false-positive test passes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

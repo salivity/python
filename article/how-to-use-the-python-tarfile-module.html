@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use the Python tarfile Module - python</title>
+    <meta name="description" content="Python's built-in tarfile module provides a comprehensive suite of tools for reading, writing, and manipulating TAR archives, including those compressed with gzip, bz2, and lzma/xz formats. This article covers what the tarfile module accomplishes, its pr">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-use-the-python-tarfile-module">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use the Python tarfile Module - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-use-the-python-tarfile-module" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's built-in tarfile module provides a comprehensive suite of tools for reading, writing, and manipulating TAR archives, including those compressed with gzip, bz2, and lzma/xz formats. This article covers what the tarfile module accomplishes, its pr" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-use-the-python-tarfile-module">How to Use the Python
+tarfile Module</h1>
+<p>Python's built-in <code>tarfile</code> module provides a
+comprehensive suite of tools for reading, writing, and manipulating TAR
+archives, including those compressed with gzip, bz2, and lzma/xz
+formats. This article covers what the <code>tarfile</code> module
+accomplishes, its primary capabilities—such as inspecting archive
+contents, extracting files safely, and creating new archives—and
+practical examples of how to implement these features in your Python
+workflows without relying on external system utilities.</p>
+<h3 id="core-capabilities-of-the-tarfile-module">Core Capabilities of
+the <code>tarfile</code> Module</h3>
+<p>The <code>tarfile</code> module eliminates the need to shell out to
+system-level <code>tar</code> commands. It interacts directly with
+standard POSIX tar archives, handling low-level byte manipulation,
+header parsing, and directory structures natively.</p>
+<h4 id="1-reading-and-inspecting-archives">1. Reading and Inspecting
+Archives</h4>
+<p>The module allows you to inspect the contents of an archive without
+extracting it to disk first. Using <code>tarfile.open()</code>, you can
+open an archive and inspect metadata such as file names, permissions,
+modification times, and file sizes.</p>
+<ul>
+<li><strong><code>getnames()</code></strong>: Returns a list of file and
+directory paths inside the archive.</li>
+<li><strong><code>getmembers()</code></strong>: Returns a list of
+<code>TarInfo</code> objects containing metadata for each item.</li>
+<li><strong><code>extractfile()</code></strong>: Reads the contents of a
+specific file inside the archive as an in-memory binary stream.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tarfile</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> tarfile.<span class="bu">open</span>(<span class="st">&quot;backup.tar.gz&quot;</span>, <span class="st">&quot;r:gz&quot;</span>) <span class="im">as</span> tar:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Print all file names in the archive</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> name <span class="kw">in</span> tar.getnames():</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(name)</span></code></pre></div>
+<h4 id="2-creating-new-archives">2. Creating New Archives</h4>
+<p>The <code>tarfile</code> module allows you to create uncompressed or
+compressed archives and add files or entire directories into them using
+the <code>add()</code> method.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tarfile</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a gzip-compressed archive</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> tarfile.<span class="bu">open</span>(<span class="st">&quot;archive.tar.gz&quot;</span>, <span class="st">&quot;w:gz&quot;</span>) <span class="im">as</span> tar:</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Add a single file</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    tar.add(<span class="st">&quot;document.pdf&quot;</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Add an entire directory recursively</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    tar.add(<span class="st">&quot;my_folder&quot;</span>, arcname<span class="op">=</span><span class="st">&quot;stored_folder&quot;</span>)</span></code></pre></div>
+<p>The <code>arcname</code> parameter allows you to rename the file or
+directory inside the archive so that local system paths are not
+exposed.</p>
+<h4 id="3-extracting-archive-contents">3. Extracting Archive
+Contents</h4>
+<p>Files can be extracted either individually or all at once. The module
+handles directory creation and file permissions automatically during
+extraction.</p>
+<ul>
+<li><strong><code>extractall()</code></strong>: Extracts the entire
+archive to a specified destination directory.</li>
+<li><strong><code>extract()</code></strong>: Extracts a single member
+identified by name or a <code>TarInfo</code> object.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tarfile</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> tarfile.<span class="bu">open</span>(<span class="st">&quot;archive.tar.gz&quot;</span>, <span class="st">&quot;r:gz&quot;</span>) <span class="im">as</span> tar:</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Extract everything to a specific folder</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    tar.extractall(path<span class="op">=</span><span class="st">&quot;./extracted_files&quot;</span>)</span></code></pre></div>
+<p><em>Note: In modern Python versions (3.12+), you can use the
+<code>filter</code> parameter (such as <code>filter='data'</code>) with
+<code>extractall()</code> to prevent directory traversal vulnerabilities
+like "Zip Slip."</em></p>
+<h4 id="4-built-in-compression-support">4. Built-in Compression
+Support</h4>
+<p>The module handles compression transparently by changing the open
+mode flag passed to <code>tarfile.open()</code>:</p>
+<ul>
+<li><code>"r"</code> or <code>"w"</code>: Uncompressed TAR.</li>
+<li><code>"r:gz"</code> or <code>"w:gz"</code>: Gzip compression
+(<code>.tar.gz</code> or <code>.tgz</code>).</li>
+<li><code>"r:bz2"</code> or <code>"w:bz2"</code>: Bzip2 compression
+(<code>.tar.bz2</code>).</li>
+<li><code>"r:xz"</code> or <code>"w:xz"</code>: LZMA/XZ compression
+(<code>.tar.xz</code>).</li>
+<li><code>"r:*"</code>: Automatically detects the compression format
+when reading.</li>
+</ul>
+<h3 id="summary">Summary</h3>
+<p>The <code>tarfile</code> module serves as a complete, self-contained
+solution for archive management in Python. It enables scripts to package
+datasets, read compressed logs in-memory, generate downloadable backups,
+and unpack incoming files across Windows, macOS, and Linux without
+external dependencies.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

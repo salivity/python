@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding the Python PEP Lifecycle Stages - python</title>
+    <meta name="description" content="This article outlines the standard progression of a Python Enhancement Proposal (PEP), detailing how a proposed feature, design change, or process update moves from an initial concept to official inclusion in the Python language. By exploring the formal">
+    <link rel="canonical" href="https://salivity.github.io/python/article/understanding-the-python-pep-lifecycle-stages">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding the Python PEP Lifecycle Stages - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/understanding-the-python-pep-lifecycle-stages" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article outlines the standard progression of a Python Enhancement Proposal (PEP), detailing how a proposed feature, design change, or process update moves from an initial concept to official inclusion in the Python language. By exploring the formal" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-the-python-pep-lifecycle-stages">Understanding the
+Python PEP Lifecycle Stages</h1>
+<p>This article outlines the standard progression of a Python
+Enhancement Proposal (PEP), detailing how a proposed feature, design
+change, or process update moves from an initial concept to official
+inclusion in the Python language. By exploring the formal stages defined
+in PEP 1—including drafting, review, acceptance, and final
+implementation—this guide provides a clear roadmap of the governance
+framework shaping Python's evolution.</p>
+<h2 id="1-idea-inception-and-pre-draft-discussion">1. Idea Inception and
+Pre-Draft Discussion</h2>
+<p>Before a proposal receives a formal PEP number, the idea begins in
+the community. The author typically initiates discussion on platforms
+such as the Python Discourse forum or the <code>python-ideas</code>
+mailing list. The objective of this phase is to gauge community
+interest, discover existing alternatives, and verify whether the idea
+justifies a full enhancement proposal.</p>
+<h2 id="2-draft">2. Draft</h2>
+<p>Once vetted, the author creates a formal document following standard
+PEP formatting. A PEP editor reviews the proposal for structural
+compliance and assigns it a unique PEP number. In the
+<strong>Draft</strong> stage, the document undergoes continuous
+iterations, refining its technical specifications, motivation,
+rationale, and backwards compatibility impact.</p>
+<h2 id="3-review-and-deliberation">3. Review and Deliberation</h2>
+<p>During this stage, the PEP is actively discussed across the Python
+community and core development team. The Python Steering Council—or a
+designated PEP Delegate (often referred to as a BDFL-Delegate)—is
+assigned to oversee the proposal. The author updates the text to address
+edge cases, technical trade-offs, and critical feedback raised during
+public deliberation.</p>
+<h2 id="4-decision-accepted-or-rejected">4. Decision: Accepted or
+Rejected</h2>
+<p>Once consensus builds and the proposal reaches maturity, the Steering
+Council or the assigned delegate makes a formal ruling:</p>
+<ul>
+<li><strong>Accepted:</strong> The proposal meets technical standards,
+aligns with Python's design philosophy, and is approved for
+implementation.</li>
+<li><strong>Rejected:</strong> The proposal is declined. The PEP is
+retained in the archives alongside documented reasoning to prevent
+redundant future proposals.</li>
+</ul>
+<h2 id="5-final-implementation">5. Final (Implementation)</h2>
+<p>After a proposal is <strong>Accepted</strong>, the implementation
+must be developed, tested, and merged into the CPython codebase. Once
+the changes are committed and scheduled for release in an official
+version of Python, the status changes to <strong>Final</strong>. At this
+point, the PEP lifecycle is complete.</p>
+<h2 id="alternate-and-terminal-states">Alternate and Terminal
+States</h2>
+<p>Not all PEPs follow a linear path from draft to final release.
+Several alternative states exist to categorize proposals throughout
+their lifecycle:</p>
+<ul>
+<li><strong>Deferred:</strong> The proposal is valid but postponed until
+specific prerequisites, resources, or dependencies become
+available.</li>
+<li><strong>Withdrawn:</strong> The author voluntarily retracts the
+proposal due to insurmountable design flaws, lack of interest, or
+personal decision.</li>
+<li><strong>Active:</strong> Used primarily for Informational or Process
+PEPs (such as PEP 1 itself) that are never "completed" because they
+serve as ongoing standards.</li>
+<li><strong>Superseded:</strong> A previously accepted or finalized PEP
+is made obsolete by a newer proposal that replaces its
+specifications.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

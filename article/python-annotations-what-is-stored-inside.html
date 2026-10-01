@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python __annotations__: What Is Stored Inside? - python</title>
+    <meta name="description" content="In Python, the annotations attribute is a dictionary that records type hints and metadata explicitly declared on functions, classes, and modules. This article details the exact data stored within the annotations dictionary for both functions and classes,">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-annotations-what-is-stored-inside">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python __annotations__: What Is Stored Inside? - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-annotations-what-is-stored-inside" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, the annotations attribute is a dictionary that records type hints and metadata explicitly declared on functions, classes, and modules. This article details the exact data stored within the annotations dictionary for both functions and classes," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-annotations-what-is-stored-inside">Python
+<strong>annotations</strong>: What Is Stored Inside?</h1>
+<p>In Python, the <code>__annotations__</code> attribute is a dictionary
+that records type hints and metadata explicitly declared on functions,
+classes, and modules. This article details the exact data stored within
+the <code>__annotations__</code> dictionary for both functions and
+classes, how keys and values are represented, and how runtime evaluation
+affects its contents.</p>
+<h2 id="function-annotations">Function Annotations</h2>
+<p>When defined on a function, the <code>__annotations__</code>
+dictionary maps parameter names to their declared type annotations,
+along with a dedicated key for the return type.</p>
+<ul>
+<li><strong>Parameter Annotations</strong>: Each parameter declared with
+a type hint becomes a key in the dictionary, represented as a string
+matching the parameter name. The corresponding value is the evaluated
+type expression. Parameters without annotations are omitted
+entirely.</li>
+<li><strong>Return Annotations</strong>: The return type annotation is
+mapped to the special string key <code>'return'</code>. If no return
+type is specified, the <code>'return'</code> key is absent from the
+dictionary.</li>
+<li><strong>Special Arguments</strong>: Variable-length positional
+arguments (<code>*args</code>) and keyword arguments
+(<code>**kwargs</code>) are also included as keys using their identifier
+names (without the asterisks) if they carry type hints.</li>
+</ul>
+<p>For example, consider the following function:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calculate_tax(subtotal: <span class="bu">float</span>, discount: <span class="bu">float</span> <span class="op">=</span> <span class="fl">0.0</span>, <span class="op">*</span>items: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">float</span>:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> subtotal <span class="op">-</span> discount</span></code></pre></div>
+<p>Accessing <code>calculate_tax.__annotations__</code> yields:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;subtotal&#39;</span>: <span class="op">&lt;</span><span class="kw">class</span> <span class="st">&#39;float&#39;</span><span class="op">&gt;</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;discount&#39;</span>: <span class="op">&lt;</span><span class="kw">class</span> <span class="st">&#39;float&#39;</span><span class="op">&gt;</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;items&#39;</span>: <span class="op">&lt;</span><span class="kw">class</span> <span class="st">&#39;str&#39;</span><span class="op">&gt;</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;return&#39;</span>: <span class="op">&lt;</span><span class="kw">class</span> <span class="st">&#39;float&#39;</span><span class="op">&gt;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="class-annotations">Class Annotations</h2>
+<p>When defined on a class, <code>__annotations__</code> stores variable
+annotations declared within the class body.</p>
+<ul>
+<li><strong>Class-Level Attributes</strong>: Any variable given a type
+annotation in the class scope is added as a string key with its
+corresponding evaluated type as the value.</li>
+<li><strong>No Values Required</strong>: A variable does not need to be
+assigned a value to appear in <code>__annotations__</code>. Simple
+statements such as <code>name: str</code> register <code>'name'</code>
+in <code>__annotations__</code> without assigning an attribute on the
+class itself.</li>
+<li><strong>Instance Scope Exclusion</strong>: Annotations declared
+exclusively inside methods (such as <code>self.attribute: int</code>
+inside <code>__init__</code>) are not stored in the class's
+<code>__annotations__</code> dictionary.</li>
+</ul>
+<p>For example, in the following class:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> User:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    username: <span class="bu">str</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    user_id: <span class="bu">int</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    is_active: <span class="bu">bool</span> <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, role: <span class="bu">str</span>):</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.role: <span class="bu">str</span> <span class="op">=</span> role</span></code></pre></div>
+<p>Accessing <code>User.__annotations__</code> contains only the
+class-body attributes:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;username&#39;</span>: <span class="op">&lt;</span><span class="kw">class</span> <span class="st">&#39;str&#39;</span><span class="op">&gt;</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;user_id&#39;</span>: <span class="op">&lt;</span><span class="kw">class</span> <span class="st">&#39;int&#39;</span><span class="op">&gt;</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;is_active&#39;</span>: <span class="op">&lt;</span><span class="kw">class</span> <span class="st">&#39;bool&#39;</span><span class="op">&gt;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>The <code>self.role</code> declaration inside <code>__init__</code>
+is an instance-level attribute assignment and is not recorded in
+<code>User.__annotations__</code>.</p>
+<h2 id="evaluated-objects-vs-strings">Evaluated Objects vs. Strings</h2>
+<p>By default, the values inside <code>__annotations__</code> are
+references to the actual Python objects (such as
+<code>&lt;class 'int'&gt;</code>, <code>typing.List</code>, or custom
+classes). However, two exceptions alter this behavior:</p>
+<ol type="1">
+<li><strong>Forward References</strong>: If a type annotation is wrapped
+in quotes (e.g., <code>'User'</code>), the value stored in the
+dictionary remains a raw string literal.</li>
+<li><strong>Deferred Evaluation</strong>: When
+<code>from __future__ import annotations</code> is enabled (PEP 563),
+all annotations are automatically converted into strings at definition
+time rather than evaluated objects. This avoids circular import issues
+and reduces runtime overhead.</li>
+</ol>
+<p>To safely resolve stringified annotations back to their underlying
+types at runtime, Python 3.10 and later provides
+<code>inspect.get_annotations(obj)</code>, which standardizes accessing
+and evaluating the contents of <code>__annotations__</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

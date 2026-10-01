@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding pyproject.toml in Modern Python - python</title>
+    <meta name="description" content="The pyproject.toml file serves as the unified, standardized configuration file for modern Python packages, dependency management, and build system specifications. This article outlines the purpose of pyproject.toml, how it replaces legacy configuration f">
+    <link rel="canonical" href="https://salivity.github.io/python/article/understanding-pyproject-toml-in-modern-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding pyproject.toml in Modern Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/understanding-pyproject-toml-in-modern-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The pyproject.toml file serves as the unified, standardized configuration file for modern Python packages, dependency management, and build system specifications. This article outlines the purpose of pyproject.toml, how it replaces legacy configuration f" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-pyprojecttoml-in-modern-python">Understanding
+pyproject.toml in Modern Python</h1>
+<p>The <code>pyproject.toml</code> file serves as the unified,
+standardized configuration file for modern Python packages, dependency
+management, and build system specifications. This article outlines the
+purpose of <code>pyproject.toml</code>, how it replaces legacy
+configuration formats like <code>setup.py</code> and tool-specific
+dotfiles, and why it has become the centralized standard for Python
+packaging and developer tooling.</p>
+<h2 id="the-legacy-problem">The Legacy Problem</h2>
+<p>Historically, Python packaging relied heavily on executable scripts,
+primarily <code>setup.py</code>, alongside supplementary files like
+<code>setup.cfg</code>, <code>requirements.txt</code>, and
+<code>MANIFEST.in</code>. This setup introduced several critical
+issues:</p>
+<ul>
+<li><strong>The Bootstrapping Problem:</strong> Installing a package
+required running <code>setup.py</code>, which required its own
+build-time dependencies (like <code>setuptools</code>). There was no
+standard, declarative way to tell a package installer what tools were
+needed to build the package before executing the code.</li>
+<li><strong>Security Risks:</strong> Executing arbitrary Python code
+just to read metadata or discover dependencies created security and
+predictability concerns.</li>
+<li><strong>Configuration Fragmentation:</strong> Different development
+tools—such as <code>pytest</code>, <code>black</code>,
+<code>isort</code>, and <code>flake8</code>—each required their own
+configuration files, cluttering the project root directory.</li>
+</ul>
+<h2 id="the-introduction-of-pep-518-and-pep-621">The Introduction of PEP
+518 and PEP 621</h2>
+<p>Python Enhancement Proposal (PEP) 518 introduced
+<code>pyproject.toml</code> to solve the build-system specification
+problem by using TOML (Tom's Obvious, Minimal Language), a clear,
+human-readable format.</p>
+<p>PEP 621 later expanded the scope of <code>pyproject.toml</code> by
+standardizing how project metadata and core dependencies are declared.
+Instead of tool-specific formats, any packaging tool could now read the
+same declarative standard.</p>
+<h2 id="core-components-of-pyprojecttoml">Core Components of
+pyproject.toml</h2>
+<p>A modern <code>pyproject.toml</code> file typically fulfills three
+primary purposes:</p>
+<h3 id="1-declaring-the-build-system-build-system">1. Declaring the
+Build System (<code>[build-system]</code>)</h3>
+<p>This table specifies the backend required to build the project and
+the requirements needed to execute that backend. This isolates the build
+environment and allows developers to choose alternatives to
+<code>setuptools</code>, such as Hatch, Flit, or Poetry.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode toml"><code class="sourceCode toml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[build-system]</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">requires</span> <span class="op">=</span> <span class="op">[</span><span class="st">&quot;hatchling&quot;</span><span class="op">]</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="dt">build-backend</span> <span class="op">=</span> <span class="st">&quot;hatchling.build&quot;</span></span></code></pre></div>
+<h3 id="2-defining-project-metadata-project">2. Defining Project
+Metadata (<code>[project]</code>)</h3>
+<p>Following the PEP 621 standard, static metadata—including the project
+name, version, authors, license, and runtime dependencies—is declared
+explicitly without executing code.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode toml"><code class="sourceCode toml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[project]</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">name</span> <span class="op">=</span> <span class="st">&quot;example-package&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="dt">version</span> <span class="op">=</span> <span class="st">&quot;1.0.0&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="dt">description</span> <span class="op">=</span> <span class="st">&quot;A sample Python package&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="dt">readme</span> <span class="op">=</span> <span class="st">&quot;README.md&quot;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="dt">requires-python</span> <span class="op">=</span> <span class="st">&quot;&gt;=3.10&quot;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="dt">dependencies</span> <span class="op">=</span> <span class="op">[</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;requests&gt;=2.28.0&quot;</span><span class="op">,</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;pydantic&gt;=2.0.0&quot;</span><span class="op">,</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="op">]</span></span></code></pre></div>
+<h3 id="3-centralizing-developer-tooling-tool">3. Centralizing Developer
+Tooling (<code>[tool.*]</code>)</h3>
+<p>Instead of maintaining multiple configuration files (e.g.,
+<code>.pytest.ini</code>, <code>.ruff.toml</code>), third-party
+development tools can read their settings directly from dedicated
+sub-tables inside <code>pyproject.toml</code>.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode toml"><code class="sourceCode toml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[tool.pytest.ini_options]</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">testpaths</span> <span class="op">=</span> <span class="op">[</span><span class="st">&quot;tests&quot;</span><span class="op">]</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">[tool.ruff]</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="dt">line-length</span> <span class="op">=</span> <span class="dv">88</span></span></code></pre></div>
+<h2 id="summary-of-benefits">Summary of Benefits</h2>
+<ul>
+<li><strong>Declarative and Static:</strong> Eliminates execution of
+arbitrary code during dependency discovery and packaging.</li>
+<li><strong>Interoperability:</strong> Allows build frontends (like
+<code>pip</code> or <code>build</code>) to interact seamlessly with any
+PEP 517-compliant backend.</li>
+<li><strong>Clean Project Structure:</strong> Consolidates configuration
+for packaging, testing, linting, and formatting into a single source of
+truth.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

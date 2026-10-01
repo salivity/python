@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invariant, Covariant, and Contravariant in Python - python</title>
+    <meta name="description" content="In Python's static type system, variance describes how subtyping relationships between base types relate to the subtyping relationships between generic types that use them. Understanding the difference between invariance, covariance, and contravariance a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/invariant-covariant-and-contravariant-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Invariant, Covariant, and Contravariant in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/invariant-covariant-and-contravariant-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python's static type system, variance describes how subtyping relationships between base types relate to the subtyping relationships between generic types that use them. Understanding the difference between invariance, covariance, and contravariance a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="invariant-covariant-and-contravariant-in-python">Invariant,
+Covariant, and Contravariant in Python</h1>
+<p>In Python's static type system, variance describes how subtyping
+relationships between base types relate to the subtyping relationships
+between generic types that use them. Understanding the difference
+between invariance, covariance, and contravariance allows developers to
+properly annotate generic classes, functions, and collections. By
+defining whether a generic container or callable accepts subtypes,
+supertypes, or only exact type matches, variance rules prevent subtle
+runtime type errors while keeping code flexible.</p>
+<h3 id="the-subtyping-baseline">The Subtyping Baseline</h3>
+<p>Consider a simple inheritance hierarchy:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Animal:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Dog(Animal):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<p>Here, <code>Dog</code> is a subtype of <code>Animal</code>
+(<code>Dog</code> <span class="math inline">\(\le\)</span>
+<code>Animal</code>). Variance answers the question: If <code>Dog</code>
+is a subtype of <code>Animal</code>, what is the relationship between
+<code>Container[Dog]</code> and <code>Container[Animal]</code>?</p>
+<hr />
+<h3 id="1-invariance">1. Invariance</h3>
+<p>A type variable is <strong>invariant</strong> when generic types
+preserve no subtyping relationship, regardless of the relationship
+between their underlying type arguments. If <code>Dog</code> is a
+subtype of <code>Animal</code>, <code>Container[Dog]</code> has no
+relation to <code>Container[Animal]</code>. Neither can be substituted
+for the other.</p>
+<p>In Python, type variables created with <code>TypeVar</code> are
+invariant by default:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypeVar, Generic</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>T <span class="op">=</span> TypeVar(<span class="st">&#39;T&#39;</span>)  <span class="co"># Invariant by default</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Box(Generic[T]):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, content: T) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.content <span class="op">=</span> content</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> inspect_animal_box(box: Box[Animal]) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>dog_box: Box[Dog] <span class="op">=</span> Box(Dog())</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>inspect_animal_box(dog_box)  <span class="co"># Type-checker error: Box[Dog] is not Box[Animal]</span></span></code></pre></div>
+<p><strong>Why it is used:</strong> Invariance is necessary for mutable
+containers (like <code>list</code> or <code>dict</code>). If
+<code>list[Dog]</code> were accepted where a <code>list[Animal]</code>
+is expected, a function could append a <code>Cat()</code> into the list,
+violating the type safety of the original <code>list[Dog]</code>.</p>
+<hr />
+<h3 id="2-covariance">2. Covariance</h3>
+<p>A type variable is <strong>covariant</strong> when generic types
+preserve the original subtyping relationship in the same direction. If
+<code>Dog</code> is a subtype of <code>Animal</code>, then
+<code>Container[Dog]</code> is a subtype of
+<code>Container[Animal]</code>.</p>
+<p>To declare covariance in Python, set <code>covariant=True</code> in
+<code>TypeVar</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypeVar, Generic</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>T_co <span class="op">=</span> TypeVar(<span class="st">&#39;T_co&#39;</span>, covariant<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ReadOnlyBox(Generic[T_co]):</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, content: T_co) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._content <span class="op">=</span> content</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get(<span class="va">self</span>) <span class="op">-&gt;</span> T_co:</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>._content</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> print_animal_name(box: ReadOnlyBox[Animal]) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    animal <span class="op">=</span> box.get()</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(animal)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>dog_box: ReadOnlyBox[Dog] <span class="op">=</span> ReadOnlyBox(Dog())</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>print_animal_name(dog_box)  <span class="co"># Valid: ReadOnlyBox[Dog] is a subtype of ReadOnlyBox[Animal]</span></span></code></pre></div>
+<p><strong>Why it is used:</strong> Covariance is safe for read-only
+containers or "producers." If a container only outputs data (like
+<code>tuple</code>, <code>Sequence</code>, or return types of
+functions), retrieving a <code>Dog</code> satisfies any code expecting
+an <code>Animal</code>.</p>
+<hr />
+<h3 id="3-contravariance">3. Contravariance</h3>
+<p>A type variable is <strong>contravariant</strong> when generic types
+reverse the original subtyping relationship. If <code>Dog</code> is a
+subtype of <code>Animal</code>, then <code>Container[Animal]</code>
+becomes a subtype of <code>Container[Dog]</code>.</p>
+<p>To declare contravariance in Python, set
+<code>contravariant=True</code> in <code>TypeVar</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> TypeVar, Generic</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>T_contra <span class="op">=</span> TypeVar(<span class="st">&#39;T_contra&#39;</span>, contravariant<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Sink(Generic[T_contra]):</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> send(<span class="va">self</span>, value: T_contra) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> handle_dog(sink: Sink[Dog]) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    sink.send(Dog())</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>animal_sink: Sink[Animal] <span class="op">=</span> Sink()</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>handle_dog(animal_sink)  <span class="co"># Valid: Sink[Animal] is a subtype of Sink[Dog]</span></span></code></pre></div>
+<p><strong>Why it is used:</strong> Contravariance is safe for
+write-only destinations or "consumers." A handler capable of processing
+any generic <code>Animal</code> can safely handle a <code>Dog</code>,
+making <code>Sink[Animal]</code> valid wherever <code>Sink[Dog]</code>
+is needed. This is the foundation of function parameter typing: a
+function accepting broader types can safely replace a function expecting
+narrower types.</p>
+<hr />
+<h3 id="summary-rule-of-thumb">Summary Rule of Thumb</h3>
+<ul>
+<li><strong>Invariant (default):</strong> Used when types are both read
+from and written to (e.g., mutable collections like
+<code>list[T]</code>).</li>
+<li><strong>Covariant (<code>covariant=True</code>):</strong> Used when
+types are only produced or read (e.g., read-only collections like
+<code>Sequence[T]</code>, function return types).</li>
+<li><strong>Contravariant (<code>contravariant=True</code>):</strong>
+Used when types are only consumed or written (e.g., consumers, callable
+argument types).</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

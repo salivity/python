@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Poetry: Dependency Locking and Packaging Guide - python</title>
+    <meta name="description" content="Poetry plays a central role in modern Python development by unifying dependency management, deterministic environment locking, and package distribution into a single tool. By leveraging the standardized pyproject.toml file alongside a dedicated lockfile,">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-poetry-dependency-locking-and-packaging-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Poetry: Dependency Locking and Packaging Guide - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-poetry-dependency-locking-and-packaging-guide" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Poetry plays a central role in modern Python development by unifying dependency management, deterministic environment locking, and package distribution into a single tool. By leveraging the standardized pyproject.toml file alongside a dedicated lockfile," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-poetry-dependency-locking-and-packaging-guide">Python
+Poetry: Dependency Locking and Packaging Guide</h1>
+<p>Poetry plays a central role in modern Python development by unifying
+dependency management, deterministic environment locking, and package
+distribution into a single tool. By leveraging the standardized
+<code>pyproject.toml</code> file alongside a dedicated lockfile, Poetry
+eliminates common pitfalls like conflicting transitive dependencies and
+environment drift across development, staging, and production
+environments.</p>
+<h3 id="deterministic-dependency-locking">Deterministic Dependency
+Locking</h3>
+<p>Traditional Python dependency management with standard
+<code>pip</code> and <code>requirements.txt</code> often leads to
+inconsistent builds because it typically resolves dependencies at
+installation time. If a sub-dependency releases an unpinned breaking
+update, identical <code>requirements.txt</code> files can produce broken
+environments across different machines.</p>
+<p>Poetry solves this with an exhaustive dependency resolver and the
+<code>poetry.lock</code> file:</p>
+<ul>
+<li><strong>Exhaustive Resolution:</strong> When a package is added
+using <code>poetry add</code>, Poetry evaluates the entire dependency
+tree to ensure all direct and transitive dependencies are mutually
+compatible.</li>
+<li><strong>The Lockfile:</strong> Once resolved, Poetry writes the
+exact cryptographic hashes and version numbers of every installed
+package to <code>poetry.lock</code>.</li>
+<li><strong>Reproducibility:</strong> When other developers or CI/CD
+pipelines run <code>poetry install</code>, Poetry reads directly from
+<code>poetry.lock</code> rather than re-resolving versions. This
+guarantees that every machine runs an identical set of packages.</li>
+</ul>
+<h3 id="modern-packaging-via-pyprojecttoml">Modern Packaging via
+<code>pyproject.toml</code></h3>
+<p>Historically, Python packaging required maintaining multiple
+disparate files, such as <code>setup.py</code>, <code>setup.cfg</code>,
+<code>MANIFEST.in</code>, and <code>requirements.txt</code>. Poetry
+consolidates this workflow by adhering to modern Python Enhancement
+Proposals (notably PEP 517 and PEP 518).</p>
+<ul>
+<li><strong>Single Source of Truth:</strong> All project
+metadata—including name, version, author, dependencies, development
+dependencies, and entry-point scripts—is defined declaratively in
+<code>pyproject.toml</code>.</li>
+<li><strong>Dependency Separation:</strong> Poetry allows developers to
+categorize packages into specific dependency groups (e.g.,
+<code>dev</code>, <code>test</code>, <code>docs</code>), ensuring
+production builds remain lean by excluding testing frameworks and
+linters.</li>
+</ul>
+<h3 id="streamlined-build-and-distribution">Streamlined Build and
+Distribution</h3>
+<p>Packaging a Python library for internal distribution or publishing to
+the Python Package Index (PyPI) is reduced to two primary commands:</p>
+<ol type="1">
+<li><strong>Building:</strong> Running <code>poetry build</code>
+automatically packages the project into both source distributions
+(<code>sdist</code>) and binary distributions (<code>wheel</code>). It
+uses the project structure and metadata to package the necessary files
+without requiring custom build scripts.</li>
+<li><strong>Publishing:</strong> Running <code>poetry publish</code>
+securely uploads the built artifacts to PyPI or a private package index.
+When combined with credentials or API tokens, it integrates cleanly into
+automated deployment pipelines.</li>
+</ol>
+<h3 id="automatic-environment-isolation">Automatic Environment
+Isolation</h3>
+<p>Beyond locking and packaging, Poetry handles the lifecycle of Python
+virtual environments. When working on a project, Poetry automatically
+detects or creates an isolated virtual environment specific to that
+project. Commands can be executed directly within this context using
+<code>poetry run</code>, ensuring that global Python installations
+remain untouched and eliminating manual environment activation
+steps.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

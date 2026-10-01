@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pandas Rolling vs Expanding vs Exponential Windows - python</title>
+    <meta name="description" content="Pandas provides three primary window functions for feature engineering and time-series analysis: rolling, expanding, and exponentially weighted moving (EWM) windows. The fundamental distinction lies in how each method defines the window size and weights">
+    <link rel="canonical" href="https://salivity.github.io/python/article/pandas-rolling-vs-expanding-vs-exponential-windows">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pandas Rolling vs Expanding vs Exponential Windows - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/pandas-rolling-vs-expanding-vs-exponential-windows" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Pandas provides three primary window functions for feature engineering and time-series analysis: rolling, expanding, and exponentially weighted moving (EWM) windows. The fundamental distinction lies in how each method defines the window size and weights" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pandas-rolling-vs-expanding-vs-exponential-windows">Pandas
+Rolling vs Expanding vs Exponential Windows</h1>
+<p>Pandas provides three primary window functions for feature
+engineering and time-series analysis: rolling, expanding, and
+exponentially weighted moving (EWM) windows. The fundamental distinction
+lies in how each method defines the window size and weights historical
+data points. Rolling windows use a fixed-size lookback period, expanding
+windows continually grow to include all cumulative history, and
+exponential windows account for all prior observations while assigning
+exponentially decreasing weights to older data points.</p>
+<h3 id="rolling-window-functions-rolling">Rolling Window Functions
+(<code>.rolling()</code>)</h3>
+<p>A rolling window maintains a fixed length (defined by the
+<code>window</code> parameter) and slides forward across the dataset row
+by row. At any given point, the calculation only accounts for a fixed
+number of prior periods, completely discarding any data that falls
+outside this lookback range.</p>
+<ul>
+<li><strong>Window Size:</strong> Constant. A window of size 5 will
+always calculate statistics using the current point and the previous 4
+points.</li>
+<li><strong>Weighting:</strong> Uniform. Every observation inside the
+window receives equal statistical weight.</li>
+<li><strong>Common Use Case:</strong> Short-term trend analysis, such as
+a 30-day simple moving average (SMA) or rolling standard deviation to
+measure temporary volatility.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculates the mean of the current row and the previous 4 rows</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>df[<span class="st">&#39;rolling_mean&#39;</span>] <span class="op">=</span> df[<span class="st">&#39;value&#39;</span>].rolling(window<span class="op">=</span><span class="dv">5</span>).mean()</span></code></pre></div>
+<h3 id="expanding-window-functions-expanding">Expanding Window Functions
+(<code>.expanding()</code>)</h3>
+<p>An expanding window fixes the starting point of the series at index
+zero and grows dynamically as it moves forward. With each new time step,
+the window size increases by one to incorporate the newly available data
+point alongside all previous history.</p>
+<ul>
+<li><strong>Window Size:</strong> Dynamic and growing. It starts at a
+minimum threshold (controlled by <code>min_periods</code>) and expands
+until it covers the entire dataset.</li>
+<li><strong>Weighting:</strong> Uniform. All historical observations
+from the start of the series up to the current row are treated with
+equal importance.</li>
+<li><strong>Common Use Case:</strong> Cumulative metrics, such as
+year-to-date performance, running totals, lifetime averages, or dynamic
+all-time highs and lows.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculates the cumulative mean from the beginning up to the current row</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>df[<span class="st">&#39;expanding_mean&#39;</span>] <span class="op">=</span> df[<span class="st">&#39;value&#39;</span>].expanding(min_periods<span class="op">=</span><span class="dv">1</span>).mean()</span></code></pre></div>
+<h3 id="exponential-window-functions-ewm">Exponential Window Functions
+(<code>.ewm()</code>)</h3>
+<p>An exponentially weighted window does not use a hard cutoff boundary.
+Instead, it incorporates all previous observations up to the current
+point, but it applies an exponential decay factor (configured via
+<code>alpha</code>, <code>span</code>, <code>com</code>, or
+<code>halflife</code>). The most recent observations receive the largest
+weight, while older observations diminish exponentially in
+significance.</p>
+<ul>
+<li><strong>Window Size:</strong> Infinite (theoretically includes all
+past points), but practically localized due to near-zero weights on
+distant data.</li>
+<li><strong>Weighting:</strong> Non-uniform. Weights decrease
+exponentially into the past, eliminating sudden shifts caused by data
+points abruptly entering or leaving a fixed window.</li>
+<li><strong>Common Use Case:</strong> Exponential Moving Averages (EMA)
+in algorithmic trading and financial forecasting where recent events are
+significantly more relevant than older history.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculates the exponential moving average with a span of 10 periods</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>df[<span class="st">&#39;ewm_mean&#39;</span>] <span class="op">=</span> df[<span class="st">&#39;value&#39;</span>].ewm(span<span class="op">=</span><span class="dv">10</span>, adjust<span class="op">=</span><span class="va">True</span>).mean()</span></code></pre></div>
+<h3 id="summary-comparison">Summary Comparison</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Rolling (<code>.rolling</code>)</th>
+<th style="text-align: left;">Expanding (<code>.expanding</code>)</th>
+<th style="text-align: left;">Exponential (<code>.ewm</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Window Boundary</strong></td>
+<td style="text-align: left;">Fixed size, moves forward</td>
+<td style="text-align: left;">Fixed start, expanding end</td>
+<td style="text-align: left;">All history considered</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Data Weighting</strong></td>
+<td style="text-align: left;">Equal weight to all points</td>
+<td style="text-align: left;">Equal weight to all points</td>
+<td style="text-align: left;">Exponentially decaying weights</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Old Data Treatment</strong></td>
+<td style="text-align: left;">Completely dropped</td>
+<td style="text-align: left;">Retained with equal influence</td>
+<td style="text-align: left;">Retained with decreasing influence</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Primary Metric</strong></td>
+<td style="text-align: left;">Simple Moving Average (SMA)</td>
+<td style="text-align: left;">Cumulative / Running Average</td>
+<td style="text-align: left;">Exponential Moving Average (EMA)</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

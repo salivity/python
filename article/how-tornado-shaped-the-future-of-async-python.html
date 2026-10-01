@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Tornado Shaped the Future of Async Python - python</title>
+    <meta name="description" content="This article examines how the Tornado web framework revolutionized Python's concurrency model by introducing a practical, production-ready, non-blocking I/O loop. Long before native asynchronous keywords existed in Python, Tornado proved that the languag">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-tornado-shaped-the-future-of-async-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Tornado Shaped the Future of Async Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-tornado-shaped-the-future-of-async-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines how the Tornado web framework revolutionized Python's concurrency model by introducing a practical, production-ready, non-blocking I/O loop. Long before native asynchronous keywords existed in Python, Tornado proved that the languag" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-tornado-shaped-the-future-of-async-python">How Tornado
+Shaped the Future of Async Python</h1>
+<p>This article examines how the Tornado web framework revolutionized
+Python's concurrency model by introducing a practical, production-ready,
+non-blocking I/O loop. Long before native asynchronous keywords existed
+in Python, Tornado proved that the language could conquer the C10k
+problem and handle thousands of simultaneous connections. By
+popularizing generator-based coroutines and event-driven architecture,
+Tornado directly influenced the creation of Python's standard
+<code>asyncio</code> module and established the foundation for modern
+asynchronous Python development.</p>
+<h3 id="the-concurrency-problem-in-early-python">The Concurrency Problem
+in Early Python</h3>
+<p>Prior to Tornado's release in 2009, standard Python web development
+operated almost exclusively on the synchronous WSGI standard.
+Applications relied on multi-threading or multi-processing server
+architectures, such as Apache with <code>mod_wsgi</code> or preforking
+servers like Gunicorn.</p>
+<p>While effective for traditional request-response cycles, this model
+struggled under the emerging "C10k problem"—the challenge of managing
+ten thousand concurrent connections. Each idle connection consumed a
+dedicated operating system thread or process, resulting in heavy memory
+overhead, frequent context switching, and contention with Python's
+Global Interpreter Lock (GIL). While Twisted offered event-driven
+programming at the time, its steep learning curve and complex callback
+chains ("callback hell") prevented widespread adoption for standard web
+applications.</p>
+<h3 id="tornados-breakthrough-practical-event-driven-io">Tornado's
+Breakthrough: Practical Event-Driven I/O</h3>
+<p>Open-sourced by Facebook following its acquisition of FriendFeed,
+Tornado demonstrated that Python could achieve high-throughput,
+low-latency performance using an event loop backed by operating system
+primitives like <code>epoll</code> on Linux and <code>kqueue</code> on
+BSD/macOS.</p>
+<p>Tornado differed from its predecessors by offering a full-stack
+solution: it combined a high-performance HTTP server, a web framework,
+and an explicit event loop (<code>tornado.ioloop.IOLoop</code>). This
+architecture allowed a single OS thread to monitor thousands of open
+sockets simultaneously, executing callbacks only when sockets were ready
+for reading or writing. For applications requiring long-polling,
+WebSockets, or continuous streaming, Tornado provided an
+order-of-magnitude increase in connection capacity without the resource
+cost of threads.</p>
+<h3 id="pioneering-coroutines-before-native-syntax">Pioneering
+Coroutines Before Native Syntax</h3>
+<p>Tornado's most influential contribution to Python’s developer
+experience was its early elimination of callback hell. In standard
+callback architectures, logic was fragmented across multiple nested
+functions.</p>
+<p>Tornado solved this by exploiting Python’s generator mechanism via
+the <code>@tornado.gen.coroutine</code> decorator. By pairing Python's
+<code>yield</code> statement with Future objects, Tornado enabled
+developers to write non-blocking code that read like standard,
+sequential code. When an asynchronous operation was initiated, the
+coroutine yielded control back to the <code>IOLoop</code>, which resumed
+execution once the operation completed:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="at">@tornado.gen.coroutine</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_resource():</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> <span class="cf">yield</span> http_client.fetch(<span class="st">&quot;http://example.com&quot;</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> response.body</span></code></pre></div>
+<p>This pattern laid the conceptual and architectural groundwork for
+asynchronous syntax across the entire Python ecosystem.</p>
+<h3 id="direct-influence-on-pep-3156-and-asyncio">Direct Influence on
+PEP 3156 and <code>asyncio</code></h3>
+<p>When Guido van Rossum began designing PEP 3156 (originally codenamed
+"Tulip") to bring asynchronous I/O into the standard library, Tornado
+served as a primary reference implementation alongside Twisted.</p>
+<p>Key design elements from Tornado migrated directly into
+<code>asyncio</code> in Python 3.4:</p>
+<ul>
+<li><strong>Event Loop Abstraction:</strong> The interface and
+responsibilities of <code>asyncio.AbstractEventLoop</code> closely
+mirrored Tornado's <code>IOLoop</code>.</li>
+<li><strong>Futures and Tasks:</strong> Tornado's concept of
+<code>Future</code> objects—representing the eventual result of an
+asynchronous operation—became a core building block of the
+<code>asyncio</code> specification.</li>
+<li><strong>Coroutines:</strong> Tornado’s generator-based coroutine
+pattern directly informed the <code>@asyncio.coroutine</code> and
+<code>yield from</code> patterns introduced in Python 3.4, which later
+evolved into Python 3.5's native <code>async</code> and
+<code>await</code> keywords (PEP 492).</li>
+</ul>
+<h3 id="seamless-coexistence-and-enduring-legacy">Seamless Coexistence
+and Enduring Legacy</h3>
+<p>Rather than becoming obsolete upon the arrival of
+<code>asyncio</code>, Tornado adapted by integrating directly with
+Python's native runtime. Tornado 5.0 redesigned its core to run directly
+on top of the standard library's <code>asyncio</code> event loop by
+default, allowing developers to mix Tornado code with standard
+<code>async</code>/<code>await</code> syntax and third-party async
+libraries without friction.</p>
+<p>While modern frameworks like FastAPI, Starlette, and aiohttp dominate
+current async web development, their existence was accelerated by
+Tornado. Tornado proved that Python could excel in real-time,
+event-driven networking and provided the architectural blueprint that
+transformed asynchronous programming from a niche technique into a
+first-class feature of the Python language.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

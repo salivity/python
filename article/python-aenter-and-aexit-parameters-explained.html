@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python __aenter__ and __aexit__ Parameters Explained - python</title>
+    <meta name="description" content="Python's asynchronous context manager protocol relies on two special methods: aenter and aexit. These methods allow objects to manage resources asynchronously when invoked via the async with statement. This article explains the exact parameters accepted">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-aenter-and-aexit-parameters-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python __aenter__ and __aexit__ Parameters Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-aenter-and-aexit-parameters-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's asynchronous context manager protocol relies on two special methods: aenter and aexit. These methods allow objects to manage resources asynchronously when invoked via the async with statement. This article explains the exact parameters accepted" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-aenter-and-aexit-parameters-explained">Python
+<strong>aenter</strong> and <strong>aexit</strong> Parameters
+Explained</h1>
+<p>Python's asynchronous context manager protocol relies on two special
+methods: <code>__aenter__</code> and <code>__aexit__</code>. These
+methods allow objects to manage resources asynchronously when invoked
+via the <code>async with</code> statement. This article explains the
+exact parameters accepted by both <code>__aenter__</code> and
+<code>__aexit__</code>, their data types, and how the Python runtime
+populates them during standard execution and error conditions.</p>
+<h2 id="parameters-for-__aenter__">Parameters for
+<code>__aenter__</code></h2>
+<p>The <code>__aenter__</code> method is called when execution enters
+the context of an <code>async with</code> block.</p>
+<h3 id="method-signature">Method Signature</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> <span class="fu">__aenter__</span>(<span class="va">self</span>):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    ...</span></code></pre></div>
+<h3 id="parameter-details">Parameter Details</h3>
+<ul>
+<li><strong><code>self</code></strong>: The only parameter accepted by
+<code>__aenter__</code> is the reference to the instance of the context
+manager class itself. It accepts no additional positional or keyword
+arguments from the <code>async with</code> statement.</li>
+</ul>
+<p>The method must be an awaitable (typically an <code>async def</code>
+coroutine). The value returned by awaiting this method is bound to the
+target specified in the <code>as</code> clause of the
+<code>async with</code> statement, if one is provided.</p>
+<hr />
+<h2 id="parameters-for-__aexit__">Parameters for
+<code>__aexit__</code></h2>
+<p>The <code>__aexit__</code> method is called when execution exits the
+<code>async with</code> block, whether the block terminates successfully
+or raises an exception.</p>
+<h3 id="method-signature-1">Method Signature</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> <span class="fu">__aexit__</span>(<span class="va">self</span>, exc_type, exc_val, exc_tb):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    ...</span></code></pre></div>
+<h3 id="parameter-details-1">Parameter Details</h3>
+<p>The <code>__aexit__</code> method accepts exactly four
+parameters:</p>
+<ol type="1">
+<li><strong><code>self</code></strong>: The instance of the context
+manager.</li>
+<li><strong><code>exc_type</code></strong>: The class of the exception
+that caused the block to terminate (for example,
+<code>ZeroDivisionError</code> or <code>ValueError</code>). If the block
+executed without raising an exception, this parameter is set to
+<code>None</code>.</li>
+<li><strong><code>exc_val</code></strong>: The exception instance (the
+actual exception object raised). If no exception occurred, this
+parameter is set to <code>None</code>.</li>
+<li><strong><code>exc_tb</code></strong>: The traceback object
+associated with the raised exception. If no exception occurred, this
+parameter is set to <code>None</code>.</li>
+</ol>
+<h3 id="exception-handling-behavior">Exception Handling Behavior</h3>
+<p>Like <code>__aenter__</code>, <code>__aexit__</code> must return an
+awaitable. The return value influences how Python handles any exception
+that occurred inside the block:</p>
+<ul>
+<li><strong>Returning <code>True</code></strong> (or any truthy value)
+suppresses the exception, preventing it from propagating outward.</li>
+<li><strong>Returning <code>False</code></strong>, <code>None</code>, or
+any other falsy value causes the exception to be re-raised automatically
+after <code>__aexit__</code> completes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

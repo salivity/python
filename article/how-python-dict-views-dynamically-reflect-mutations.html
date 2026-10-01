@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Dict Views Dynamically Reflect Mutations - python</title>
+    <meta name="description" content="In Python, the methods .keys(), .values(), and .items() return dictionary view objects (dictkeys, dictvalues, and dictitems) rather than static lists. Instead of copying the dictionary's data at the moment of invocation, these views maintain an internal">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-dict-views-dynamically-reflect-mutations">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Dict Views Dynamically Reflect Mutations - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-dict-views-dynamically-reflect-mutations" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, the methods .keys(), .values(), and .items() return dictionary view objects (dictkeys, dictvalues, and dictitems) rather than static lists. Instead of copying the dictionary's data at the moment of invocation, these views maintain an internal" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-dict-views-dynamically-reflect-mutations">How Python
+Dict Views Dynamically Reflect Mutations</h1>
+<p>In Python, the methods <code>.keys()</code>, <code>.values()</code>,
+and <code>.items()</code> return dictionary view objects
+(<code>dict_keys</code>, <code>dict_values</code>, and
+<code>dict_items</code>) rather than static lists. Instead of copying
+the dictionary's data at the moment of invocation, these views maintain
+an internal reference to the underlying dictionary. As a result, any
+structural or value mutations—such as adding, updating, or deleting
+key-value pairs—are instantly and dynamically reflected in existing view
+objects without requiring manual re-evaluation.</p>
+<h3 id="the-underlying-mechanism-references-vs-copies">The Underlying
+Mechanism: References vs. Copies</h3>
+<p>In Python 2, calling <code>.keys()</code> allocated a brand-new list
+containing all the keys at that specific point in time. Python 3
+replaced this behavior with dictionary views to improve memory
+efficiency and performance.</p>
+<p>When you invoke <code>.keys()</code>, <code>.values()</code>, or
+<code>.items()</code>, Python constructs a lightweight C-level object
+containing a pointer directly to the original dictionary. No element
+duplication occurs, resulting in <span
+class="math inline">\(O(1)\)</span> time and space complexity during
+creation.</p>
+<p>Because the view object holds a reference to the dictionary rather
+than its own collection of items:</p>
+<ul>
+<li>Iterating over the view (<code>for k in my_view:</code>) walks the
+actual dictionary's internal hash table at the time of iteration.</li>
+<li>Membership checks (<code>item in my_view</code>) evaluate against
+the current state of the dictionary.</li>
+<li>Calling <code>len(my_view)</code> directly queries the current
+length of the dictionary.</li>
+</ul>
+<h3 id="demonstrating-dynamic-behavior">Demonstrating Dynamic
+Behavior</h3>
+<p>The following example shows how modifying a dictionary automatically
+updates an existing view:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> {<span class="st">&quot;a&quot;</span>: <span class="dv">1</span>, <span class="st">&quot;b&quot;</span>: <span class="dv">2</span>}</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Create views</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>keys_view <span class="op">=</span> data.keys()</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>items_view <span class="op">=</span> data.items()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">list</span>(keys_view))   <span class="co"># Output: [&#39;a&#39;, &#39;b&#39;]</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(items_view))   <span class="co"># Output: 2</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Mutate the dictionary</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>data[<span class="st">&quot;c&quot;</span>] <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span> data[<span class="st">&quot;a&quot;</span>]</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># The previously created views dynamically reflect the changes</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">list</span>(keys_view))   <span class="co"># Output: [&#39;b&#39;, &#39;c&#39;]</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(items_view))   <span class="co"># Output: 2</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>((<span class="st">&quot;c&quot;</span>, <span class="dv">3</span>) <span class="kw">in</span> items_view)  <span class="co"># Output: True</span></span></code></pre></div>
+<h3 id="iteration-hazards-during-mutation">Iteration Hazards During
+Mutation</h3>
+<p>Because dictionary views dynamically reference the live hash table,
+altering the size of the dictionary while iterating over a view triggers
+a <code>RuntimeError</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> {<span class="st">&quot;a&quot;</span>: <span class="dv">1</span>, <span class="st">&quot;b&quot;</span>: <span class="dv">2</span>, <span class="st">&quot;c&quot;</span>: <span class="dv">3</span>}</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> key <span class="kw">in</span> data.keys():</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> key <span class="op">==</span> <span class="st">&quot;b&quot;</span>:</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">del</span> data[key]  <span class="co"># Raises RuntimeError: dictionary changed size during iteration</span></span></code></pre></div>
+<p>To safely mutate a dictionary while looping through its keys or
+items, create a static snapshot by converting the view into an explicit
+list first:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> key <span class="kw">in</span> <span class="bu">list</span>(data.keys()):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> key <span class="op">==</span> <span class="st">&quot;b&quot;</span>:</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="kw">del</span> data[key]  <span class="co"># Safe: iterates over the snapshot list, not the live view</span></span></code></pre></div>
+<h3 id="set-operations-on-dynamic-views">Set Operations on Dynamic
+Views</h3>
+<p><code>dict_keys</code> and <code>dict_items</code> (when values are
+hashable) behave like immutable sets. You can perform standard set
+operations such as intersections (<code>&amp;</code>), unions
+(<code>|</code>), and differences (<code>-</code>) directly between
+views or between a view and a regular set. These operations execute
+against the current data state at the exact moment the set operation is
+evaluated.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

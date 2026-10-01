@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Class Decorators: Construction and Evaluation - python</title>
+    <meta name="description" content="Class decorators in Python provide a clean, declarative syntax for modifying or enhancing class definitions dynamically. This article explores how Python constructs class decorators under the hood, how they alter or replace class objects, and the precise">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-class-decorators-construction-and-evaluation">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Class Decorators: Construction and Evaluation - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-class-decorators-construction-and-evaluation" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Class decorators in Python provide a clean, declarative syntax for modifying or enhancing class definitions dynamically. This article explores how Python constructs class decorators under the hood, how they alter or replace class objects, and the precise" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-class-decorators-construction-and-evaluation">Python
+Class Decorators: Construction and Evaluation</h1>
+<p>Class decorators in Python provide a clean, declarative syntax for
+modifying or enhancing class definitions dynamically. This article
+explores how Python constructs class decorators under the hood, how they
+alter or replace class objects, and the precise timing of their
+evaluation during a program's lifecycle.</p>
+<h2 id="what-is-a-class-decorator">What Is a Class Decorator?</h2>
+<p>A class decorator is a callable—typically a function or another
+class—that accepts a class object as its sole argument and returns
+either the modified class, an entirely new class, or a wrapper
+object.</p>
+<p>Syntactically, applying a class decorator looks like this:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="at">@my_decorator</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> MyClass:</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<p>Behind the scenes, the <code>@</code> syntax is syntactic sugar.
+Python translates the code above into an explicit function call
+immediately after the class body executes:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> MyClass:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>MyClass <span class="op">=</span> my_decorator(MyClass)</span></code></pre></div>
+<h2 id="how-python-constructs-class-decorators">How Python Constructs
+Class Decorators</h2>
+<p>To understand how decorators operate on classes, it helps to
+understand how Python builds a class in the first place:</p>
+<ol type="1">
+<li><strong>Body Execution:</strong> Python executes the class body as a
+code block within a dedicated namespace dictionary.</li>
+<li><strong>Class Creation:</strong> Python invokes the metaclass (by
+default, <code>type</code>) using the class name, base classes, and the
+populated namespace to construct the class object in memory.</li>
+<li><strong>Decorator Application:</strong> Once the class object is
+instantiated, Python immediately passes that class object into the
+decorator callable.</li>
+<li><strong>Rebinding:</strong> The original identifier
+(<code>MyClass</code>) is rebound to whatever object the decorator
+returns.</li>
+</ol>
+<h3 id="implementing-a-basic-class-decorator">Implementing a Basic Class
+Decorator</h3>
+<p>A decorator can mutate the class directly and return it:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> add_greeting(cls):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    cls.greeting <span class="op">=</span> <span class="st">&quot;Hello, World!&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> cls</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="at">@add_greeting</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> User:</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(User.greeting)  <span class="co"># Outputs: Hello, World!</span></span></code></pre></div>
+<p>Alternatively, a decorator can wrap the original class in an entirely
+new class or proxy, intercepting instantiation or method calls:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> singleton(cls):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    instances <span class="op">=</span> {}</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_instance(<span class="op">*</span>args, <span class="op">**</span>kwargs):</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> cls <span class="kw">not</span> <span class="kw">in</span> instances:</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>            instances[cls] <span class="op">=</span> cls(<span class="op">*</span>args, <span class="op">**</span>kwargs)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> instances[cls]</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> get_instance</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="at">@singleton</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> DatabaseConnection:</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<p>In this case, <code>DatabaseConnection</code> no longer points to the
+class itself, but to the <code>get_instance</code> closure.</p>
+<h2 id="when-are-class-decorators-evaluated">When Are Class Decorators
+Evaluated?</h2>
+<p>Class decorators are evaluated at <strong>definition time</strong>
+(often referred to as import time), not at runtime when instances of the
+class are created.</p>
+<p>When Python imports a module or encounters a class block during
+execution:</p>
+<ol type="1">
+<li>The class body runs from top to bottom.</li>
+<li>The class object is constructed.</li>
+<li>The decorator function runs immediately.</li>
+</ol>
+<h3 id="demonstrating-evaluation-timing">Demonstrating Evaluation
+Timing</h3>
+<p>Consider this example showing the exact execution order:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> track_decorator(cls):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Decorator function evaluated.&quot;</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> cls</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;Before class definition.&quot;</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="at">@track_decorator</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Order:</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Inside class body.&quot;</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;After class definition.&quot;</span>)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Creating instances later</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>order1 <span class="op">=</span> Order()</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>order2 <span class="op">=</span> Order()</span></code></pre></div>
+<p>Output:</p>
+<pre class="text"><code>Before class definition.
+Inside class body.
+Decorator function evaluated.
+After class definition.</code></pre>
+<p>Notice that <code>track_decorator</code> runs before any
+<code>Order</code> instance is created and before the code following the
+class definition executes. Instantiating <code>Order()</code> does not
+re-trigger the decorator.</p>
+<h2 id="decorators-with-arguments">Decorators with Arguments</h2>
+<p>When a decorator takes arguments, it requires an extra layer of
+construction known as a decorator factory.</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> set_tag(tag_name):</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;1. Factory called with tag: </span><span class="sc">{</span>tag_name<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> decorator(cls):</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;2. Decorator applied to </span><span class="sc">{</span>cls<span class="sc">.</span><span class="va">__name__</span><span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        cls.tag <span class="op">=</span> tag_name</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> cls</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> decorator</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="at">@set_tag</span>(<span class="st">&quot;admin&quot;</span>)</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Account:</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span></code></pre></div>
+<h3 id="evaluation-order-with-arguments">Evaluation Order with
+Arguments:</h3>
+<ol type="1">
+<li>Python encounters <code>@set_tag("admin")</code> and evaluates
+<code>set_tag("admin")</code> first, producing the actual decorator
+function.</li>
+<li>Python executes the body of <code>Account</code> and creates the
+class object.</li>
+<li>Python calls the resulting decorator with <code>Account</code> as
+the argument.</li>
+<li><code>Account</code> is rebound to the decorator's return
+value.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

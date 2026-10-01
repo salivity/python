@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Division vs Floor Division Explained - python</title>
+    <meta name="description" content="Python provides two distinct operators for arithmetic division: the standard division operator (/), often called true division, and the floor division operator (//), sometimes referred to as integer division. While both execute mathematical division betw">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-division-vs-floor-division-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Division vs Floor Division Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-division-vs-floor-division-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python provides two distinct operators for arithmetic division: the standard division operator (/), often called true division, and the floor division operator (//), sometimes referred to as integer division. While both execute mathematical division betw" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-division-vs-floor-division-explained">Python Division vs
+Floor Division Explained</h1>
+<p>Python provides two distinct operators for arithmetic division: the
+standard division operator (<code>/</code>), often called true division,
+and the floor division operator (<code>//</code>), sometimes referred to
+as integer division. While both execute mathematical division between
+numeric operands, they differ in how they calculate the result, how they
+handle data types, their behavior with negative numbers, and the
+underlying special methods Python invokes during execution.</p>
+<h3 id="the-true-division-operator-">The True Division Operator
+(<code>/</code>)</h3>
+<p>The standard division operator performs floating-point division
+regardless of the types of the operands involved.</p>
+<ul>
+<li><strong>Return Type:</strong> It always returns a
+<code>float</code>, even if the division results in a whole number. For
+example, <code>4 / 2</code> evaluates to <code>2.0</code>, and
+<code>7 / 2</code> evaluates to <code>3.5</code>.</li>
+<li><strong>Under the Hood:</strong> Python maps the <code>/</code>
+operator to the <code>__truediv__()</code> magic method. When you write
+<code>a / b</code>, Python internally calls
+<code>type(a).__truediv__(a, b)</code>. At the C level (in CPython),
+this corresponds to the <code>nb_true_divide</code> slot in the type's
+number protocol structure.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> <span class="dv">10</span> <span class="op">/</span> <span class="dv">2</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)       <span class="co"># Output: 5.0</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">type</span>(result)) <span class="co"># Output: &lt;class &#39;float&#39;&gt;</span></span></code></pre></div>
+<h3 id="the-floor-division-operator-">The Floor Division Operator
+(<code>//</code>)</h3>
+<p>The floor division operator divides the operands and rounds the
+result down to the nearest mathematical integer (applying the floor
+function, <span class="math inline">\(\lfloor x \rfloor\)</span>).</p>
+<ul>
+<li><strong>Return Type:</strong> The type of the result depends on the
+input types:
+<ul>
+<li>If both operands are integers, the result is an <code>int</code>
+(e.g., <code>7 // 2</code> yields <code>3</code>).</li>
+<li>If at least one operand is a float, the result is a
+<code>float</code> rounded down to the nearest integer value (e.g.,
+<code>7.0 // 2</code> yields <code>3.0</code>).</li>
+</ul></li>
+<li><strong>Under the Hood:</strong> Python maps the <code>//</code>
+operator to the <code>__floordiv__()</code> method. Writing
+<code>a // b</code> triggers <code>type(a).__floordiv__(a, b)</code>. In
+CPython, this is handled by the <code>nb_floor_divide</code> slot.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="dv">7</span> <span class="op">//</span> <span class="dv">2</span>)       <span class="co"># Output: 3 (int)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="fl">7.0</span> <span class="op">//</span> <span class="dv">2</span>)     <span class="co"># Output: 3.0 (float)</span></span></code></pre></div>
+<h3 id="handling-negative-numbers-rounding-down-vs-truncation">Handling
+Negative Numbers: Rounding Down vs. Truncation</h3>
+<p>A common point of confusion is how floor division handles negative
+values. Unlike languages such as C or Java, which truncate division
+toward zero, Python's <code>//</code> rounds down toward negative
+infinity.</p>
+<ul>
+<li><strong>True Division:</strong> <code>-7 / 2</code> evaluates to
+<code>-3.5</code>.</li>
+<li><strong>Floor Division:</strong> <code>-7 // 2</code> evaluates to
+<code>-4</code>, because <code>-4</code> is the next integer less than
+or equal to <code>-3.5</code>.</li>
+</ul>
+<p>This design preserves the fundamental mathematical invariant that
+connects division and the modulo operator (<code>%</code>):</p>
+<pre class="text"><code>a == (a // b) * b + (a % b)</code></pre>
+<p>Using <code>-7</code> and <code>2</code>:</p>
+<pre class="text"><code>-7 == (-7 // 2) * 2 + (-7 % 2)
+-7 == (-4 * 2) + 1
+-7 == -8 + 1</code></pre>
+<h3 id="summary-of-differences">Summary of Differences</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Division (<code>/</code>)</th>
+<th style="text-align: left;">Floor Division (<code>//</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Operation</strong></td>
+<td style="text-align: left;">Mathematical division</td>
+<td style="text-align: left;">Mathematical division floored (<span
+class="math inline">\(\lfloor a/b \rfloor\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Output Type</strong></td>
+<td style="text-align: left;">Always <code>float</code></td>
+<td style="text-align: left;"><code>int</code> (if both inputs are
+<code>int</code>), otherwise <code>float</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Dunder Method</strong></td>
+<td style="text-align: left;"><code>__truediv__</code></td>
+<td style="text-align: left;"><code>__floordiv__</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Negative Rounding</strong></td>
+<td style="text-align: left;">Exact decimal</td>
+<td style="text-align: left;">Rounds toward negative infinity</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use math.comb and math.perm in Python - python</title>
+    <meta name="description" content="Python provides built-in tools for combinatorial calculations through the math.comb() and math.perm() functions introduced in Python 3.8. This article explains how these functions calculate combinations and permutations, their syntax and mathematical for">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-use-math-comb-and-math-perm-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use math.comb and math.perm in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-use-math-comb-and-math-perm-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python provides built-in tools for combinatorial calculations through the math.comb() and math.perm() functions introduced in Python 3.8. This article explains how these functions calculate combinations and permutations, their syntax and mathematical for" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-use-mathcomb-and-mathperm-in-python">How to Use math.comb
+and math.perm in Python</h1>
+<p>Python provides built-in tools for combinatorial calculations through
+the <code>math.comb()</code> and <code>math.perm()</code> functions
+introduced in Python 3.8. This article explains how these functions
+calculate combinations and permutations, their syntax and mathematical
+formulas, their handling of edge cases, and the underlying performance
+optimizations that make them superior to manual implementations using
+factorials.</p>
+<h3 id="permutations-with-mathperm">Permutations with
+<code>math.perm()</code></h3>
+<p>A permutation represents the number of ways to choose and arrange
+<span class="math inline">\(k\)</span> items from a set of <span
+class="math inline">\(n\)</span> distinct items where the order of
+selection matters.</p>
+<p>The mathematical formula for a permutation is:</p>
+<p><span class="math display">\[P(n, k) = \frac{n!}{(n -
+k)!}\]</span></p>
+<p>In Python, the syntax is:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>math.perm(n, k<span class="op">=</span><span class="va">None</span>)</span></code></pre></div>
+<p>The function takes two arguments:</p>
+<ul>
+<li><code>n</code>: A non-negative integer representing the total number
+of items.</li>
+<li><code>k</code> (optional): A non-negative integer representing the
+number of items to arrange. If <span class="math inline">\(k\)</span> is
+not specified or set to <code>None</code>, the function defaults to
+<span class="math inline">\(k = n\)</span>, calculating <span
+class="math inline">\(n!\)</span> (the full factorial of <span
+class="math inline">\(n\)</span>).</li>
+</ul>
+<h4 id="example-usage">Example Usage</h4>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Number of ways to award 1st, 2nd, and 3rd place among 10 competitors</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>podium_finishes <span class="op">=</span> math.perm(<span class="dv">10</span>, <span class="dv">3</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(podium_finishes)  <span class="co"># Output: 720</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Full arrangement of 5 items (equivalent to math.factorial(5))</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>all_arrangements <span class="op">=</span> math.perm(<span class="dv">5</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(all_arrangements)  <span class="co"># Output: 120</span></span></code></pre></div>
+<p>If <span class="math inline">\(k &gt; n\)</span>,
+<code>math.perm(n, k)</code> returns <code>0</code> because it is
+impossible to choose more items than are available. If either <span
+class="math inline">\(n\)</span> or <span
+class="math inline">\(k\)</span> is negative or not an integer, a
+<code>ValueError</code> or <code>TypeError</code> is raised.</p>
+<hr />
+<h3 id="combinations-with-mathcomb">Combinations with
+<code>math.comb()</code></h3>
+<p>A combination represents the number of ways to choose <span
+class="math inline">\(k\)</span> items from a set of <span
+class="math inline">\(n\)</span> items where the order of selection does
+not matter.</p>
+<p>The mathematical formula for a combination is:</p>
+<p><span class="math display">\[C(n, k) = \binom{n}{k} = \frac{n!}{k!(n
+- k)!}\]</span></p>
+<p>In Python, the syntax is:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>math.comb(n, k)</span></code></pre></div>
+<p>Both arguments <span class="math inline">\(n\)</span> and <span
+class="math inline">\(k\)</span> are required and must be non-negative
+integers.</p>
+<h4 id="example-usage-1">Example Usage</h4>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Number of ways to choose a 4-person committee from a group of 12</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>committee <span class="op">=</span> math.comb(<span class="dv">12</span>, <span class="dv">4</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(committee)  <span class="co"># Output: 495</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Choosing 0 items from 10 always yields 1 way</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>empty_set <span class="op">=</span> math.comb(<span class="dv">10</span>, <span class="dv">0</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(empty_set)  <span class="co"># Output: 1</span></span></code></pre></div>
+<p>Similar to <code>math.perm()</code>, if <span class="math inline">\(k
+&gt; n\)</span>, <code>math.comb(n, k)</code> evaluates to
+<code>0</code>. Passing negative values or non-integers raises a
+<code>ValueError</code> or <code>TypeError</code>.</p>
+<hr />
+<h3 id="how-they-compute-combinatorics-internally">How They Compute
+Combinatorics Internally</h3>
+<p>Naively implementing permutations or combinations using
+<code>math.factorial()</code> is computationally inefficient. Computing
+full factorials such as <span class="math inline">\(n!\)</span> produces
+extremely large intermediate numbers, consuming significant memory and
+processor time before division cancels out the common terms.</p>
+<p>Instead, Python’s C implementation uses optimized arithmetic
+algorithms:</p>
+<ol type="1">
+<li><p><strong>Direct Multiplicative Cancellation:</strong> For
+permutations, <code>math.perm(n, k)</code> computes only the falling
+factorial:</p>
+<p><span class="math display">\[n \times (n - 1) \times \dots \times (n
+- k + 1)\]</span></p>
+<p>This performs exactly <span class="math inline">\(k\)</span>
+multiplications instead of computing the full <span
+class="math inline">\(n!\)</span> and <span class="math inline">\((n -
+k)!\)</span>.</p></li>
+<li><p><strong>Symmetry Optimization:</strong> For combinations, <span
+class="math inline">\(\binom{n}{k}\)</span> is mathematically identical
+to <span class="math inline">\(\binom{n}{n - k}\)</span>. If <span
+class="math inline">\(k &gt; n / 2\)</span>, <code>math.comb()</code>
+automatically sets <span class="math inline">\(k = n - k\)</span>. This
+minimizes the number of multiplication and division steps.</p></li>
+<li><p><strong>C-Level Big Integer Handling:</strong> Both functions are
+implemented directly in C within CPython. They use intermediate
+reductions to keep number sizes manageable throughout evaluation,
+returning an exact Python integer regardless of magnitude without risk
+of floating-point overflow.</p></li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

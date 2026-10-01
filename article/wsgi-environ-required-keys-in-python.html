@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WSGI Environ Required Keys in Python - python</title>
+    <meta name="description" content="The Python Web Server Gateway Interface (WSGI), defined in PEP 333 and updated in PEP 3333, acts as a standard interface between web servers and Python web applications or frameworks. When a request arrives, the WSGI server passes a dictionary called env">
+    <link rel="canonical" href="https://salivity.github.io/python/article/wsgi-environ-required-keys-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="WSGI Environ Required Keys in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/wsgi-environ-required-keys-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Python Web Server Gateway Interface (WSGI), defined in PEP 333 and updated in PEP 3333, acts as a standard interface between web servers and Python web applications or frameworks. When a request arrives, the WSGI server passes a dictionary called env" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="wsgi-environ-required-keys-in-python">WSGI Environ Required Keys
+in Python</h1>
+<p>The Python Web Server Gateway Interface (WSGI), defined in PEP 333
+and updated in PEP 3333, acts as a standard interface between web
+servers and Python web applications or frameworks. When a request
+arrives, the WSGI server passes a dictionary called <code>environ</code>
+containing request metadata, configuration parameters, and I/O streams.
+This article outlines the specific key-value pairs that are guaranteed
+to exist within that <code>environ</code> dictionary for every
+conforming WSGI implementation.</p>
+<h2 id="wsgi-specific-keys">WSGI-Specific Keys</h2>
+<p>PEP 3333 mandates eight WSGI-specific keys. These keys always begin
+with the <code>wsgi.</code> prefix and define the runtime environment,
+streaming interfaces, and concurrency capabilities:</p>
+<ul>
+<li><strong><code>wsgi.version</code></strong>: A tuple of two integers,
+<code>(1, 0)</code>, representing WSGI version 1.0.</li>
+<li><strong><code>wsgi.url_scheme</code></strong>: A string representing
+the URL scheme used to access the application, typically
+<code>"http"</code> or <code>"https"</code>.</li>
+<li><strong><code>wsgi.input</code></strong>: An input stream (a
+file-like object supporting <code>.read()</code>,
+<code>.readline()</code>, etc.) from which the HTTP request body can be
+read.</li>
+<li><strong><code>wsgi.errors</code></strong>: An output stream (a
+file-like object supporting <code>.write()</code>,
+<code>.writelines()</code>, and <code>.flush()</code>) designated for
+logging application errors.</li>
+<li><strong><code>wsgi.multithread</code></strong>: A boolean that
+evaluates to <code>True</code> if the application object may be
+simultaneously invoked by another thread in the same process, and
+<code>False</code> otherwise.</li>
+<li><strong><code>wsgi.multiprocess</code></strong>: A boolean that
+evaluates to <code>True</code> if an equivalent application object may
+be simultaneously invoked by another process, and <code>False</code>
+otherwise.</li>
+<li><strong><code>wsgi.run_once</code></strong>: A boolean that
+evaluates to <code>True</code> if the server or gateway expects the
+application to be invoked only once during the lifetime of its
+containing process (common in traditional CGI environments).</li>
+</ul>
+<h2 id="mandatory-cgi-keys">Mandatory CGI Keys</h2>
+<p>WSGI incorporates variables derived from the Common Gateway Interface
+(CGI) specification. While some CGI variables are optional (such as
+<code>CONTENT_TYPE</code> or <code>REMOTE_USER</code>, which only exist
+if the client provided them), the following CGI keys are strictly
+required to be present in every <code>environ</code> dictionary:</p>
+<ul>
+<li><strong><code>REQUEST_METHOD</code></strong>: A string representing
+the HTTP request method, such as <code>"GET"</code>,
+<code>"POST"</code>, <code>"PUT"</code>, or <code>"DELETE"</code>. This
+string cannot be empty.</li>
+<li><strong><code>SCRIPT_NAME</code></strong>: A string representing the
+initial portion of the URL path that corresponds to the application
+object, allowing the application to know its prefix. This may be an
+empty string <code>""</code> if the application sits at the server
+root.</li>
+<li><strong><code>PATH_INFO</code></strong>: A string representing the
+remainder of the request URL's path within the application. This value
+can be an empty string if the request path matches
+<code>SCRIPT_NAME</code> and has no trailing slash.</li>
+<li><strong><code>QUERY_STRING</code></strong>: A string containing the
+portion of the request URL that follows the <code>?</code> character. If
+no query string was sent, this key must still be present as an empty
+string <code>""</code>.</li>
+<li><strong><code>SERVER_NAME</code></strong>: A string specifying the
+hostname or IP address of the server responding to the request.</li>
+<li><strong><code>SERVER_PORT</code></strong>: A string representing the
+TCP port number on which the server is listening (e.g.,
+<code>"80"</code>, <code>"443"</code>).</li>
+<li><strong><code>SERVER_PROTOCOL</code></strong>: A string defining the
+version of the protocol used by the client to make the request,
+typically <code>"HTTP/1.0"</code> or <code>"HTTP/1.1"</code>.</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<p>Any WSGI-compliant server (such as Gunicorn, uWSGI, or the standard
+library's <code>wsgiref</code>) must populate these 15 keys for every
+incoming request. Applications can safely access these keys using direct
+dictionary indexing (<code>environ['KEY']</code>) without handling a
+<code>KeyError</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

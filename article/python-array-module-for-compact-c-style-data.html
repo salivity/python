@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python array Module for Compact C-Style Data - python</title>
+    <meta name="description" content="The Python array module provides an efficient, space-saving alternative to standard Python lists when handling large sequences of numeric data. By strictly requiring all elements to share a single C-style primitive type, it eliminates the per-element obj">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-array-module-for-compact-c-style-data">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python array Module for Compact C-Style Data - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-array-module-for-compact-c-style-data" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Python array module provides an efficient, space-saving alternative to standard Python lists when handling large sequences of numeric data. By strictly requiring all elements to share a single C-style primitive type, it eliminates the per-element obj" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-array-module-for-compact-c-style-data">Python array
+Module for Compact C-Style Data</h1>
+<p>The Python <code>array</code> module provides an efficient,
+space-saving alternative to standard Python lists when handling large
+sequences of numeric data. By strictly requiring all elements to share a
+single C-style primitive type, it eliminates the per-element object
+overhead inherent to standard Python objects. This article explains what
+the <code>array</code> module provides, how its fixed-type system works,
+its primary memory advantages, and practical examples of utilizing
+C-style data types in Python.</p>
+<h2 id="core-capabilities-of-the-array-module">Core Capabilities of the
+<code>array</code> Module</h2>
+<p>The module defines a single object type:
+<code>array.array(typecode[, initializer])</code>. Unlike standard
+Python lists, which store references to arbitrary, dynamically allocated
+Python objects, an <code>array</code> stores raw, unboxed machine values
+in contiguous memory blocks.</p>
+<p>Key features provided by the module include:</p>
+<ul>
+<li><strong>Homogeneous Storage:</strong> Every item in the array must
+adhere to the data type declared at initialization.</li>
+<li><strong>Fixed Memory Footprint:</strong> Memory allocation per
+element matches the exact byte size of the underlying C data type (e.g.,
+1 byte for an 8-bit integer, 8 bytes for a 64-bit float).</li>
+<li><strong>Buffer Protocol Support:</strong> Arrays expose the buffer
+interface, allowing direct memory sharing with external libraries,
+sockets, and files without intermediate copies.</li>
+<li><strong>Fast Binary I/O:</strong> Built-in methods enable reading
+and writing directly to and from binary files.</li>
+</ul>
+<h2 id="supported-type-codes">Supported Type Codes</h2>
+<p>The type of data stored inside an array is defined using
+single-character type codes that correspond directly to C
+primitives:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Type Code</th>
+<th style="text-align: left;">C Type</th>
+<th style="text-align: left;">Minimum Size (Bytes)</th>
+<th style="text-align: left;">Python Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>'b'</code> / <code>'B'</code></td>
+<td style="text-align: left;"><code>signed char</code> /
+<code>unsigned char</code></td>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;"><code>int</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>'h'</code> / <code>'H'</code></td>
+<td style="text-align: left;"><code>signed short</code> /
+<code>unsigned short</code></td>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;"><code>int</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>'i'</code> / <code>'I'</code></td>
+<td style="text-align: left;"><code>signed int</code> /
+<code>unsigned int</code></td>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;"><code>int</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>'l'</code> / <code>'L'</code></td>
+<td style="text-align: left;"><code>signed long</code> /
+<code>unsigned long</code></td>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;"><code>int</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>'q'</code> / <code>'Q'</code></td>
+<td style="text-align: left;"><code>signed long long</code> /
+<code>unsigned long long</code></td>
+<td style="text-align: left;">8</td>
+<td style="text-align: left;"><code>int</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>'f'</code></td>
+<td style="text-align: left;"><code>float</code></td>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;"><code>float</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>'d'</code></td>
+<td style="text-align: left;"><code>double</code></td>
+<td style="text-align: left;">8</td>
+<td style="text-align: left;"><code>float</code></td>
+</tr>
+</tbody>
+</table>
+<p>Attempting to insert a value outside the range or type dictated by
+the code raises a <code>TypeError</code> or
+<code>OverflowError</code>.</p>
+<h2 id="memory-efficiency-array-vs-standard-list">Memory Efficiency:
+<code>array</code> vs. Standard <code>list</code></h2>
+<p>In a standard Python list containing integers, each element is a full
+Python object (typically 28 bytes on 64-bit platforms), plus an 8-byte
+pointer inside the list structure. Storing 10 million integers in a
+standard list requires over 300 megabytes of RAM.</p>
+<p>In contrast, an <code>array</code> with the type code
+<code>'i'</code> (4-byte signed integer) or <code>'h'</code> (2-byte
+signed integer) allocates only the raw byte width per element in
+contiguous memory. Storing 10 million 4-byte integers in an
+<code>array</code> requires roughly 40 megabytes—reducing memory
+consumption by more than 85%.</p>
+<h2 id="basic-usage-and-binary-operations">Basic Usage and Binary
+Operations</h2>
+<p>Creating and populating an array mirrors standard Python sequence
+conventions:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> array</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Create an array of unsigned 16-bit integers (&#39;H&#39;)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>numbers <span class="op">=</span> array.array(<span class="st">&#39;H&#39;</span>, [<span class="dv">100</span>, <span class="dv">200</span>, <span class="dv">300</span>, <span class="dv">400</span>, <span class="dv">500</span>])</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Append an element</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>numbers.append(<span class="dv">600</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Check item size in bytes</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(numbers.itemsize)  <span class="co"># Output: 2</span></span></code></pre></div>
+<h3 id="high-performance-binary-serialization">High-Performance Binary
+Serialization</h3>
+<p>Because arrays map directly to C-style memory buffers, they provide
+rapid serialization methods:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Export directly to raw bytes</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>raw_bytes <span class="op">=</span> numbers.tobytes()</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Reconstruct a new array from raw bytes</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>restored <span class="op">=</span> array.array(<span class="st">&#39;H&#39;</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>restored.frombytes(raw_bytes)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Direct binary file write and read</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(<span class="st">&#39;data.bin&#39;</span>, <span class="st">&#39;wb&#39;</span>) <span class="im">as</span> f:</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    numbers.tofile(f)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>new_numbers <span class="op">=</span> array.array(<span class="st">&#39;H&#39;</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(<span class="st">&#39;data.bin&#39;</span>, <span class="st">&#39;rb&#39;</span>) <span class="im">as</span> f:</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    new_numbers.fromfile(f, <span class="bu">len</span>(numbers))</span></code></pre></div>
+<h2 id="when-to-use-the-array-module">When to Use the <code>array</code>
+Module</h2>
+<p>The <code>array</code> module is built into Python's standard
+library, requiring no external dependencies. It is ideal for:</p>
+<ul>
+<li>Managing large collections of simple numerical data where memory
+overhead must be minimized.</li>
+<li>Network and systems programming requiring explicit
+C-struct-compatible buffers.</li>
+<li>Low-overhead binary data exchange where third-party packages like
+NumPy are unavailable or unnecessary.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

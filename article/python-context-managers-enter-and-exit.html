@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Context Managers: __enter__ and __exit__ - python</title>
+    <meta name="description" content="Context managers in Python provide an efficient mechanism for resource management, ensuring that resources like files, database connections, and locks are properly acquired and released. This automation is powered by the with statement, which relies on t">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-context-managers-enter-and-exit">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Context Managers: __enter__ and __exit__ - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-context-managers-enter-and-exit" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Context managers in Python provide an efficient mechanism for resource management, ensuring that resources like files, database connections, and locks are properly acquired and released. This automation is powered by the with statement, which relies on t" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-context-managers-enter-and-exit">Python Context Managers:
+<strong>enter</strong> and <strong>exit</strong></h1>
+<p>Context managers in Python provide an efficient mechanism for
+resource management, ensuring that resources like files, database
+connections, and locks are properly acquired and released. This
+automation is powered by the <code>with</code> statement, which relies
+on the context management protocol defined by two runtime lifecycle
+methods: <code>__enter__</code> and <code>__exit__</code>. This article
+explains the responsibilities of each method, details their execution
+flow, demonstrates how to handle exceptions within them, and provides a
+practical implementation of a custom context manager.</p>
+<h3 id="the-role-of-__enter__">The Role of <code>__enter__</code></h3>
+<p>The <code>__enter__</code> method prepares the execution context.
+When a <code>with</code> block begins, the runtime first instantiates
+the context manager object and immediately calls its
+<code>__enter__</code> method.</p>
+<ul>
+<li><strong>Setup Logic:</strong> This method is used to acquire
+resources, such as opening a file or establishing a network socket.</li>
+<li><strong>Return Value:</strong> Whatever <code>__enter__</code>
+returns is bound to the target variable defined after the
+<code>as</code> keyword in the <code>with</code> statement. It is not
+required to return <code>self</code>, though it frequently does if the
+manager itself provides the interface to the resource.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ManagedResource:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__enter__</span>(<span class="va">self</span>):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Acquiring resource&quot;</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span></span></code></pre></div>
+<h3 id="the-role-of-__exit__">The Role of <code>__exit__</code></h3>
+<p>The <code>__exit__</code> method guarantees teardown logic, executing
+regardless of whether the code inside the <code>with</code> block
+finishes successfully or raises an unhandled error.</p>
+<p>The <code>__exit__</code> method requires four arguments:
+<code>self</code>, and three exception-related parameters:</p>
+<ol type="1">
+<li><code>exc_type</code>: The exception class (e.g.,
+<code>ValueError</code>), or <code>None</code> if no error
+occurred.</li>
+<li><code>exc_val</code>: The exception instance or message, or
+<code>None</code>.</li>
+<li><code>exc_tb</code>: The traceback object, or
+<code>None</code>.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ManagedResource:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__exit__</span>(<span class="va">self</span>, exc_type, exc_val, exc_tb):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">&quot;Releasing resource&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Returning True suppresses any raised exception</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">False</span></span></code></pre></div>
+<h3 id="exception-handling-in-__exit__">Exception Handling in
+<code>__exit__</code></h3>
+<p>The return value of <code>__exit__</code> dictates how errors are
+handled:</p>
+<ul>
+<li><strong>Propagating Exceptions:</strong> If <code>__exit__</code>
+returns <code>False</code>, <code>None</code>, or finishes without a
+return statement, any exception that occurred inside the
+<code>with</code> block will be re-raised immediately after
+<code>__exit__</code> completes.</li>
+<li><strong>Suppression:</strong> If <code>__exit__</code> returns
+<code>True</code>, Python suppresses the exception and execution
+proceeds normally on the line immediately following the
+<code>with</code> block.</li>
+</ul>
+<h3 id="execution-flow-under-the-hood">Execution Flow Under the
+Hood</h3>
+<p>When Python encounters a context manager:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> ContextManager() <span class="im">as</span> resource:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Operations using resource</span></span></code></pre></div>
+<p>The interpreter translates that code to behave equivalently to the
+following pattern:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>manager <span class="op">=</span> ContextManager()</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>resource <span class="op">=</span> manager.<span class="fu">__enter__</span>()</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>exception_occurred <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Operations using resource</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    exception_occurred <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">Exception</span>:</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> manager.<span class="fu">__exit__</span>(<span class="op">*</span>sys.exc_info()):</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="cf">finally</span>:</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> exception_occurred:</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        manager.<span class="fu">__exit__</span>(<span class="va">None</span>, <span class="va">None</span>, <span class="va">None</span>)</span></code></pre></div>
+<h3 id="practical-implementation">Practical Implementation</h3>
+<p>The following example demonstrates a custom file-handling context
+manager that opens a file, yields access to it, and ensures it closes
+correctly even if an error is raised.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CustomFileHandler:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, filepath, mode):</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.filepath <span class="op">=</span> filepath</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.mode <span class="op">=</span> mode</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.<span class="bu">file</span> <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__enter__</span>(<span class="va">self</span>):</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.<span class="bu">file</span> <span class="op">=</span> <span class="bu">open</span>(<span class="va">self</span>.filepath, <span class="va">self</span>.mode)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.<span class="bu">file</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__exit__</span>(<span class="va">self</span>, exc_type, exc_val, exc_tb):</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="va">self</span>.<span class="bu">file</span>:</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.<span class="bu">file</span>.close()</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> exc_type <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Handled error: </span><span class="sc">{</span>exc_val<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">True</span>  <span class="co"># Suppresses the exception</span></span></code></pre></div>
+<p>Using this implementation:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> CustomFileHandler(<span class="st">&quot;example.txt&quot;</span>, <span class="st">&quot;w&quot;</span>) <span class="im">as</span> f:</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    f.write(<span class="st">&quot;Writing data securely.&quot;</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> <span class="pp">RuntimeError</span>(<span class="st">&quot;Something went wrong during write.&quot;</span>)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Execution continues here because __exit__ returned True</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;Execution continues past the with block.&quot;</span>)</span></code></pre></div>
+<p>By encapsulating allocation in <code>__enter__</code> and release
+logic in <code>__exit__</code>, Python context managers eliminate
+resource leaks and boilerplate <code>try...finally</code> structures
+across applications.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

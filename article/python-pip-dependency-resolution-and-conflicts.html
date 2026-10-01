@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Pip Dependency Resolution and Conflicts - python</title>
+    <meta name="description" content="Python’s package installer, pip, manages complex environments by recursively parsing package requirements and automatically reconciling version mismatches. Since the release of version 20.3, pip has used a backtracking resolver powered by the resolveli">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-pip-dependency-resolution-and-conflicts">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Pip Dependency Resolution and Conflicts - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-pip-dependency-resolution-and-conflicts" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s package installer, pip, manages complex environments by recursively parsing package requirements and automatically reconciling version mismatches. Since the release of version 20.3, pip has used a backtracking resolver powered by the resolveli" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-pip-dependency-resolution-and-conflicts">Python Pip
+Dependency Resolution and Conflicts</h1>
+<p>Python’s package installer, <code>pip</code>, manages complex
+environments by recursively parsing package requirements and
+automatically reconciling version mismatches. Since the release of
+version 20.3, <code>pip</code> has used a backtracking resolver powered
+by the <code>resolvelib</code> library, moving away from its legacy
+greedy approach. This article examines how <code>pip</code> discovers
+recursive dependencies, traverses the dependency tree, resolves
+conflicting constraints via backtracking, and handles unresolvable
+dependency conflicts.</p>
+<h3 id="the-recursive-discovery-process">The Recursive Discovery
+Process</h3>
+<p>When a package is installed using <code>pip install</code>, the
+resolver evaluates the requested package's metadata (found in
+distribution wheels or source packages via <code>pyproject.toml</code>,
+<code>setup.cfg</code>, or <code>setup.py</code>).</p>
+<ol type="1">
+<li><strong>Root Inspection:</strong> <code>pip</code> parses the
+primary package's direct dependencies and records their version
+specifiers.</li>
+<li><strong>Recursive Traversal:</strong> For each required dependency,
+<code>pip</code> downloads package metadata from the index (such as
+PyPI) without downloading the entire package archive if metadata is
+available. It extracts downstream dependencies, continuing this process
+iteratively until all branches of the dependency tree terminate.</li>
+<li><strong>Graph Construction:</strong> The result is a Directed
+Acyclic Graph (DAG) representing the complete set of required direct and
+transitive packages along with their specified version ranges.</li>
+</ol>
+<h3 id="the-backtracking-resolution-algorithm">The Backtracking
+Resolution Algorithm</h3>
+<p>Older versions of <code>pip</code> used a naive, "first-seen-wins"
+approach. If Package A required <code>foo==1.0</code> and Package B
+required <code>foo==2.0</code>, <code>pip</code> would install whichever
+was encountered first, leaving the environment broken.</p>
+<p>Modern <code>pip</code> uses a backtracking algorithm that evaluates
+the dependency tree globally:</p>
+<ul>
+<li><strong>Constraint Accumulation:</strong> <code>pip</code> gathers
+every constraint applied to a specific package across all dependencies.
+For example, if Package A requires
+<code>urllib3&gt;=1.26.0,&lt;2.0.0</code> and Package B requires
+<code>urllib3&gt;=1.21.1</code>, the effective constraint becomes
+<code>urllib3&gt;=1.26.0,&lt;2.0.0</code>.</li>
+<li><strong>Candidate Selection:</strong> <code>pip</code> attempts to
+select the newest available version of a package that satisfies all
+currently known constraints.</li>
+<li><strong>Backtracking on Failure:</strong> If selecting a specific
+version of a package leads to a conflict downstream (for instance, a
+transitive dependency introduces a new constraint that invalidates the
+chosen version), <code>pip</code> reverses its decision. It discards the
+incompatible candidate and evaluates the next viable candidate version
+higher up in the dependency tree.</li>
+</ul>
+<h3 id="resolving-incompatible-version-conflicts">Resolving Incompatible
+Version Conflicts</h3>
+<p>When constraints are mutually exclusive, no valid set of packages can
+satisfy the environment. For example:</p>
+<ul>
+<li>Package X requires <code>requests&lt;2.25.0</code></li>
+<li>Package Y requires <code>requests&gt;=2.28.0</code></li>
+</ul>
+<p>Because no release of <code>requests</code> can satisfy both
+conditions simultaneously, <code>pip</code> exhausts all possible
+backtracking combinations across the dependency tree. Once all candidate
+combinations fail, <code>pip</code> aborts the installation entirely to
+avoid corrupting the environment. It outputs a
+<code>ResolutionImpossible</code> error detailing:</p>
+<ul>
+<li>The conflicting packages.</li>
+<li>The exact dependency paths that introduced the conflicting
+constraints.</li>
+<li>The specific version ranges demanded by each dependent package.</li>
+</ul>
+<h3 id="controlling-resolver-behavior">Controlling Resolver
+Behavior</h3>
+<p>Users can manage how <code>pip</code> resolves dependencies through
+specific flags:</p>
+<ul>
+<li><strong><code>--use-deprecated=legacy-resolver</code>:</strong>
+Temporarily reverts to the pre-20.3 resolver behavior (not recommended,
+as it allows silently broken environments).</li>
+<li><strong>Constraints Files
+(<code>-c constraints.txt</code>):</strong> Enforces global limits on
+specific package versions across an entire dependency tree without
+forcing them to be installed directly unless required by another
+package.</li>
+<li><strong><code>--no-deps</code>:</strong> Skips dependency resolution
+entirely, installing only the explicitly named target package.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

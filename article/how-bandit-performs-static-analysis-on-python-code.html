@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Bandit Performs Static Analysis on Python Code - python</title>
+    <meta name="description" content="Bandit is a dedicated static application security testing (SAST) tool designed to identify common security flaws in Python code. It operates by converting raw Python files into an Abstract Syntax Tree (AST), scanning the structural nodes against an exten">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-bandit-performs-static-analysis-on-python-code">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Bandit Performs Static Analysis on Python Code - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-bandit-performs-static-analysis-on-python-code" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Bandit is a dedicated static application security testing (SAST) tool designed to identify common security flaws in Python code. It operates by converting raw Python files into an Abstract Syntax Tree (AST), scanning the structural nodes against an exten" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-bandit-performs-static-analysis-on-python-code">How Bandit
+Performs Static Analysis on Python Code</h1>
+<p>Bandit is a dedicated static application security testing (SAST) tool
+designed to identify common security flaws in Python code. It operates
+by converting raw Python files into an Abstract Syntax Tree (AST),
+scanning the structural nodes against an extensible collection of
+security-focused test plugins, and generating reports that rate
+identified vulnerabilities by severity and confidence. By analyzing
+syntax and context rather than raw text, Bandit enables developers to
+automate code reviews and catch potential security regressions directly
+within development and continuous integration environments.</p>
+<h3 id="abstract-syntax-tree-ast-generation">Abstract Syntax Tree (AST)
+Generation</h3>
+<p>Instead of relying on regex pattern matching, Bandit leverages
+Python’s built-in <code>ast</code> module. When provided with a target
+directory or file, Bandit parses the source text into an Abstract Syntax
+Tree. This hierarchical tree representation breaks the code down into
+structural elements, such as module imports, function definitions,
+variable assignments, and function calls. Analyzing the AST allows
+Bandit to understand the programmatic structure and relationships within
+the code, significantly reducing false positives compared to simple
+text-search tools.</p>
+<h3 id="node-traversal-and-context-evaluation">Node Traversal and
+Context Evaluation</h3>
+<p>Once the AST is built, Bandit traverses the tree using a Node Visitor
+pattern. As Bandit walks through each node of the AST, it evaluates the
+node's context. For instance, if Bandit encounters a <code>Call</code>
+node, it inspects:</p>
+<ul>
+<li>The exact name of the function being executed.</li>
+<li>The module from which the function was imported.</li>
+<li>The positional and keyword arguments passed to that call.</li>
+<li>Whether variable inputs originate from static literals or dynamic
+definitions.</li>
+</ul>
+<p>This structural context ensures that security rules trigger only when
+specific, potentially dangerous programmatic conditions are met.</p>
+<h3 id="plugin-based-security-testing">Plugin-Based Security
+Testing</h3>
+<p>Bandit organizes its analysis logic into modular test plugins. Each
+plugin is registered to watch for specific AST node types. When a
+matching node is encountered during the AST walk, the relevant plugin
+executes its evaluation logic.</p>
+<p>Common security tests performed by Bandit plugins include:</p>
+<ul>
+<li><strong>Unsafe Deserialization:</strong> Detecting calls to modules
+like <code>pickle</code>, <code>marshal</code>, or
+<code>yaml.load</code> without safe loaders, which can lead to remote
+code execution.</li>
+<li><strong>Command Injection:</strong> Flagging invocations of
+execution functions such as <code>subprocess.Popen</code> or
+<code>os.system</code> where arguments like <code>shell=True</code> are
+used with dynamic inputs.</li>
+<li><strong>Hardcoded Credentials:</strong> Identifying potential
+secrets, tokens, and passwords assigned to variables or passed as
+default parameters.</li>
+<li><strong>Weak Cryptography:</strong> Detecting the use of outdated
+hash algorithms (e.g., MD5, SHA1) or insecure ciphers.</li>
+<li><strong>Insecure Defaults and Configurations:</strong> Finding
+misconfigured settings such as binding network services to all
+interfaces (<code>0.0.0.0</code>), using insecure temporary files via
+<code>tempfile.mktemp</code>, or executing SQL queries constructed with
+raw string formatting.</li>
+</ul>
+<h3 id="severity-and-confidence-metrics">Severity and Confidence
+Metrics</h3>
+<p>When a plugin discovers a vulnerability, Bandit assigns two distinct
+ratings to the issue:</p>
+<ol type="1">
+<li><strong>Severity (Low, Medium, High):</strong> Measures the
+potential impact of the security flaw on the application if
+exploited.</li>
+<li><strong>Confidence (Low, Medium, High):</strong> Measures the
+likelihood that the reported issue represents an actual vulnerability
+rather than a false positive.</li>
+</ol>
+<p>These ratings allow development teams to filter and prioritize
+findings, focusing immediately on high-severity, high-confidence flaws
+while ignoring lower-risk patterns according to their risk
+tolerance.</p>
+<h3 id="configuration-baseline-and-pipeline-execution">Configuration,
+Baseline, and Pipeline Execution</h3>
+<p>Bandit supports custom configuration through YAML files or
+pyproject.toml, where teams can disable specific plugins, customize test
+parameters, or specify file paths to exclude. To prevent redundant
+alerts on existing codebases, Bandit supports baseline reporting, which
+allows users to suppress previously known issues and only fail builds
+when new security flaws are introduced. Because it executes via the
+command line and outputs formats such as JSON, CSV, HTML, and SARIF,
+Bandit fits seamlessly into modern CI/CD pipelines to enforce static
+security standards before code is merged into production.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

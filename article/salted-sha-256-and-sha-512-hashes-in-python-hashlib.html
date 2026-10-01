@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salted SHA-256 and SHA-512 Hashes in Python Hashlib - python</title>
+    <meta name="description" content="Python's hashlib module provides robust support for generating salted SHA-256 and SHA-512 hashes through native cryptographic primitives and dedicated key derivation functions. While developers can manually combine a salt with standard sha256 and sha512">
+    <link rel="canonical" href="https://salivity.github.io/python/article/salted-sha-256-and-sha-512-hashes-in-python-hashlib">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Salted SHA-256 and SHA-512 Hashes in Python Hashlib - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/salted-sha-256-and-sha-512-hashes-in-python-hashlib" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's hashlib module provides robust support for generating salted SHA-256 and SHA-512 hashes through native cryptographic primitives and dedicated key derivation functions. While developers can manually combine a salt with standard sha256 and sha512" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="salted-sha-256-and-sha-512-hashes-in-python-hashlib">Salted
+SHA-256 and SHA-512 Hashes in Python Hashlib</h1>
+<p>Python's <code>hashlib</code> module provides robust support for
+generating salted SHA-256 and SHA-512 hashes through native
+cryptographic primitives and dedicated key derivation functions. While
+developers can manually combine a salt with standard <code>sha256</code>
+and <code>sha512</code> algorithms, <code>hashlib</code> specifically
+incorporates <strong>PBKDF2-HMAC</strong> and <strong>scrypt</strong> to
+securely implement salted hashing. This article outlines the specific
+algorithms supported by <code>hashlib</code> for generating salted SHA
+hashes, explaining how each functions and when to use them.</p>
+<h3 id="1-pbkdf2-with-hmac-sha-256-and-hmac-sha-512">1. PBKDF2 with
+HMAC-SHA-256 and HMAC-SHA-512</h3>
+<p>For password hashing and secure credential storage,
+<code>hashlib.pbkdf2_hmac</code> is the primary standardized algorithm
+in Python's standard library that natively uses SHA-256 and SHA-512 with
+salts.</p>
+<p>PBKDF2 (Password-Based Key Derivation Function 2) applies a
+pseudorandom function—in this case, HMAC using either SHA-256 or
+SHA-512—along with a cryptographic salt across thousands of iterations
+to slow down brute-force attacks.</p>
+<ul>
+<li><strong>Supported Hash Names:</strong> <code>'sha256'</code> and
+<code>'sha512'</code></li>
+<li><strong>Method Signature:</strong>
+<code>hashlib.pbkdf2_hmac(hash_name, password, salt, iterations, dklen=None)</code></li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> hashlib</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>salt <span class="op">=</span> os.urandom(<span class="dv">16</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>password <span class="op">=</span> <span class="st">b&quot;user_secure_password&quot;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Salted SHA-256 using PBKDF2</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>key_sha256 <span class="op">=</span> hashlib.pbkdf2_hmac(<span class="st">&#39;sha256&#39;</span>, password, salt, iterations<span class="op">=</span><span class="dv">600000</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Salted SHA-512 using PBKDF2</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>key_sha512 <span class="op">=</span> hashlib.pbkdf2_hmac(<span class="st">&#39;sha512&#39;</span>, password, salt, iterations<span class="op">=</span><span class="dv">600000</span>)</span></code></pre></div>
+<h3 id="2-standard-sha-256-and-sha-512-via-manual-salting">2. Standard
+SHA-256 and SHA-512 via Manual Salting</h3>
+<p>Python's <code>hashlib</code> exposes raw SHA-2 family message-digest
+algorithms:</p>
+<ul>
+<li><code>hashlib.sha256()</code></li>
+<li><code>hashlib.sha512()</code></li>
+<li><code>hashlib.sha384()</code>, <code>hashlib.sha224()</code>,
+<code>hashlib.sha512_224()</code>, and <code>hashlib.sha512_256()</code>
+(variants based on the same core engines)</li>
+</ul>
+<p>These core primitives do not take a dedicated <code>salt</code>
+parameter natively. Instead, salting is achieved by prepending,
+appending, or mixing the salt bytes directly into the message before
+digest generation.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>salt <span class="op">=</span> os.urandom(<span class="dv">16</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> <span class="st">b&quot;sensitive_data&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Salted raw SHA-256</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>hasher_256 <span class="op">=</span> hashlib.sha256(salt <span class="op">+</span> data)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>salted_hash_256 <span class="op">=</span> hasher_256.hexdigest()</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Salted raw SHA-512</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>hasher_512 <span class="op">=</span> hashlib.sha512(salt <span class="op">+</span> data)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>salted_hash_512 <span class="op">=</span> hasher_512.hexdigest()</span></code></pre></div>
+<p><em>Note: Raw salted SHA-256 and SHA-512 are designed to be fast and
+are vulnerable to high-speed brute-force attacks when applied to
+passwords. They should primarily be used for data integrity
+verification, digital signatures, or non-password token
+generation.</em></p>
+<h3 id="3-hmac-using-sha-256-and-sha-512">3. HMAC Using SHA-256 and
+SHA-512</h3>
+<p>To protect against length-extension attacks inherent to simple
+<code>salt + message</code> hashing, Python supports HMAC (Hash-based
+Message Authentication Code). While implemented via the separate
+<code>hmac</code> module, it relies directly on <code>hashlib</code>'s
+SHA-256 and SHA-512 algorithms. In this pattern, the salt acts as the
+secret cryptographic key.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> hmac</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>salt <span class="op">=</span> os.urandom(<span class="dv">16</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>message <span class="op">=</span> <span class="st">b&quot;message_to_authenticate&quot;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># HMAC-SHA-256</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>hmac_sha256 <span class="op">=</span> hmac.new(salt, message, hashlib.sha256).hexdigest()</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># HMAC-SHA-512</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>hmac_sha512 <span class="op">=</span> hmac.new(salt, message, hashlib.sha512).hexdigest()</span></code></pre></div>
+<h3 id="4-scrypt-sha-256-derivative">4. Scrypt (SHA-256 Derivative)</h3>
+<p>Python 3.8+ includes <code>hashlib.scrypt()</code>. While not a pure
+SHA-512 algorithm, scrypt is a memory-hard key derivation function that
+fundamentally uses PBKDF2 with <strong>HMAC-SHA-256</strong> at its
+base. It requires a distinct <code>salt</code> parameter and provides
+protection against hardware-accelerated (ASIC/GPU) attacks.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Salted scrypt key derivation (internally utilizes HMAC-SHA-256)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>scrypt_hash <span class="op">=</span> hashlib.scrypt(password, salt<span class="op">=</span>salt, n<span class="op">=</span><span class="dv">16384</span>, r<span class="op">=</span><span class="dv">8</span>, p<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div>
+<h3 id="summary-of-best-practices">Summary of Best Practices</h3>
+<ul>
+<li><strong>For storing passwords:</strong> Use
+<code>hashlib.pbkdf2_hmac</code> with <code>'sha256'</code> or
+<code>'sha512'</code>, generating a unique 16-byte cryptographic salt
+via <code>os.urandom()</code> for each record.</li>
+<li><strong>For data verification and message integrity:</strong> Use
+<code>hmac.new()</code> using <code>hashlib.sha256</code> or
+<code>hashlib.sha512</code>.</li>
+<li><strong>For general hashing:</strong> Avoid using raw, manually
+concatenated <code>hashlib.sha256(salt + password)</code> for
+authentication credentials.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

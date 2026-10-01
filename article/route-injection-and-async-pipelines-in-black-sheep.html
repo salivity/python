@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Injection and Async Pipelines in BlackSheep - python</title>
+    <meta name="description" content="BlackSheep is a high-performance ASGI web framework for Python designed around asynchronous programming and modern type hinting. This article examines how BlackSheep implements request handling, focusing specifically on its native dependency injection sy">
+    <link rel="canonical" href="https://salivity.github.io/python/article/route-injection-and-async-pipelines-in-black-sheep">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Route Injection and Async Pipelines in BlackSheep - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/route-injection-and-async-pipelines-in-black-sheep" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="BlackSheep is a high-performance ASGI web framework for Python designed around asynchronous programming and modern type hinting. This article examines how BlackSheep implements request handling, focusing specifically on its native dependency injection sy" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="route-injection-and-async-pipelines-in-blacksheep">Route
+Injection and Async Pipelines in BlackSheep</h1>
+<p>BlackSheep is a high-performance ASGI web framework for Python
+designed around asynchronous programming and modern type hinting. This
+article examines how BlackSheep implements request handling, focusing
+specifically on its native dependency injection system for route
+handlers and its non-blocking asynchronous middleware pipeline that
+optimizes request-response flows.</p>
+<h2 id="the-asynchronous-pipeline-architecture">The Asynchronous
+Pipeline Architecture</h2>
+<p>BlackSheep runs on top of standard ASGI servers like Uvicorn or
+Hypercorn, utilizing <code>uvloop</code> and <code>httptools</code>
+under the hood for maximum I/O throughput. The framework organizes
+request processing into an asynchronous pipeline consisting of
+middlewares and route handlers.</p>
+<p>The middleware pipeline works as a chain of asynchronous callables
+executed sequentially:</p>
+<ol type="1">
+<li><strong>Incoming Request:</strong> An incoming HTTP request hits the
+ASGI interface, instantiating a BlackSheep <code>Request</code>
+object.</li>
+<li><strong>Middleware Traversal:</strong> The request passes through
+registered middlewares in the order they were defined. Each middleware
+can inspect or mutate the request before passing control down the chain
+using <code>await handler(request)</code>.</li>
+<li><strong>Endpoint Execution:</strong> The router resolves the
+matching URL pattern and invokes the corresponding asynchronous endpoint
+handler.</li>
+<li><strong>Response Unwinding:</strong> The resulting
+<code>Response</code> traverses back up the middleware chain, allowing
+components to alter headers, log responses, or handle exceptions before
+the payload is returned to the client.</li>
+</ol>
+<p>Because every step of this pipeline is a native Python coroutine, the
+event loop can pause and resume execution during I/O operations (such as
+database queries or third-party API calls) without blocking other
+concurrent requests.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> blacksheep <span class="im">import</span> Application, Request, Response</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> Application()</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">@app.middlewares.append</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> timing_middleware(request: Request, handler) <span class="op">-&gt;</span> Response:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Pre-processing</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> <span class="cf">await</span> handler(request)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Post-processing</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    response.add_header(<span class="st">b&quot;X-Custom-Header&quot;</span>, <span class="st">b&quot;Processed&quot;</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> response</span></code></pre></div>
+<h2 id="route-injection-mechanics">Route Injection Mechanics</h2>
+<p>BlackSheep integrates built-in dependency injection (DI) powered by
+the lightweight container library <code>rodi</code>. Rather than
+manually parsing parameters or instantiating services inside endpoints,
+BlackSheep inspects route handler type annotations at application
+startup and injects required dependencies at runtime.</p>
+<h3 id="service-registration-lifecycles">Service Registration
+Lifecycles</h3>
+<p>Services are registered to the application's service container
+(<code>app.services</code>) with explicit lifecycles:</p>
+<ul>
+<li><strong>Singleton:</strong> Instantiated once and shared across the
+entire application runtime.</li>
+<li><strong>Scoped:</strong> Created once per HTTP request and disposed
+of after the request cycle completes.</li>
+<li><strong>Transient:</strong> Created anew every time the dependency
+is requested.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> blacksheep <span class="im">import</span> Application</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> Application()</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> DatabaseService:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="kw">def</span> fetch_data(<span class="va">self</span>):</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> {<span class="st">&quot;status&quot;</span>: <span class="st">&quot;active&quot;</span>}</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Register as a singleton or scoped service</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>app.services.add_singleton(DatabaseService)</span></code></pre></div>
+<h3 id="parameter-binding-and-injection">Parameter Binding and
+Injection</h3>
+<p>When an HTTP route is invoked, BlackSheep's binder inspects the
+signature of the handler function. It distinguishes between:</p>
+<ul>
+<li><strong>Route/Query/Header parameters:</strong> Primitive types like
+<code>str</code>, <code>int</code>, or models bound from URL segments,
+query strings, and headers.</li>
+<li><strong>Request Body:</strong> Pydantic models, dataclasses, or
+custom classes parsed automatically from JSON or form payloads.</li>
+<li><strong>Injected Services:</strong> Types registered within the DI
+container.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> blacksheep <span class="im">import</span> get</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="at">@get</span>(<span class="st">&quot;/api/data/</span><span class="sc">{item_id}</span><span class="st">&quot;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> get_data(item_id: <span class="bu">int</span>, db: DatabaseService):</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># &#39;item_id&#39; is extracted from the URL route</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># &#39;db&#39; is automatically resolved and injected by the DI container</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> <span class="cf">await</span> db.fetch_data()</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {<span class="st">&quot;id&quot;</span>: item_id, <span class="st">&quot;data&quot;</span>: data}</span></code></pre></div>
+<h2 id="concurrency-and-lifecycle-management">Concurrency and Lifecycle
+Management</h2>
+<p>When a request arrives, BlackSheep creates a scoped service provider
+tied directly to that request's context. If a route handler or any
+middleware declares a dependency on a scoped service, the container
+resolves it within that context. Once the async pipeline finishes
+sending the response, the scoped context is finalized, invoking cleanup
+routines (such as closing database sessions or network connections)
+automatically.</p>
+<p>This integration of dependency injection into an asynchronous
+pipeline allows BlackSheep to minimize boilerplate, ensure clean
+separation of concerns, and maintain high concurrency without
+sacrificing code maintainability.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

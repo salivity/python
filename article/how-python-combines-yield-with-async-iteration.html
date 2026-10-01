@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Combines Yield With Async Iteration - python</title>
+    <meta name="description" content="Python asynchronous generators blend the lazy evaluation of traditional generators with the non-blocking concurrency of asyncio. By placing the yield keyword inside an async def function, Python creates an object that pauses execution to deliver data to">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-combines-yield-with-async-iteration">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Combines Yield With Async Iteration - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-combines-yield-with-async-iteration" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python asynchronous generators blend the lazy evaluation of traditional generators with the non-blocking concurrency of asyncio. By placing the yield keyword inside an async def function, Python creates an object that pauses execution to deliver data to" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-combines-yield-with-async-iteration">How Python
+Combines Yield With Async Iteration</h1>
+<p>Python asynchronous generators blend the lazy evaluation of
+traditional generators with the non-blocking concurrency of
+<code>asyncio</code>. By placing the <code>yield</code> keyword inside
+an <code>async def</code> function, Python creates an object that pauses
+execution to deliver data to a consumer while also being able to suspend
+execution to wait for external I/O events. This article explores how
+Python ties these two paradigms together through the asynchronous
+iteration protocol, the interaction between <code>yield</code> and
+<code>await</code>, and how data flows through an <code>async for</code>
+loop.</p>
+<h3 id="the-mechanics-of-the-async-generator-function">The Mechanics of
+the Async Generator Function</h3>
+<p>A standard generator function uses <code>def</code> and
+<code>yield</code> to implement the iterator protocol
+(<code>__iter__</code> and <code>__next__</code>). An asynchronous
+generator function is defined using <code>async def</code> and contains
+at least one <code>yield</code> statement.</p>
+<p>When you call an asynchronous generator function, it does not
+immediately execute the function body. Instead, it returns an
+asynchronous generator object. This object adheres to the asynchronous
+iterator protocol by implementing two core special methods:</p>
+<ul>
+<li><code>__aiter__()</code>: Returns the asynchronous generator object
+itself.</li>
+<li><code>__anext__()</code>: Returns an awaitable object that, when
+awaited, resolves to the next yielded value or raises a
+<code>StopAsyncIteration</code> exception to signal completion.</li>
+</ul>
+<h3 id="interleaving-await-and-yield">Interleaving <code>await</code>
+and <code>yield</code></h3>
+<p>The primary utility of an asynchronous generator is the ability to
+interleave operations that await coroutines with operations that produce
+values.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> fetch_pages(urls):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> url <span class="kw">in</span> urls:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Suspend execution to perform I/O</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        data <span class="op">=</span> <span class="cf">await</span> fake_http_get(url)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Yield the processed result to the consumer</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">yield</span> data</span></code></pre></div>
+<p>In this flow, two distinct pausing mechanisms work in concert:</p>
+<ol type="1">
+<li><strong>Pausing on <code>await</code>:</strong> When execution hits
+an <code>await</code> expression, the generator suspends itself and
+yields control back to the event loop, allowing other asynchronous tasks
+to run while waiting for an external event (like a socket read or a
+database query).</li>
+<li><strong>Pausing on <code>yield</code>:</strong> When execution
+reaches a <code>yield</code> statement, the generator resolves the
+awaitable returned by <code>__anext__()</code>, providing the yielded
+value to the consumer. The generator's state is preserved exactly at
+that point until the consumer requests the subsequent item.</li>
+</ol>
+<h3 id="consumption-via-async-for">Consumption via
+<code>async for</code></h3>
+<p>Asynchronous generators cannot be consumed by standard
+<code>for</code> loops or the built-in <code>next()</code> function
+because their steps are inherently asynchronous. Instead, they are
+consumed using the <code>async for</code> statement.</p>
+<p>Under the hood, the <code>async for</code> construct translates to
+the following sequence:</p>
+<ol type="1">
+<li>It retrieves the iterator by calling
+<code>gen.__aiter__()</code>.</li>
+<li>At each iteration, it calls <code>gen.__anext__()</code>, which
+returns a coroutine.</li>
+<li>It awaits that coroutine to retrieve the value.</li>
+<li>If the coroutine resolves with a value, the loop body executes.</li>
+<li>If the coroutine raises <code>StopAsyncIteration</code>, the loop
+terminates gracefully.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="cf">for</span> page <span class="kw">in</span> fetch_pages(url_list):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(page)</span></code></pre></div>
+<h3 id="generator-lifecycle-and-cleanup">Generator Lifecycle and
+Cleanup</h3>
+<p>Asynchronous iteration semantics also govern how cleanup is handled.
+Traditional generators use <code>close()</code> to terminate iteration
+early, raising a <code>GeneratorExit</code> inside the frame.</p>
+<p>Because asynchronous generators may need to perform asynchronous
+cleanup—such as closing network connections or committing
+transactions—they provide an <code>aclose()</code> method. Calling
+<code>await gen.aclose()</code> returns an awaitable that resumes the
+generator, raises <code>GeneratorExit</code> at the point of suspension,
+executes any enclosing <code>finally</code> blocks (even those
+containing <code>await</code> expressions), and completes the
+generator's lifecycle cleanly within the event loop.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

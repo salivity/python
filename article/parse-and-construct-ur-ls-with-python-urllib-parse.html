@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parse and Construct URLs with Python urllib.parse - python</title>
+    <meta name="description" content="Python's standard library provides the urllib.parse module to break uniform resource locators (URLs) into structured components and recombine them into valid strings. This article explains how to dissect URLs using functions like urlparse and urlsplit, h">
+    <link rel="canonical" href="https://salivity.github.io/python/article/parse-and-construct-ur-ls-with-python-urllib-parse">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Parse and Construct URLs with Python urllib.parse - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/parse-and-construct-ur-ls-with-python-urllib-parse" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's standard library provides the urllib.parse module to break uniform resource locators (URLs) into structured components and recombine them into valid strings. This article explains how to dissect URLs using functions like urlparse and urlsplit, h" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="parse-and-construct-urls-with-python-urllibparse">Parse and
+Construct URLs with Python urllib.parse</h1>
+<p>Python's standard library provides the <code>urllib.parse</code>
+module to break uniform resource locators (URLs) into structured
+components and recombine them into valid strings. This article explains
+how to dissect URLs using functions like <code>urlparse</code> and
+<code>urlsplit</code>, handle query strings with <code>parse_qs</code>,
+and construct or modify URLs programmatically using
+<code>urlunparse</code>, <code>urljoin</code>, and
+<code>urlencode</code>.</p>
+<h2 id="parsing-urls-into-components">Parsing URLs into Components</h2>
+<p>The primary function for breaking down a URL is
+<code>urlparse()</code>. It analyzes a URL string and separates it into
+six components based on standard syntax: <code>scheme</code>,
+<code>netloc</code> (network location/host), <code>path</code>,
+<code>params</code>, <code>query</code>, and <code>fragment</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> urllib.parse <span class="im">import</span> urlparse</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">&quot;https://user:pass@example.com:8080/path/to/page;param?query=data#section&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>parsed <span class="op">=</span> urlparse(url)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(parsed.scheme)    <span class="co"># &#39;https&#39;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(parsed.netloc)    <span class="co"># &#39;user:pass@example.com:8080&#39;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(parsed.path)      <span class="co"># &#39;/path/to/page&#39;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(parsed.params)    <span class="co"># &#39;param&#39;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(parsed.query)     <span class="co"># &#39;query=data&#39;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(parsed.fragment)  <span class="co"># &#39;section&#39;</span></span></code></pre></div>
+<p>Alternatively, <code>urlsplit()</code> operates similarly to
+<code>urlparse()</code>, but it does not separate standard path
+parameters into the <code>params</code> attribute. Instead, it leaves
+them within the <code>path</code> attribute, returning a 5-item named
+tuple. Modern applications and specifications generally prefer
+<code>urlsplit()</code> because modern web standards rarely treat the
+semicolon parameter segment separately from the path.</p>
+<p>Both functions return named tuples, allowing component access via
+attribute names or numeric indexing.</p>
+<h2 id="parsing-query-strings">Parsing Query Strings</h2>
+<p>The <code>query</code> component extracted by <code>urlparse</code>
+is a raw string. To convert this into usable Python data structures,
+<code>urllib.parse</code> provides <code>parse_qs()</code> and
+<code>parse_qsl()</code>.</p>
+<ul>
+<li><code>parse_qs(query_string)</code>: Parses parameters into a
+dictionary where each key maps to a list of values, preserving multiple
+identical keys.</li>
+<li><code>parse_qsl(query_string)</code>: Parses parameters into a list
+of <code>(key, value)</code> tuples, preserving the original parameter
+order.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> urllib.parse <span class="im">import</span> parse_qs, parse_qsl</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>query <span class="op">=</span> <span class="st">&quot;name=Alice&amp;tag=python&amp;tag=web&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(parse_qs(query))</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: {&#39;name&#39;: [&#39;Alice&#39;], &#39;tag&#39;: [&#39;python&#39;, &#39;web&#39;]}</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(parse_qsl(query))</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: [(&#39;name&#39;, &#39;Alice&#39;), (&#39;tag&#39;, &#39;python&#39;), (&#39;tag&#39;, &#39;web&#39;)]</span></span></code></pre></div>
+<h2 id="constructing-urls">Constructing URLs</h2>
+<p>URLs can be assembled from individual components using
+<code>urlunparse()</code> or <code>urlunsplit()</code>. These functions
+require an iterable (such as a list, tuple, or the named tuple produced
+during parsing) containing the required number of components (6 for
+<code>urlunparse</code>, 5 for <code>urlunsplit</code>).</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> urllib.parse <span class="im">import</span> urlunparse, ParseResult</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>components <span class="op">=</span> ParseResult(</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    scheme<span class="op">=</span><span class="st">&quot;https&quot;</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    netloc<span class="op">=</span><span class="st">&quot;api.example.com&quot;</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    path<span class="op">=</span><span class="st">&quot;/v1/users&quot;</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    params<span class="op">=</span><span class="st">&quot;&quot;</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    query<span class="op">=</span><span class="st">&quot;active=true&quot;</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    fragment<span class="op">=</span><span class="st">&quot;&quot;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>constructed_url <span class="op">=</span> urlunparse(components)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(constructed_url)</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: https://api.example.com/v1/users?active=true</span></span></code></pre></div>
+<h2 id="creating-query-strings-with-urlencode">Creating Query Strings
+with urlencode</h2>
+<p>To build a query string from key-value pairs safely, use
+<code>urlencode()</code>. It automatically applies percent-encoding to
+special characters and spaces.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> urllib.parse <span class="im">import</span> urlencode</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>params <span class="op">=</span> {<span class="st">&quot;search&quot;</span>: <span class="st">&quot;hello world&quot;</span>, <span class="st">&quot;page&quot;</span>: <span class="dv">2</span>, <span class="st">&quot;filters&quot;</span>: [<span class="st">&quot;new&quot;</span>, <span class="st">&quot;featured&quot;</span>]}</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>query_string <span class="op">=</span> urlencode(params, doseq<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(query_string)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: search=hello+world&amp;page=2&amp;filters=new&amp;filters=featured</span></span></code></pre></div>
+<p>Setting <code>doseq=True</code> ensures that elements inside iterable
+values (like lists) are encoded as separate key-value pairs rather than
+stringified lists.</p>
+<h2 id="joining-base-and-relative-urls">Joining Base and Relative
+URLs</h2>
+<p>When resolving links found within a document against the document's
+base address, <code>urljoin()</code> calculates the correct absolute URL
+according to RFC 3986 rules.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> urllib.parse <span class="im">import</span> urljoin</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>base_url <span class="op">=</span> <span class="st">&quot;https://example.com/blog/articles/&quot;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(urljoin(base_url, <span class="st">&quot;post-1.html&quot;</span>))</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: https://example.com/blog/articles/post-1.html</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(urljoin(base_url, <span class="st">&quot;/images/pic.png&quot;</span>))</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: https://example.com/images/pic.png</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(urljoin(base_url, <span class="st">&quot;../index.html&quot;</span>))</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: https://example.com/blog/index.html</span></span></code></pre></div>
+<h2 id="percent-encoding-and-decoding-strings">Percent-Encoding and
+Decoding Strings</h2>
+<p>When inserting individual text fragments into paths or netlocs,
+<code>quote()</code> and <code>quote_plus()</code> replace unsafe
+characters with hex equivalents (e.g., <code>%20</code>). To reverse the
+process, use <code>unquote()</code> or <code>unquote_plus()</code>.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> urllib.parse <span class="im">import</span> quote, unquote</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>raw_string <span class="op">=</span> <span class="st">&quot;price: $10 &amp; up&quot;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>encoded <span class="op">=</span> quote(raw_string)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>decoded <span class="op">=</span> unquote(encoded)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(encoded)  <span class="co"># price%3A%20%2410%20%26%20up</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(decoded)  <span class="co"># price: $10 &amp; up</span></span></code></pre></div>
+<p><code>quote_plus()</code> replaces spaces with <code>+</code>
+characters instead of <code>%20</code>, which is standard behavior when
+formatting query component values.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

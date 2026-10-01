@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Dataclass slots=True Memory and Performance - python</title>
+    <meta name="description" content="Python 3.10 introduced the slots=True parameter to the @dataclass decorator, providing a streamlined way to automatically generate classes that use slots. This article explores how enabling slots=True eliminates the default dynamic per-instance dictionar">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-dataclass-slots-true-memory-and-performance">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Dataclass slots=True Memory and Performance - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-dataclass-slots-true-memory-and-performance" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python 3.10 introduced the slots=True parameter to the @dataclass decorator, providing a streamlined way to automatically generate classes that use slots. This article explores how enabling slots=True eliminates the default dynamic per-instance dictionar" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-dataclass-slotstrue-memory-and-performance">Python
+Dataclass slots=True Memory and Performance</h1>
+<p>Python 3.10 introduced the <code>slots=True</code> parameter to the
+<code>@dataclass</code> decorator, providing a streamlined way to
+automatically generate classes that use <code>__slots__</code>. This
+article explores how enabling <code>slots=True</code> eliminates the
+default dynamic per-instance dictionary, drastically lowering memory
+overhead and accelerating attribute access times for data-heavy
+applications.</p>
+<h2 id="how-default-dataclasses-handle-attributes">How Default
+Dataclasses Handle Attributes</h2>
+<p>By default, Python objects—including standard dataclasses—store their
+instance attributes in a dynamic dictionary named <code>__dict__</code>.
+This dictionary grants the flexibility to add, modify, or delete
+attributes on an instance at runtime.</p>
+<p>However, a Python dictionary relies on a hash table implementation.
+Even an empty dictionary consumes a noticeable amount of memory, and as
+attributes are added, the hash table pre-allocates space to minimize
+resizing operations. When you instantiate thousands or millions of
+dataclass objects, the collective memory overhead of these per-instance
+dictionaries becomes a major performance bottleneck.</p>
+<h2 id="memory-reduction-with-slotstrue">Memory Reduction with
+<code>slots=True</code></h2>
+<p>When you define a dataclass with <code>@dataclass(slots=True)</code>,
+Python bypasses the creation of the <code>__dict__</code> and
+<code>__weakref__</code> attributes for each instance (unless explicitly
+requested or inherited).</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dataclasses <span class="im">import</span> dataclass</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span>(slots<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Coordinate:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    x: <span class="bu">float</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    y: <span class="bu">float</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    z: <span class="bu">float</span></span></code></pre></div>
+<p>Instead of an individual hash map for each instance, Python creates a
+fixed-size array of pointers directly inside the C structure of the
+object. The class object manages attribute lookups using descriptors at
+specific memory offsets.</p>
+<p>This change leads to substantial memory savings:</p>
+<ul>
+<li><strong>Overhead Reduction:</strong> A conventional dataclass
+instance with a few attributes often consumes around 150 to 200 bytes.
+With <code>slots=True</code>, that same instance typically drops to 48
+to 64 bytes.</li>
+<li><strong>Scalability:</strong> When dealing with millions of
+records—such as streaming data, large datasets in memory, or simulation
+entities—enabling <code>slots=True</code> can reduce overall heap usage
+by 50% to 70%.</li>
+</ul>
+<h2 id="execution-performance-and-attribute-access">Execution
+Performance and Attribute Access</h2>
+<p>In addition to smaller memory footprints, <code>slots=True</code>
+speeds up attribute reads and writes:</p>
+<ol type="1">
+<li><strong>Direct Memory Offsets:</strong> Accessing an attribute on a
+standard object requires a hash calculation and a lookup within
+<code>__dict__</code>. Slotted attributes use descriptors that map
+directly to fixed offsets in the object's memory structure, implemented
+directly in C.</li>
+<li><strong>Improved Cache Locality:</strong> Because slotted objects
+are significantly smaller, more instances fit into CPU L1/L2 caches
+simultaneously. This reduces CPU cache misses during iterations over
+large collections of objects, leading to faster execution times in tight
+loops.</li>
+</ol>
+<p>Benchmark tests typically show that reading and writing attributes on
+slotted dataclasses is 15% to 25% faster compared to standard
+dataclasses.</p>
+<h2 id="trade-offs-and-considerations">Trade-offs and
+Considerations</h2>
+<p>While <code>slots=True</code> provides clear performance benefits, it
+introduces a few behavioral changes:</p>
+<ul>
+<li><strong>No Dynamic Attributes:</strong> You cannot assign new
+attributes to an instance that were not declared in the class
+definition. Attempting to assign an undeclared attribute raises an
+<code>AttributeError</code>.</li>
+<li><strong>Inheritance Constraints:</strong> Inheriting from multiple
+slotted classes can lead to <code>TypeError</code> exceptions if more
+than one parent class defines non-empty slots.</li>
+<li><strong>Weak References:</strong> Instances cannot be weakly
+referenced by default unless <code>__weakref__</code> is explicitly
+included in the slot definitions.</li>
+</ul>
+<p>For most data transfer objects and high-volume data structures in
+Python 3.10 and newer, <code>@dataclass(slots=True)</code> is an
+effective, zero-boilerplate optimization for reducing memory consumption
+and improving runtime throughput.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

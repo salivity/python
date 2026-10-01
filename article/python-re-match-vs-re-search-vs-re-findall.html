@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python re.match vs re.search vs re.findall - python</title>
+    <meta name="description" content="Python’s re module offers multiple functions to parse and extract text using regular expressions, but each searches strings differently and returns distinct data structures. This article breaks down the practical differences between re.match(), re.sear">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-re-match-vs-re-search-vs-re-findall">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python re.match vs re.search vs re.findall - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-re-match-vs-re-search-vs-re-findall" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s re module offers multiple functions to parse and extract text using regular expressions, but each searches strings differently and returns distinct data structures. This article breaks down the practical differences between re.match(), re.sear" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-rematch-vs-research-vs-refindall">Python re.match vs
+re.search vs re.findall</h1>
+<p>Python’s <code>re</code> module offers multiple functions to parse
+and extract text using regular expressions, but each searches strings
+differently and returns distinct data structures. This article breaks
+down the practical differences between <code>re.match()</code>,
+<code>re.search()</code>, and <code>re.findall()</code>, demonstrating
+how they locate patterns, what they return, and how to choose the right
+function for your task.</p>
+<h3 id="rematch-matches-from-the-beginning"><code>re.match()</code>:
+Matches from the Beginning</h3>
+<p><code>re.match()</code> determines if the regular expression matches
+only at the very beginning of the target string. If the pattern does not
+match the initial character(s), the function immediately returns
+<code>None</code>, even if the pattern appears later in the string.</p>
+<ul>
+<li><strong>Scan Behavior:</strong> Scans strictly from index 0.</li>
+<li><strong>Return Value:</strong> A single <code>Match</code> object if
+a match exists at the start; otherwise, <code>None</code>.</li>
+<li><strong>Common Use Case:</strong> Validating input formats (e.g.,
+verifying that an input starts with a specific prefix).</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>text <span class="op">=</span> <span class="st">&quot;Error 404: Not Found&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Matches because the pattern is at the start</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> re.match(<span class="vs">r&quot;</span><span class="dv">\w</span><span class="op">+</span><span class="vs">&quot;</span>, text)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result.group())  <span class="co"># Output: Error</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Fails because digits are not at the start</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> re.match(<span class="vs">r&quot;</span><span class="dv">\d</span><span class="op">+</span><span class="vs">&quot;</span>, text)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)  <span class="co"># Output: None</span></span></code></pre></div>
+<hr />
+<h3
+id="research-finds-the-first-match-anywhere"><code>re.search()</code>:
+Finds the First Match Anywhere</h3>
+<p><code>re.search()</code> scans the entire string from left to right
+to find the first location where the regular expression produces a
+match. Unlike <code>re.match()</code>, the match does not have to be at
+the beginning of the string.</p>
+<ul>
+<li><strong>Scan Behavior:</strong> Scans through the entire string
+until the first match is found.</li>
+<li><strong>Return Value:</strong> A single <code>Match</code> object
+for the first occurrence; otherwise, <code>None</code>.</li>
+<li><strong>Common Use Case:</strong> Checking for the presence of a
+pattern or extracting the first instance of a pattern anywhere within a
+block of text.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>text <span class="op">=</span> <span class="st">&quot;Error 404: Not Found&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Finds the first occurrence of digits anywhere in the text</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> re.search(<span class="vs">r&quot;</span><span class="dv">\d</span><span class="op">+</span><span class="vs">&quot;</span>, text)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result.group())  <span class="co"># Output: 404</span></span></code></pre></div>
+<hr />
+<h3 id="refindall-finds-all-matches"><code>re.findall()</code>: Finds
+All Matches</h3>
+<p><code>re.findall()</code> scans the entire string and extracts all
+non-overlapping occurrences of the pattern. Instead of returning a
+<code>Match</code> object, it returns the matched data directly.</p>
+<ul>
+<li><strong>Scan Behavior:</strong> Scans the entire string
+comprehensively.</li>
+<li><strong>Return Value:</strong> A Python <code>list</code> containing
+all matches. If the pattern contains no capturing groups, it returns a
+list of strings. If the pattern contains capturing groups, it returns a
+list of tuples containing the groups. If no matches are found, it
+returns an empty list (<code>[]</code>).</li>
+<li><strong>Common Use Case:</strong> Extracting repeated items, such as
+gathering all email addresses, URLs, or phone numbers from a
+document.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>text <span class="op">=</span> <span class="st">&quot;Item 1 costs $15, Item 2 costs $30, Item 3 costs $45&quot;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Finds all digit sequences throughout the string</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> re.findall(<span class="vs">r&quot;</span><span class="dv">\d</span><span class="op">+</span><span class="vs">&quot;</span>, text)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)  <span class="co"># Output: [&#39;1&#39;, &#39;15&#39;, &#39;2&#39;, &#39;30&#39;, &#39;3&#39;, &#39;45&#39;]</span></span></code></pre></div>
+<hr />
+<h3 id="key-differences-summary">Key Differences Summary</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>re.match()</code></th>
+<th style="text-align: left;"><code>re.search()</code></th>
+<th style="text-align: left;"><code>re.findall()</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Search Scope</strong></td>
+<td style="text-align: left;">Start of the string only</td>
+<td style="text-align: left;">Entire string (stops at first match)</td>
+<td style="text-align: left;">Entire string</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Number of Matches</strong></td>
+<td style="text-align: left;">1 (if at start)</td>
+<td style="text-align: left;">1 (first occurrence)</td>
+<td style="text-align: left;">All occurrences</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Return Type</strong></td>
+<td style="text-align: left;"><code>Match</code> object or
+<code>None</code></td>
+<td style="text-align: left;"><code>Match</code> object or
+<code>None</code></td>
+<td style="text-align: left;"><code>list</code> of strings/tuples (or
+empty list)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Accessing Text</strong></td>
+<td style="text-align: left;">Requires <code>.group()</code></td>
+<td style="text-align: left;">Requires <code>.group()</code></td>
+<td style="text-align: left;">Elements accessed directly via list
+indexing</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Objects Does gc.get_objects() Return? - python</title>
+    <meta name="description" content="Python's gc.getobjects() function returns a Python list containing all objects currently tracked by the CPython cyclical garbage collector, excluding the returned list itself. While commonly used for heap introspection and memory leak detection, it does">
+    <link rel="canonical" href="https://salivity.github.io/python/article/what-objects-does-gc-get-objects-return">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="What Objects Does gc.get_objects() Return? - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/what-objects-does-gc-get-objects-return" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's gc.getobjects() function returns a Python list containing all objects currently tracked by the CPython cyclical garbage collector, excluding the returned list itself. While commonly used for heap introspection and memory leak detection, it does" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="what-objects-does-gcget_objects-return">What Objects Does
+gc.get_objects() Return?</h1>
+<p>Python's <code>gc.get_objects()</code> function returns a Python list
+containing all objects currently tracked by the CPython cyclical garbage
+collector, excluding the returned list itself. While commonly used for
+heap introspection and memory leak detection, it does not provide a
+complete representation of every object allocated in memory. Instead, it
+exclusively returns container objects and custom types capable of
+participating in reference cycles, omitting most atomic immutable
+types.</p>
+<h3 id="tracked-objects">Tracked Objects</h3>
+<p>CPython’s garbage collector is designed to detect and resolve
+circular references. Because reference counting handles straightforward
+deallocations, the garbage collector only monitors objects that can hold
+references to other objects.</p>
+<p>When you invoke <code>gc.get_objects()</code>, the returned list
+contains:</p>
+<ul>
+<li><strong>Custom Class Instances:</strong> Instances of user-defined
+classes and their underlying <code>__dict__</code> attributes.</li>
+<li><strong>Mutable Containers:</strong> Standard collections such as
+<code>list</code>, <code>dict</code>, and <code>set</code>.</li>
+<li><strong>Functions, Modules, and Classes:</strong> Function objects,
+generator objects, module objects, and class definitions (types).</li>
+<li><strong>Execution Frames:</strong> Tracebacks and frame objects
+currently active or retained in closures.</li>
+<li><strong>Complex Tuples:</strong> Tuples that contain references to
+at least one mutable or tracked object.</li>
+</ul>
+<h3 id="untracked-objects">Untracked Objects</h3>
+<p><code>gc.get_objects()</code> does not inspect raw heap memory; it
+only traverses the doubly linked lists maintained by the GC generations.
+Consequently, several categories of objects are missing from its
+output:</p>
+<ul>
+<li><strong>Atomic Primitives:</strong> Non-container types such as
+integers (<code>int</code>), floating-point numbers
+(<code>float</code>), booleans (<code>bool</code>), and strings
+(<code>str</code>) are never tracked because they cannot reference other
+objects.</li>
+<li><strong>Stateless or Immutable Singletons:</strong> Objects like
+<code>None</code>, <code>Ellipsis</code>, and empty tuples are not
+tracked.</li>
+<li><strong>Optimized Tuples:</strong> A tuple consisting entirely of
+atomic immutables (such as <code>(1, "text", 3.14)</code>) is untracked
+by the garbage collector to reduce overhead.</li>
+<li><strong>Untracked Dictionaries:</strong> CPython implements an
+optimization that untracks dictionaries under certain conditions.
+Dictionaries containing only string keys and primitive values (such as
+module namespaces or specific instance dictionaries) may be untracked
+until a complex object is inserted.</li>
+</ul>
+<h3 id="the-generation-parameter">The <code>generation</code>
+Parameter</h3>
+<p>Starting in Python 3.8, <code>gc.get_objects()</code> accepts an
+optional <code>generation</code> argument:</p>
+<ul>
+<li><code>gc.get_objects(generation=0)</code>: Returns only the youngest
+objects (Generation 0).</li>
+<li><code>gc.get_objects(generation=1)</code>: Returns objects that have
+survived one collection cycle (Generation 1).</li>
+<li><code>gc.get_objects(generation=2)</code>: Returns the oldest,
+long-lived objects (Generation 2).</li>
+<li><code>gc.get_objects()</code>: Returns all tracked objects across
+all three generations.</li>
+</ul>
+<h3 id="heap-introspection-considerations">Heap Introspection
+Considerations</h3>
+<p>Because <code>gc.get_objects()</code> excludes atomic primitives,
+iterating over its output will not reveal memory occupied by large
+strings, byte buffers, or millions of cached integers directly. To find
+untracked objects during heap debugging, you must inspect the contents
+and attributes of the tracked container objects returned by the function
+using tools like <code>sys.getsizeof()</code> or traversal libraries
+like <code>objgraph</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

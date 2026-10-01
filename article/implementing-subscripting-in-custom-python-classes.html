@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementing Subscripting in Custom Python Classes - python</title>
+    <meta name="description" content="Python's square bracket syntax ([]) provides a clean, unified interface for indexing, key lookup, and slicing across built-in types like lists and dictionaries. In custom classes, this functionality is enabled by implementing the special dunder methods g">
+    <link rel="canonical" href="https://salivity.github.io/python/article/implementing-subscripting-in-custom-python-classes">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Implementing Subscripting in Custom Python Classes - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/implementing-subscripting-in-custom-python-classes" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's square bracket syntax ([]) provides a clean, unified interface for indexing, key lookup, and slicing across built-in types like lists and dictionaries. In custom classes, this functionality is enabled by implementing the special dunder methods g" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="implementing-subscripting-in-custom-python-classes">Implementing
+Subscripting in Custom Python Classes</h1>
+<p>Python's square bracket syntax (<code>[]</code>) provides a clean,
+unified interface for indexing, key lookup, and slicing across built-in
+types like lists and dictionaries. In custom classes, this functionality
+is enabled by implementing the special dunder methods
+<code>__getitem__</code>, <code>__setitem__</code>, and
+<code>__delitem__</code>. This guide explains how the Python interpreter
+intercepts subscript operations, passes arguments to these underlying
+methods, handles both discrete keys and slice objects, and allows you to
+build custom container types.</p>
+<h2 id="the-subscripting-protocol">The Subscripting Protocol</h2>
+<p>When Python encounters square brackets applied to an object instance,
+it translates the syntax directly into a call to that object's
+corresponding magic method. Rather than relying on hardcoded type
+checks, Python uses duck typing via this subscripting protocol:</p>
+<ul>
+<li><strong>Retrieval (<code>obj[key]</code>)</strong> triggers
+<code>obj.__getitem__(key)</code></li>
+<li><strong>Assignment (<code>obj[key] = value</code>)</strong> triggers
+<code>obj.__setitem__(key, value)</code></li>
+<li><strong>Deletion (<code>del obj[key]</code>)</strong> triggers
+<code>obj.__delitem__(key)</code></li>
+</ul>
+<p>Under the hood, Python performs method lookup on the class itself
+rather than the instance namespace (i.e.,
+<code>type(obj).__getitem__(obj, key)</code>), ensuring consistent
+evaluation and performance.</p>
+<hr />
+<h2 id="1-accessing-data-with-__getitem__">1. Accessing Data with
+<code>__getitem__</code></h2>
+<p>The <code>__getitem__(self, key)</code> method accepts a single
+argument: the index, key, or slice passed inside the brackets.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CustomList:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, data):</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._data <span class="op">=</span> <span class="bu">list</span>(data)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__getitem__</span>(<span class="va">self</span>, index):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>._data[index]</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>cl <span class="op">=</span> CustomList([<span class="st">&quot;a&quot;</span>, <span class="st">&quot;b&quot;</span>, <span class="st">&quot;c&quot;</span>])</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(cl[<span class="dv">1</span>])  <span class="co"># Invokes cl.__getitem__(1) -&gt; Output: &#39;b&#39;</span></span></code></pre></div>
+<h3 id="handling-slices">Handling Slices</h3>
+<p>When a range like <code>cl[0:2]</code> is passed, Python packages the
+indices into a <code>slice</code> object
+(<code>slice(0, 2, None)</code>) and delivers it directly to
+<code>__getitem__</code>. To properly support slicing, your method
+should handle <code>slice</code> instances:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> <span class="fu">__getitem__</span>(<span class="va">self</span>, index):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">isinstance</span>(index, <span class="bu">slice</span>):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>._data[index.start:index.stop:index.step]</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>._data[index]</span></code></pre></div>
+<p>If an invalid key or index is provided, the method should raise
+either an <code>IndexError</code> (for sequence-like objects) or a
+<code>KeyError</code> (for mapping-like objects).</p>
+<hr />
+<h2 id="2-mutating-data-with-__setitem__">2. Mutating Data with
+<code>__setitem__</code></h2>
+<p>The <code>__setitem__(self, key, value)</code> method requires two
+arguments: the target index/key and the value being assigned. It is
+invoked when an assignment statement targets an index expression.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CustomList:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, data):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._data <span class="op">=</span> <span class="bu">list</span>(data)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__setitem__</span>(<span class="va">self</span>, index, value):</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._data[index] <span class="op">=</span> value</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>cl <span class="op">=</span> CustomList([<span class="dv">10</span>, <span class="dv">20</span>, <span class="dv">30</span>])</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>cl[<span class="dv">0</span>] <span class="op">=</span> <span class="dv">99</span>  <span class="co"># Invokes cl.__setitem__(0, 99)</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(cl._data)  <span class="co"># Output: [99, 20, 30]</span></span></code></pre></div>
+<p>Just like <code>__getitem__</code>, if slice syntax is used on the
+left side of the assignment (such as <code>cl[0:2] = [1, 2]</code>), the
+<code>index</code> parameter receives a <code>slice</code> object.</p>
+<hr />
+<h2 id="3-removing-data-with-__delitem__">3. Removing Data with
+<code>__delitem__</code></h2>
+<p>The <code>__delitem__(self, key)</code> method enables the
+<code>del</code> keyword on subscripted expressions. It accepts the
+target index or key and removes the corresponding value from the
+underlying storage.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CustomList:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, data):</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._data <span class="op">=</span> <span class="bu">list</span>(data)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__delitem__</span>(<span class="va">self</span>, index):</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">del</span> <span class="va">self</span>._data[index]</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>cl <span class="op">=</span> CustomList([<span class="st">&quot;first&quot;</span>, <span class="st">&quot;second&quot;</span>, <span class="st">&quot;third&quot;</span>])</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span> cl[<span class="dv">1</span>]  <span class="co"># Invokes cl.__delitem__(1)</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(cl._data)  <span class="co"># Output: [&#39;first&#39;, &#39;third&#39;]</span></span></code></pre></div>
+<p>If the item cannot be removed due to an invalid key or missing index,
+raise the appropriate <code>IndexError</code> or
+<code>KeyError</code>.</p>
+<hr />
+<h2 id="complete-implementation-example">Complete Implementation
+Example</h2>
+<p>The following example combines all three methods into a custom
+key-value store that validates string keys and logs mutations:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> MonitoredDict:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._store <span class="op">=</span> {}</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__getitem__</span>(<span class="va">self</span>, key):</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(key, <span class="bu">str</span>):</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">TypeError</span>(<span class="st">&quot;Keys must be strings.&quot;</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>._store[key]</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__setitem__</span>(<span class="va">self</span>, key, value):</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(key, <span class="bu">str</span>):</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">TypeError</span>(<span class="st">&quot;Keys must be strings.&quot;</span>)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Setting </span><span class="sc">{</span>key<span class="sc">!r}</span><span class="ss"> to </span><span class="sc">{</span>value<span class="sc">!r}</span><span class="ss">&quot;</span>)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._store[key] <span class="op">=</span> value</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__delitem__</span>(<span class="va">self</span>, key):</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Deleting key </span><span class="sc">{</span>key<span class="sc">!r}</span><span class="ss">&quot;</span>)</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>        <span class="kw">del</span> <span class="va">self</span>._store[key]</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Usage</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> MonitoredDict()</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>data[<span class="st">&quot;user&quot;</span>] <span class="op">=</span> <span class="st">&quot;Alice&quot;</span>   <span class="co"># Output: Setting &#39;user&#39; to &#39;Alice&#39;</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>val <span class="op">=</span> data[<span class="st">&quot;user&quot;</span>]       <span class="co"># Calls __getitem__</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span> data[<span class="st">&quot;user&quot;</span>]         <span class="co"># Output: Deleting key &#39;user&#39;</span></span></code></pre></div>
+<h2 id="protocol-summary">Protocol Summary</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Syntax</th>
+<th style="text-align: left;">Invoked Dunder Method</th>
+<th style="text-align: left;">Common Exceptions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>obj[key]</code></td>
+<td style="text-align: left;"><code>__getitem__(self, key)</code></td>
+<td style="text-align: left;"><code>KeyError</code>,
+<code>IndexError</code>, <code>TypeError</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>obj[key] = value</code></td>
+<td
+style="text-align: left;"><code>__setitem__(self, key, value)</code></td>
+<td style="text-align: left;"><code>KeyError</code>,
+<code>IndexError</code>, <code>TypeError</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>del obj[key]</code></td>
+<td style="text-align: left;"><code>__delitem__(self, key)</code></td>
+<td style="text-align: left;"><code>KeyError</code>,
+<code>IndexError</code>, <code>TypeError</code></td>
+</tr>
+</tbody>
+</table>
+<p>By implementing these three methods, your custom objects integrate
+seamlessly with Python's indexing syntax, creating predictable and
+idiomatic interfaces.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python SimpleNamespace vs Dict and Custom Object - python</title>
+    <meta name="description" content="Python's types.SimpleNamespace provides an elegant middle ground between flexible key-value mappings and structured class instances. While a standard dictionary relies on bracket notation and a custom class often requires boilerplate code, SimpleNamespac">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-simple-namespace-vs-dict-and-custom-object">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python SimpleNamespace vs Dict and Custom Object - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-simple-namespace-vs-dict-and-custom-object" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's types.SimpleNamespace provides an elegant middle ground between flexible key-value mappings and structured class instances. While a standard dictionary relies on bracket notation and a custom class often requires boilerplate code, SimpleNamespac" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-simplenamespace-vs-dict-and-custom-object">Python
+SimpleNamespace vs Dict and Custom Object</h1>
+<p>Python's <code>types.SimpleNamespace</code> provides an elegant
+middle ground between flexible key-value mappings and structured class
+instances. While a standard dictionary relies on bracket notation and a
+custom class often requires boilerplate code,
+<code>SimpleNamespace</code> offers an out-of-the-box object that allows
+attribute-style access, automatic string representations, and built-in
+equality checking. This article examines the core differences in syntax,
+functionality, and performance that distinguish
+<code>SimpleNamespace</code> from traditional dictionaries and custom
+objects.</p>
+<h2 id="simplenamespace-vs-dictionary">SimpleNamespace vs.
+Dictionary</h2>
+<p>The primary distinction between <code>SimpleNamespace</code> and a
+standard Python <code>dict</code> lies in syntax and API interface:</p>
+<ul>
+<li><strong>Attribute Access vs. Subscripting:</strong> Dictionaries
+require subscript notation to access values (e.g.,
+<code>data['key']</code>), whereas <code>SimpleNamespace</code> allows
+dot-notation attribute access (e.g., <code>data.key</code>). This makes
+code cleaner and easier to read, especially when dealing with
+configuration settings or passing parameters.</li>
+<li><strong>Namespace Cleanliness:</strong> A dictionary possesses
+built-in methods like <code>.keys()</code>, <code>.values()</code>,
+<code>.items()</code>, and <code>.update()</code>. If a dictionary key
+shares a name with one of these methods, calling that method remains
+distinct from accessing the key. In contrast,
+<code>SimpleNamespace</code> contains virtually no built-in methods on
+the instance itself, preventing naming collisions between your data and
+built-in object functions.</li>
+<li><strong>String Representation:</strong> Printing a
+<code>SimpleNamespace</code> produces a readable representation showing
+the type and its attributes (e.g., <code>namespace(a=1, b=2)</code>),
+making it clear that it is an object rather than a raw data map.</li>
+</ul>
+<h2 id="simplenamespace-vs-custom-object">SimpleNamespace vs. Custom
+Object</h2>
+<p>Developers often create an empty class
+(<code>class Container: pass</code>) simply to attach attributes
+dynamically. <code>SimpleNamespace</code> replaces this pattern with
+several advantages:</p>
+<ul>
+<li><strong>No Boilerplate Initialization:</strong> Creating a custom
+object typically requires writing an <code>__init__</code> method to
+assign attributes on instantiation. <code>SimpleNamespace</code> accepts
+keyword arguments directly upon creation
+(<code>sn = SimpleNamespace(x=10, y=20)</code>) without requiring an
+explicit class definition.</li>
+<li><strong>Default Equality Comparisons:</strong> Two separate
+instances of a basic custom class without an overridden
+<code>__eq__</code> method compare by memory address (identity). Two
+<code>SimpleNamespace</code> instances compare their attributes for
+equality automatically; if their keys and values match,
+<code>sn1 == sn2</code> evaluates to <code>True</code>.</li>
+<li><strong>Built-in <code>__repr__</code>:</strong> A generic custom
+class displays a generic memory address representation (e.g.,
+<code>&lt;Container object at 0x...&gt;</code>).
+<code>SimpleNamespace</code> automatically implements a helpful
+<code>__repr__</code> that displays all assigned attributes and
+values.</li>
+</ul>
+<h2 id="summary-of-use-cases">Summary of Use Cases</h2>
+<ul>
+<li><strong>Use a Dictionary</strong> when you need a dynamic collection
+of key-value pairs, intend to iterate heavily over keys and values,
+require JSON serialization compatibility out of the box, or have keys
+that are not valid Python identifiers (such as strings containing spaces
+or hyphens).</li>
+<li><strong>Use a Custom Class (or <code>dataclass</code>)</strong> when
+your data requires associated methods, business logic, inheritance, type
+validation, or strict attribute schemas.</li>
+<li><strong>Use <code>types.SimpleNamespace</code></strong> when you
+need a lightweight, throwaway object to hold data with dot-notation
+access, such as command-line arguments, mock objects during testing, or
+configuration bundles, without the overhead of declaring a full
+class.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

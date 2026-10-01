@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How CPython Trashcan Prevents Stack Overflows - python</title>
+    <meta name="description" content="In CPython, deleting deeply nested data structures can trigger a chain reaction of recursive deallocations that exhausts the operating system's call stack, leading to a segmentation fault. To eliminate this vulnerability, CPython implements a defensive s">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-c-python-trashcan-prevents-stack-overflows">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How CPython Trashcan Prevents Stack Overflows - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-c-python-trashcan-prevents-stack-overflows" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In CPython, deleting deeply nested data structures can trigger a chain reaction of recursive deallocations that exhausts the operating system's call stack, leading to a segmentation fault. To eliminate this vulnerability, CPython implements a defensive s" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-cpython-trashcan-prevents-stack-overflows">How CPython
+Trashcan Prevents Stack Overflows</h1>
+<p>In CPython, deleting deeply nested data structures can trigger a
+chain reaction of recursive deallocations that exhausts the operating
+system's call stack, leading to a segmentation fault. To eliminate this
+vulnerability, CPython implements a defensive system known as the
+"trashcan" mechanism. By intercepting deeply nested deallocation calls,
+deferring object destruction, and flattening the recursive cleanup
+process into an iterative loop, the trashcan guarantees that deeply
+nested collections can be freed safely without causing C-level stack
+overflows.</p>
+<h3 id="the-problem-recursive-deallocation">The Problem: Recursive
+Deallocation</h3>
+<p>CPython relies primarily on reference counting for memory management.
+When an object's reference count drops to zero, its type-specific
+deallocator (<code>tp_dealloc</code>) is executed immediately.</p>
+<p>For container types—such as lists, tuples, or dictionaries—the
+<code>tp_dealloc</code> function must decrement the reference count of
+every item it holds:</p>
+<ol type="1">
+<li>Object <span class="math inline">\(A\)</span> reaches a reference
+count of zero, triggering its <code>tp_dealloc</code>.</li>
+<li>Object <span class="math inline">\(A\)</span>'s deallocator calls
+<code>Py_DECREF()</code> on child object <span
+class="math inline">\(B\)</span>.</li>
+<li>If <span class="math inline">\(B\)</span>'s reference count drops to
+zero, <span class="math inline">\(B\)</span>'s <code>tp_dealloc</code>
+is immediately invoked on the same C stack.</li>
+<li><span class="math inline">\(B\)</span> calls
+<code>Py_DECREF()</code> on child object <span
+class="math inline">\(C\)</span>, and the chain continues.</li>
+</ol>
+<p>Consider a singly nested list chain constructed as
+<code>x = []; for _ in range(1000000): x = [x]</code>. Deleting
+<code>x</code> requires unwinding one million nested lists. Because each
+<code>tp_dealloc</code> call allocates a new C stack frame, this pattern
+rapidly exceeds the execution stack limits of the host operating system,
+terminating the Python process abruptly with a segmentation fault.</p>
+<h3 id="how-the-trashcan-mechanism-works">How the Trashcan Mechanism
+Works</h3>
+<p>The trashcan mechanism solves this problem by enforcing a maximum
+recursion depth for deallocation routines at the C level. It is exposed
+to container implementations via the macros
+<code>Py_TRASHCAN_BEGIN</code> and <code>Py_TRASHCAN_END</code>.</p>
+<h4 id="1-tracking-nesting-depth">1. Tracking Nesting Depth</h4>
+<p>The CPython interpreter state maintains a counter tracking the
+current nesting depth of active deallocators
+(<code>trash_delete_nesting</code>). Each time a container begins
+deallocating its contents within a <code>Py_TRASHCAN_BEGIN</code> block,
+CPython checks this counter against a hardcoded threshold (historically
+defined as <code>PyTrash_UNWIND_LEVEL</code>, typically set to 54).</p>
+<h4 id="2-deferring-destruction">2. Deferring Destruction</h4>
+<p>If the nesting depth is below the threshold, the object deallocates
+normally, incrementing the nesting depth while its children are
+processed.</p>
+<p>Once the nesting depth reaches the threshold limit:</p>
+<ul>
+<li>The current object is not immediately traversed or freed.</li>
+<li>Instead, the object is added to a singly linked list of deferred
+objects (<code>trash_delete_later</code>) stored on the thread
+state.</li>
+<li>The object's internal pointers are temporarily reused to maintain
+this linked list, avoiding additional memory allocation.</li>
+<li>The <code>tp_dealloc</code> call immediately returns, unwinding the
+C stack frame rather than proceeding deeper into the hierarchy.</li>
+</ul>
+<h4 id="3-iterative-processing">3. Iterative Processing</h4>
+<p>When the stack unwinds back to the original caller that entered the
+<code>Py_TRASHCAN_BEGIN</code> block at depth zero:</p>
+<ul>
+<li>The <code>Py_TRASHCAN_END</code> macro detects that the base
+deallocation level has been reached and that deferred objects are
+waiting in the <code>trash_delete_later</code> queue.</li>
+<li>The mechanism enters an iterative <code>while</code> loop that pops
+deferred objects from the queue one at a time and executes their
+deallocators with the nesting counter reset to 1.</li>
+<li>If processing those queued objects generates further deep cascades
+exceeding the limit, they are simply queued back into
+<code>trash_delete_later</code>.</li>
+</ul>
+<h3 id="summary">Summary</h3>
+<p>By using a fixed recursion threshold and a deferred queue, the
+trashcan converts an unbounded recursive destruction tree into a
+bounded, iterative release loop. This ensures that object destruction in
+Python remains memory-efficient and protected from low-level C stack
+exhaustion, regardless of how deeply nested the objects are.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

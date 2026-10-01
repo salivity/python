@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspecting Tasks with asyncio.all_tasks in Python - python</title>
+    <meta name="description" content="Python's asyncio.alltasks() function allows developers to inspect all active, uncompleted asynchronous tasks associated with an event loop. This article covers how asyncio.alltasks() operates internally, how it scopes tasks to a specific or running event">
+    <link rel="canonical" href="https://salivity.github.io/python/article/inspecting-tasks-with-asyncio-all-tasks-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Inspecting Tasks with asyncio.all_tasks in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/inspecting-tasks-with-asyncio-all-tasks-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's asyncio.alltasks() function allows developers to inspect all active, uncompleted asynchronous tasks associated with an event loop. This article covers how asyncio.alltasks() operates internally, how it scopes tasks to a specific or running event" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="inspecting-tasks-with-asyncioall_tasks-in-python">Inspecting
+Tasks with asyncio.all_tasks in Python</h1>
+<p>Python's <code>asyncio.all_tasks()</code> function allows developers
+to inspect all active, uncompleted asynchronous tasks associated with an
+event loop. This article covers how <code>asyncio.all_tasks()</code>
+operates internally, how it scopes tasks to a specific or running event
+loop, and how it can be utilized for real-time monitoring, debugging,
+and implementing graceful shutdowns in concurrent Python
+applications.</p>
+<h3 id="how-asyncioall_tasks-operates">How
+<code>asyncio.all_tasks()</code> Operates</h3>
+<p>The function signature is <code>asyncio.all_tasks(loop=None)</code>.
+When invoked without an explicit loop argument, it calls
+<code>asyncio.get_running_loop()</code> to target the event loop of the
+current OS thread. If no event loop is running and no loop is passed, it
+raises a <code>RuntimeError</code>.</p>
+<p>Under the hood, the Python <code>asyncio</code> runtime maintains an
+internal collection of alive <code>Task</code> objects using a
+<code>weakref.WeakSet</code>. When a new <code>Task</code> instance is
+scheduled, it registers itself with this global or loop-level tracker.
+Because it relies on weak references, tasks that are garbage-collected
+do not leak memory simply by being tracked.</p>
+<p>When <code>asyncio.all_tasks()</code> executes, it performs the
+following steps:</p>
+<ol type="1">
+<li>Identifies the target event loop (either the passed argument or the
+active running loop).</li>
+<li>Traverses the internal set of tracked <code>Task</code>
+objects.</li>
+<li>Filters the tasks to retain only those whose bound loop matches the
+target loop (<code>task.get_loop() is loop</code>).</li>
+<li>Omits any tasks that have already completed execution or finished
+their cancellation cycle (<code>task.done()</code> returns
+<code>True</code>).</li>
+<li>Returns a standard Python <code>set</code> containing the matching
+<code>Task</code> references.</li>
+</ol>
+<h3 id="code-example">Code Example</h3>
+<p>The following example demonstrates how to call
+<code>asyncio.all_tasks()</code> to inspect concurrent operations:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> worker(task_id: <span class="bu">int</span>):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> asyncio.sleep(<span class="dv">2</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> monitor():</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Allow workers to spin up</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> asyncio.sleep(<span class="fl">0.1</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Retrieve all active tasks for the current running loop</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    active_tasks <span class="op">=</span> asyncio.all_tasks()</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Total active tasks detected: </span><span class="sc">{</span><span class="bu">len</span>(active_tasks)<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> task <span class="kw">in</span> active_tasks:</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;- Task Name: </span><span class="sc">{</span>task<span class="sc">.</span>get_name()<span class="sc">}</span><span class="ss">, Done: </span><span class="sc">{</span>task<span class="sc">.</span>done()<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Spawn multiple background workers</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    t1 <span class="op">=</span> asyncio.create_task(worker(<span class="dv">1</span>), name<span class="op">=</span><span class="st">&quot;Worker-1&quot;</span>)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    t2 <span class="op">=</span> asyncio.create_task(worker(<span class="dv">2</span>), name<span class="op">=</span><span class="st">&quot;Worker-2&quot;</span>)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> asyncio.create_task(monitor(), name<span class="op">=</span><span class="st">&quot;Monitor&quot;</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> asyncio.gather(t1, t2, m)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>asyncio.run(main())</span></code></pre></div>
+<h3 id="self-inclusion-and-filtering">Self-Inclusion and Filtering</h3>
+<p>A critical behavioral detail of <code>asyncio.all_tasks()</code> is
+that it includes the task from which the function is called. Because the
+inspecting coroutine is itself an active task executing on the loop, it
+appears in the returned set.</p>
+<p>To inspect only external worker tasks, filter out the current task
+using <code>asyncio.current_task()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>current <span class="op">=</span> asyncio.current_task()</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>external_tasks <span class="op">=</span> {t <span class="cf">for</span> t <span class="kw">in</span> asyncio.all_tasks() <span class="cf">if</span> t <span class="kw">is</span> <span class="kw">not</span> current}</span></code></pre></div>
+<h3 id="primary-use-cases">Primary Use Cases</h3>
+<ul>
+<li><strong>Graceful Application Teardown:</strong> During application
+shutdown (such as intercepting a <code>SIGINT</code> or
+<code>SIGTERM</code> signal), <code>asyncio.all_tasks()</code> retrieves
+remaining tasks so they can be explicitly cancelled using
+<code>task.cancel()</code>, followed by
+<code>asyncio.gather(*tasks, return_exceptions=True)</code> to allow
+them to clean up resources cleanly.</li>
+<li><strong>Leak Detection:</strong> Long-running services can
+periodically count active tasks to detect coroutines that fail to
+terminate due to unhandled deadlocks, unyielding network sockets, or
+forgotten background processes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

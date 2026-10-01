@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JAX Autodiff and JIT Compilation Explained - python</title>
+    <meta name="description" content="JAX transforms standard Python and NumPy code into high-performance, hardware-accelerated machine learning pipelines. This article explores what makes JAX fundamentally distinct in its ability to automatically differentiate and Just-In-Time (JIT) compile">
+    <link rel="canonical" href="https://salivity.github.io/python/article/jax-autodiff-and-jit-compilation-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="JAX Autodiff and JIT Compilation Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/jax-autodiff-and-jit-compilation-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="JAX transforms standard Python and NumPy code into high-performance, hardware-accelerated machine learning pipelines. This article explores what makes JAX fundamentally distinct in its ability to automatically differentiate and Just-In-Time (JIT) compile" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="jax-autodiff-and-jit-compilation-explained">JAX Autodiff and JIT
+Compilation Explained</h1>
+<p>JAX transforms standard Python and NumPy code into high-performance,
+hardware-accelerated machine learning pipelines. This article explores
+what makes JAX fundamentally distinct in its ability to automatically
+differentiate and Just-In-Time (JIT) compile Python functions. By
+utilizing functional program transformations, an intermediate tracing
+representation called jaxpr, and the XLA (Accelerated Linear Algebra)
+compiler, JAX unifies flexibility and speed without requiring custom
+graph-building syntax.</p>
+<h3 id="composable-function-transformations">Composable Function
+Transformations</h3>
+<p>Traditional deep learning frameworks like PyTorch use tape-based
+automatic differentiation, constructing a dynamic computation graph on
+the fly during each forward pass. In contrast, JAX treats code
+transformation as a first-class citizen.</p>
+<p>Instead of wrapping tensors in graph-tracking objects, JAX exposes
+pure functions that take functions as inputs and return new functions as
+outputs. The primary transformation primitives include:</p>
+<ul>
+<li><code>grad</code> for reverse-mode automatic differentiation</li>
+<li><code>jit</code> for compiling functions via XLA</li>
+<li><code>vmap</code> for automatic vectorization</li>
+<li><code>pmap</code> for parallel execution across multiple
+devices</li>
+</ul>
+<p>Because these transformations operate on functions rather than
+objects, they are completely composable. You can nest them in any order,
+such as <code>jit(vmap(grad(f)))</code>, enabling higher-order
+derivatives and parallel batching without modifying the original
+implementation of the function <code>f</code>.</p>
+<h3 id="tracing-and-jaxpr-representation">Tracing and Jaxpr
+Representation</h3>
+<p>JAX does not parse Python abstract syntax trees (AST) or interpret
+raw Python bytecode to perform differentiation or compilation. Instead,
+it relies on a process known as tracing.</p>
+<p>When a transformed function is executed, JAX passes abstract tracer
+values through the function instead of concrete numerical arrays. As
+Python executes, these tracers record every primitive numerical
+operation encountered.</p>
+<p>This recording generates an intermediate representation called a
+<strong>jaxpr</strong> (JAX expression). A jaxpr is a typed, purely
+functional directed acyclic graph (DAG) representing the mathematical
+operations performed by the Python function. It strips away standard
+Python control flow, runtime overhead, and non-array-related logic,
+leaving only pure mathematical primitives ready for transformation.</p>
+<h3 id="native-autodiff-via-vector-jacobian-products">Native Autodiff
+via Vector-Jacobian Products</h3>
+<p>Automatic differentiation in JAX operates directly on the primitive
+operations defined in the jaxpr. Every primitive in JAX has registered
+rules for:</p>
+<ol type="1">
+<li><strong>Forward-mode differentiation</strong> via Jacobian-Vector
+Products (JVPs).</li>
+<li><strong>Reverse-mode differentiation</strong> via Vector-Jacobian
+Products (VJPs).</li>
+</ol>
+<p>When you call <code>jax.grad(f)</code>, JAX traces <code>f</code>
+into a jaxpr, decomposes the operations into their elementary
+components, and applies reverse-mode differentiation rules via the chain
+rule. Because the output of <code>grad</code> is itself a valid Python
+function that generates its own jaxpr, taking higher-order derivatives
+like Hessians simply requires calling
+<code>jax.grad(jax.grad(f))</code>.</p>
+<h3 id="compilation-with-xla">Compilation with XLA</h3>
+<p>Once JAX captures a function's computational graph in a jaxpr, it
+bypasses the standard Python interpreter using the <code>jax.jit</code>
+transformation.</p>
+<p><code>jax.jit</code> lowers the jaxpr into the High-Level Optimizer
+(HLO) format consumed by Google's XLA (Accelerated Linear Algebra)
+compiler. XLA performs aggressive hardware-specific optimizations for
+CPUs, GPUs, and TPUs, including:</p>
+<ul>
+<li><strong>Kernel Fusion:</strong> Merging consecutive element-wise
+operations into a single GPU kernel, drastically reducing round-trip
+memory read/write cycles to high-bandwidth memory (HBM).</li>
+<li><strong>Constant Folding and Dead Code Elimination:</strong>
+Removing redundant computations at compile time.</li>
+<li><strong>Memory Footprint Optimization:</strong> Scheduling
+allocations to minimize the peak memory required for intermediate
+activations.</li>
+</ul>
+<p>The compiled artifact runs directly on the hardware accelerator as
+native machine code, completely detached from the Python Global
+Interpreter Lock (GIL).</p>
+<h3 id="the-pure-function-constraint">The Pure Function Constraint</h3>
+<p>The mechanism that enables JAX’s distinct autodiff and JIT
+compilation capabilities requires a strict programming model: functions
+must be functionally pure.</p>
+<p>A pure function must:</p>
+<ul>
+<li>Yield identical outputs for identical inputs.</li>
+<li>Exhibit no side effects, such as modifying global state, performing
+in-place array mutations, or writing to disk during execution.</li>
+</ul>
+<p>Because JAX executes Python code only during the tracing phase, any
+side effects (such as standard <code>print</code> statements or
+appending to a Python list) occur once during tracing and will not
+execute in subsequent calls to the compiled binary. By enforcing
+functional purity, JAX guarantees that traced computation graphs remain
+strictly deterministic, enabling seamless mathematical transformation
+and compilation.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

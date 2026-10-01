@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unpack Generic Types with get_origin and get_args - python</title>
+    <meta name="description" content="Python's typing module provides type hinting primarily for static analysis, but libraries and frameworks often need to inspect these types at runtime. The typing.getorigin() and typing.getargs() functions, introduced in Python 3.8, serve as the standard">
+    <link rel="canonical" href="https://salivity.github.io/python/article/unpack-generic-types-with-get-origin-and-get-args">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Unpack Generic Types with get_origin and get_args - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/unpack-generic-types-with-get-origin-and-get-args" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's typing module provides type hinting primarily for static analysis, but libraries and frameworks often need to inspect these types at runtime. The typing.getorigin() and typing.getargs() functions, introduced in Python 3.8, serve as the standard" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="unpack-generic-types-with-get_origin-and-get_args">Unpack
+Generic Types with get_origin and get_args</h1>
+<p>Python's <code>typing</code> module provides type hinting primarily
+for static analysis, but libraries and frameworks often need to inspect
+these types at runtime. The <code>typing.get_origin()</code> and
+<code>typing.get_args()</code> functions, introduced in Python 3.8,
+serve as the standard interface for unpacking parameterized generic
+types and generic type aliases. Together, they allow developers to
+dissect complex type annotations—such as <code>list[str]</code>,
+<code>Union[int, float]</code>, or custom generic classes—into their
+foundational types and constituent arguments.</p>
+<h3 id="understanding-generic-type-decomposition">Understanding Generic
+Type Decomposition</h3>
+<p>A parameterized type alias consists of two components:</p>
+<ol type="1">
+<li><strong>The Origin</strong>: The base or unsubscribed generic
+class/constructor (e.g., <code>list</code> in
+<code>list[str]</code>).</li>
+<li><strong>The Arguments</strong>: The type parameters supplied inside
+the brackets as a tuple (e.g., <code>(str,)</code> in
+<code>list[str]</code>).</li>
+</ol>
+<p>Directly inspecting these structures using <code>type()</code> or
+<code>isinstance()</code> is unreliable because parameterized generics
+are instances of internal typing constructs (such as
+<code>types.GenericAlias</code> or <code>typing._GenericAlias</code>).
+The functions <code>get_origin()</code> and <code>get_args()</code>
+abstract away internal implementation details to return predictable
+values.</p>
+<h3 id="how-typingget_origin-works">How <code>typing.get_origin()</code>
+Works</h3>
+<p><code>get_origin(tp)</code> takes a type annotation <code>tp</code>
+and returns the unsubscribed version of the type. If the annotation is
+not a parameterized generic or a supported typing construct, it returns
+<code>None</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> get_origin, Union, Literal</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Standard collections and typing wrappers</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_origin(<span class="bu">list</span>[<span class="bu">int</span>]))         <span class="co"># Output: &lt;class &#39;list&#39;&gt;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_origin(<span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">float</span>]))  <span class="co"># Output: &lt;class &#39;dict&#39;&gt;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Special typing constructs</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_origin(Union[<span class="bu">int</span>, <span class="bu">str</span>]))   <span class="co"># Output: typing.Union</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_origin(<span class="bu">int</span> <span class="op">|</span> <span class="bu">str</span>))         <span class="co"># Output: typing.Union (or types.UnionType)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_origin(Literal[<span class="st">&quot;a&quot;</span>, <span class="st">&quot;b&quot;</span>])) <span class="co"># Output: typing.Literal</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Non-parameterized types return None</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_origin(<span class="bu">int</span>))               <span class="co"># Output: None</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_origin(<span class="bu">list</span>))              <span class="co"># Output: None</span></span></code></pre></div>
+<h3 id="how-typingget_args-works">How <code>typing.get_args()</code>
+Works</h3>
+<p><code>get_args(tp)</code> extracts the generic arguments passed to
+<code>tp</code> and returns them as a <code>tuple</code>. If
+<code>tp</code> is not parameterized, it returns an empty tuple
+<code>()</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> get_args, Union, Callable</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Unpacking arguments</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_args(<span class="bu">list</span>[<span class="bu">int</span>]))                    <span class="co"># Output: (&lt;class &#39;int&#39;&gt;,)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_args(<span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">float</span>]))             <span class="co"># Output: (&lt;class &#39;str&#39;&gt;, &lt;class &#39;float&#39;&gt;)</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_args(Union[<span class="bu">int</span>, <span class="bu">str</span>]))              <span class="co"># Output: (&lt;class &#39;int&#39;&gt;, &lt;class &#39;str&#39;&gt;)</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Callable types: arguments are represented as a list or ellipsis, followed by return type</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_args(Callable[[<span class="bu">str</span>, <span class="bu">int</span>], <span class="bu">bool</span>]))   <span class="co"># Output: ([&lt;class &#39;str&#39;&gt;, &lt;class &#39;int&#39;&gt;], &lt;class &#39;bool&#39;&gt;)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Non-parameterized types return an empty tuple</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_args(<span class="bu">int</span>))                          <span class="co"># Output: ()</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_args(<span class="bu">list</span>))                         <span class="co"># Output: ()</span></span></code></pre></div>
+<h3 id="unpacking-custom-generic-classes">Unpacking Custom Generic
+Classes</h3>
+<p>Custom generic types created using <code>typing.Generic</code> or
+Python 3.12+ generic syntax (PEP 695) follow the same decomposition
+rules.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> Generic, TypeVar, get_origin, get_args</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>T <span class="op">=</span> TypeVar(<span class="st">&quot;T&quot;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Container(Generic[T]):</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, value: T):</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.value <span class="op">=</span> value</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>Alias <span class="op">=</span> Container[<span class="bu">int</span>]</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_origin(Alias))  <span class="co"># Output: &lt;class &#39;__main__.Container&#39;&gt;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(get_args(Alias))    <span class="co"># Output: (&lt;class &#39;int&#39;&gt;,)</span></span></code></pre></div>
+<h3 id="unpacking-nested-generics-recursively">Unpacking Nested Generics
+Recursively</h3>
+<p><code>get_origin()</code> and <code>get_args()</code> operate
+shallowly; they inspect only the outermost layer of a generic. To
+inspect deeply nested type declarations, recursively evaluate each
+argument:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> get_origin, get_args</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> unpack_type(tp):</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    origin <span class="op">=</span> get_origin(tp)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    args <span class="op">=</span> get_args(tp)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> origin <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> {<span class="st">&quot;base&quot;</span>: tp, <span class="st">&quot;args&quot;</span>: ()}</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;origin&quot;</span>: origin,</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;args&quot;</span>: [unpack_type(arg) <span class="cf">for</span> arg <span class="kw">in</span> args]</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>nested_type <span class="op">=</span> <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">list</span>[<span class="bu">int</span>]]</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(unpack_type(nested_type))</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Output:</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co"># {</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="co">#   &#39;origin&#39;: &lt;class &#39;dict&#39;&gt;,</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co">#   &#39;args&#39;: [</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="co">#       {&#39;base&#39;: &lt;class &#39;str&#39;&gt;, &#39;args&#39;: ()},</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="co">#       {&#39;origin&#39;: &lt;class &#39;list&#39;&gt;, &#39;args&#39;: [{&#39;base&#39;: &lt;class &#39;int&#39;&gt;, &#39;args&#39;: ()}]}</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="co">#   ]</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co"># }</span></span></code></pre></div>
+<h3 id="key-edge-cases">Key Edge Cases</h3>
+<ul>
+<li><strong><code>Optional[T]</code></strong>: Since
+<code>Optional[T]</code> is syntactic sugar for
+<code>Union[T, None]</code>, <code>get_origin(Optional[int])</code>
+returns <code>typing.Union</code>, and
+<code>get_args(Optional[int])</code> returns
+<code>(&lt;class 'int'&gt;, &lt;class 'NoneType'&gt;)</code>.</li>
+<li><strong><code>Tuple</code> without fixed size</strong>: A
+variable-length tuple annotation like <code>tuple[int, ...]</code>
+returns <code>(&lt;class 'int'&gt;, Ellipsis)</code> via
+<code>get_args()</code>.</li>
+<li><strong>Empty generics</strong>: Subscribing without types (e.g.,
+<code>Tuple[()]</code>) returns <code>()</code> in
+<code>get_args()</code>.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

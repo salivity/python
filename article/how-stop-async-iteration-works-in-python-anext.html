@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How StopAsyncIteration Works in Python __anext__ - python</title>
+    <meta name="description" content="In Python, the asynchronous iteration protocol relies on the StopAsyncIteration exception to determine when a stream of asynchronous data has ended. Within a custom class implementing the anext method, raising StopAsyncIteration serves as the explicit te">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-stop-async-iteration-works-in-python-anext">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How StopAsyncIteration Works in Python __anext__ - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-stop-async-iteration-works-in-python-anext" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, the asynchronous iteration protocol relies on the StopAsyncIteration exception to determine when a stream of asynchronous data has ended. Within a custom class implementing the anext method, raising StopAsyncIteration serves as the explicit te" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-stopasynciteration-works-in-python-anext">How
+StopAsyncIteration Works in Python <strong>anext</strong></h1>
+<p>In Python, the asynchronous iteration protocol relies on the
+<code>StopAsyncIteration</code> exception to determine when a stream of
+asynchronous data has ended. Within a custom class implementing the
+<code>__anext__</code> method, raising <code>StopAsyncIteration</code>
+serves as the explicit termination signal to consumer constructs such as
+<code>async for</code> loops. This article covers the role of
+<code>StopAsyncIteration</code>, how the asynchronous loop catches and
+processes it, and how to properly implement it in custom asynchronous
+iterators.</p>
+<h3 id="the-asynchronous-iteration-protocol">The Asynchronous Iteration
+Protocol</h3>
+<p>Python defines asynchronous iteration via two core dunder methods:
+<code>__aiter__</code> and <code>__anext__</code>.</p>
+<ol type="1">
+<li><strong><code>__aiter__(self)</code></strong>: Returns the
+asynchronous iterator object itself.</li>
+<li><strong><code>__anext__(self)</code></strong>: An awaitable method
+that returns the next value in the sequence on each call.</li>
+</ol>
+<p>Because <code>__anext__</code> is an asynchronous method, it cannot
+simply return an empty value or <code>None</code> to indicate
+completion, as <code>None</code> might be a valid yielded item. Instead,
+the language specification dictates that <code>__anext__</code> must
+raise <code>StopAsyncIteration</code> once the sequence is
+exhausted.</p>
+<h3 id="how-stopasynciteration-terminates-the-loop">How
+<code>StopAsyncIteration</code> Terminates the Loop</h3>
+<p>When an <code>async for</code> loop iterates over an asynchronous
+iterable, it implicitly awaits the <code>__anext__</code> method on each
+pass. Behind the scenes, the loop operates similarly to a
+<code>while True</code> block wrapped in an exception handler:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>iterator <span class="op">=</span> iterable.<span class="fu">__aiter__</span>()</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="va">True</span>:</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        item <span class="op">=</span> <span class="cf">await</span> iterator.<span class="fu">__anext__</span>()</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> <span class="pp">StopAsyncIteration</span>:</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">break</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Loop body executes here</span></span></code></pre></div>
+<p>When <code>StopAsyncIteration</code> is raised:</p>
+<ul>
+<li>Execution within <code>__anext__</code> halts immediately.</li>
+<li>The exception propagates out to the caller.</li>
+<li>The <code>async for</code> construct catches
+<code>StopAsyncIteration</code> and executes a clean break, terminating
+iteration without bubbling the exception to the outer scope.</li>
+</ul>
+<h3 id="implementation-example">Implementation Example</h3>
+<p>Below is an implementation of a custom asynchronous iterator that
+streams numbers up to a specified limit:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> AsyncCounter:</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, limit):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.limit <span class="op">=</span> limit</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.current <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__aiter__</span>(<span class="va">self</span>):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="kw">def</span> <span class="fu">__anext__</span>(<span class="va">self</span>):</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Simulate asynchronous I/O</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> asyncio.sleep(<span class="fl">0.1</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="va">self</span>.current <span class="op">&lt;</span> <span class="va">self</span>.limit:</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>            val <span class="op">=</span> <span class="va">self</span>.current</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.current <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> val</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Signal that iteration has finished</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">StopAsyncIteration</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="cf">for</span> number <span class="kw">in</span> AsyncCounter(<span class="dv">3</span>):</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(number)</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>asyncio.run(main())</span></code></pre></div>
+<p>In this example, once <code>self.current</code> reaches
+<code>3</code>, the conditional branch raises
+<code>StopAsyncIteration</code>. The <code>async for</code> loop catches
+this exception, ceases execution, and proceeds to the end of the program
+without error.</p>
+<h3
+id="differences-between-stopiteration-and-stopasynciteration">Differences
+Between <code>StopIteration</code> and
+<code>StopAsyncIteration</code></h3>
+<p>Standard synchronous iterators raise <code>StopIteration</code>
+inside <code>__next__</code>. However, raising a standard
+<code>StopIteration</code> inside an asynchronous <code>__anext__</code>
+method is an error.</p>
+<p>Under PEP 479, raising <code>StopIteration</code> inside an
+asynchronous context or coroutine will not cleanly end the loop;
+instead, Python transforms it into a <code>RuntimeError</code>.
+Therefore, custom asynchronous iterators must explicitly use
+<code>StopAsyncIteration</code> to ensure compatibility with
+asynchronous looping constructs.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

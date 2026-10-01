@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Resolves Relative Imports with Dots - python</title>
+    <meta name="description" content="This article explains how Python uses leading dots to resolve explicit relative imports within packages. You will learn the mechanics behind syntax like from . import sibling, how Python relies on the name and package attributes to traverse package hiera">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-resolves-relative-imports-with-dots">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Resolves Relative Imports with Dots - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-resolves-relative-imports-with-dots" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how Python uses leading dots to resolve explicit relative imports within packages. You will learn the mechanics behind syntax like from . import sibling, how Python relies on the name and package attributes to traverse package hiera" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-resolves-relative-imports-with-dots">How Python
+Resolves Relative Imports with Dots</h1>
+<p>This article explains how Python uses leading dots to resolve
+explicit relative imports within packages. You will learn the mechanics
+behind syntax like <code>from . import sibling</code>, how Python relies
+on the <code>__name__</code> and <code>__package__</code> attributes to
+traverse package hierarchies, and why running modules directly often
+breaks relative import resolution.</p>
+<h2 id="the-syntax-of-leading-dots">The Syntax of Leading Dots</h2>
+<p>Python uses dots to specify relative positioning within the package
+hierarchy:</p>
+<ul>
+<li><strong>Single dot (<code>.</code>):</strong> Represents the current
+package directory where the importing module resides.</li>
+<li><strong>Double dots (<code>..</code>):</strong> Represents the
+parent package (one level up).</li>
+<li><strong>Three dots (<code>...</code>):</strong> Represents the
+grandparent package (two levels up), with each additional dot moving one
+level higher.</li>
+</ul>
+<p>For example, consider this package structure:</p>
+<pre class="text"><code>my_package/
+│
+├── __init__.py
+├── sibling.py
+├── module_a.py
+└── subpackage/
+    ├── __init__.py
+    └── module_b.py</code></pre>
+<p>Inside <code>module_a.py</code>, importing <code>sibling</code> can
+be done using:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> . <span class="im">import</span> sibling</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> .sibling <span class="im">import</span> some_function</span></code></pre></div>
+<p>Inside <code>subpackage/module_b.py</code>, referencing
+<code>sibling</code> requires stepping up one directory to
+<code>my_package</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> .. <span class="im">import</span> sibling</span></code></pre></div>
+<h2 id="how-the-resolution-mechanism-works">How the Resolution Mechanism
+Works</h2>
+<p>Python’s import system does not inspect the physical filesystem path
+when resolving relative imports. Instead, it relies entirely on the
+module’s metadata attributes: <code>__name__</code> and
+<code>__package__</code>.</p>
+<ol type="1">
+<li><strong>Identifying the Current Anchor:</strong> When a module is
+loaded as part of a package, Python populates <code>__package__</code>.
+For example, if Python loads
+<code>my_package.subpackage.module_b</code>, its <code>__name__</code>
+is set to <code>"my_package.subpackage.module_b"</code>, and its
+<code>__package__</code> is set to
+<code>"my_package.subpackage"</code>.</li>
+<li><strong>Calculating the Target Path:</strong>
+<ul>
+<li>A single dot (<code>.</code>) anchors the resolution to the value of
+<code>__package__</code> (<code>"my_package.subpackage"</code>).</li>
+<li>Each subsequent dot strips the rightmost component from the package
+string. Two dots (<code>..</code>) removes <code>.subpackage</code>,
+leaving <code>"my_package"</code>.</li>
+</ul></li>
+<li><strong>Translating to an Absolute Import:</strong> Python appends
+the imported name to the derived package path.
+<code>from .. import sibling</code> is internally transformed into an
+absolute lookup for <code>my_package.sibling</code>.</li>
+<li><strong>Loading via <code>sys.modules</code>:</strong> Python checks
+<code>sys.modules</code> for the resolved absolute name. If the module
+is not already loaded, it uses standard import loaders to locate and
+execute the file.</li>
+</ol>
+<h2 id="why-relative-imports-fail-in-__main__">Why Relative Imports Fail
+in <code>__main__</code></h2>
+<p>A frequent issue with relative imports is the following error:</p>
+<pre class="text"><code>ImportError: attempted relative import with no known parent package</code></pre>
+<p>This occurs when a file containing a relative import is executed
+directly as a script (e.g.,
+<code>python my_package/module_a.py</code>).</p>
+<p>When a script is run directly, Python assigns its
+<code>__name__</code> attribute to <code>"__main__"</code> and sets
+<code>__package__</code> to <code>None</code> (or an empty string).
+Because the module no longer knows where it sits in the package
+hierarchy, the import system cannot calculate what the leading dots
+refer to.</p>
+<p>To resolve relative imports correctly during execution, the code must
+be run as a module from outside the package directory using the
+<code>-m</code> switch:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-m</span> my_package.module_a</span></code></pre></div>
+<p>This execution method ensures that Python initializes
+<code>__package__</code> properly, allowing the relative dot notation to
+resolve as intended.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

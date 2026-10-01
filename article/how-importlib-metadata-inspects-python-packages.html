@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How importlib.metadata Inspects Python Packages - python</title>
+    <meta name="description" content="Python's importlib.metadata standard library module provides a unified API for inspecting installed third-party distributions without executing or importing their code. It achieves this by leveraging the import system to locate package metadata directori">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-importlib-metadata-inspects-python-packages">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How importlib.metadata Inspects Python Packages - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-importlib-metadata-inspects-python-packages" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's importlib.metadata standard library module provides a unified API for inspecting installed third-party distributions without executing or importing their code. It achieves this by leveraging the import system to locate package metadata directori" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-importlibmetadata-inspects-python-packages">How
+importlib.metadata Inspects Python Packages</h1>
+<p>Python's <code>importlib.metadata</code> standard library module
+provides a unified API for inspecting installed third-party
+distributions without executing or importing their code. It achieves
+this by leveraging the import system to locate package metadata
+directories (<code>.dist-info</code> or <code>.egg-info</code>) across
+<code>sys.path</code>, parsing standardized plain-text metadata files to
+retrieve distribution versions, registered entry points, and declared
+project requirements.</p>
+<h3 id="locating-distribution-metadata">Locating Distribution
+Metadata</h3>
+<p>The retrieval process begins with <code>MetadataPathFinder</code>, a
+built-in meta path finder registered in <code>sys.meta_path</code>. When
+a query is initiated, the finder searches each directory in
+<code>sys.path</code> for folders ending in <code>.dist-info</code>
+(defined by PEP 376) or legacy <code>.egg-info</code>.</p>
+<p>A <code>.dist-info</code> directory contains standardized text files
+generated during the build and install phases (such as
+<code>pip install</code>). Rather than loading Python bytecode,
+<code>importlib.metadata.distribution('package-name')</code> locates the
+corresponding directory and reads its static text records directly from
+disk or compressed zip archives.</p>
+<h3 id="extracting-distribution-versions">Extracting Distribution
+Versions</h3>
+<p>To extract a distribution's version,
+<code>importlib.metadata.version('package-name')</code> accesses the
+<code>METADATA</code> file (or <code>PKG-INFO</code> in
+<code>.egg-info</code> directories) inside the package's
+<code>.dist-info</code> directory.</p>
+<p>This file is formatted as an RFC 822 email header message defined by
+Python Core Metadata specifications (PEP 566, PEP 643). The module uses
+an internal email-style message parser to read the key-value headers. It
+reads the value corresponding to the <code>Version:</code> key and
+returns it as a string, completely bypassing the package's runtime
+<code>__version__</code> attribute.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> importlib.metadata <span class="im">import</span> version</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>pkg_version <span class="op">=</span> version(<span class="st">&quot;requests&quot;</span>)</span></code></pre></div>
+<h3 id="parsing-entry-points">Parsing Entry Points</h3>
+<p>Entry points enable packages to register plugins or command-line
+scripts. These mappings are stored inside
+<code>.dist-info/entry_points.txt</code> using an INI-style format.
+Sections in the file define entry point groups, while individual lines
+map named identifiers to module paths and callables:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode ini"><code class="sourceCode ini"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[console_scripts]</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">black </span><span class="ot">=</span><span class="st"> black:patched_main</span></span></code></pre></div>
+<p>When calling <code>importlib.metadata.entry_points()</code>, the
+module reads <code>entry_points.txt</code>, groups definitions by
+section, and constructs <code>EntryPoint</code> objects. Each
+<code>EntryPoint</code> object retains references to the
+<code>name</code>, <code>group</code>, and target <code>value</code>
+(e.g., <code>module:attribute</code>). If the caller executes
+<code>entry_point.load()</code>, <code>importlib</code> dynamically
+imports the specified module and resolves the object attribute on
+demand.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> importlib.metadata <span class="im">import</span> entry_points</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>scripts <span class="op">=</span> entry_points(group<span class="op">=</span><span class="st">&quot;console_scripts&quot;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>black_cmd <span class="op">=</span> scripts[<span class="st">&quot;black&quot;</span>]</span></code></pre></div>
+<h3 id="resolving-dependencies">Resolving Dependencies</h3>
+<p>Dependencies are also extracted from the <code>METADATA</code> file.
+When calling <code>importlib.metadata.requires('package-name')</code>,
+the module scans the parsed metadata headers for all occurrences of the
+<code>Requires-Dist:</code> field.</p>
+<p>Each <code>Requires-Dist:</code> entry contains a dependency
+specification compliant with PEP 508, including package names, version
+constraints, and optional environment markers (such as Python version or
+platform checks):</p>
+<pre class="text"><code>Requires-Dist: urllib3&lt;3,&gt;=1.21.1
+Requires-Dist: certifi&gt;=2017.4.17
+Requires-Dist: PySocks!=1.5.7,&gt;=1.5.6; extra == &quot;socks&quot;</code></pre>
+<p>The <code>requires()</code> function reads these keys into a list of
+strings representing the declared distribution dependencies, enabling
+tools to analyze requirement graphs and environment constraints
+statically.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

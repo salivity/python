@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Multiprocessing Manager Shared Object Proxies - python</title>
+    <meta name="description" content="Python’s multiprocessing.Manager enables safe data sharing across multiple processes by spawning a dedicated server process that holds the actual state of shared objects. Because operating system processes do not share memory by default, worker process">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-multiprocessing-manager-shared-object-proxies">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Multiprocessing Manager Shared Object Proxies - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-multiprocessing-manager-shared-object-proxies" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s multiprocessing.Manager enables safe data sharing across multiple processes by spawning a dedicated server process that holds the actual state of shared objects. Because operating system processes do not share memory by default, worker process" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-multiprocessing-manager-shared-object-proxies">Python
+Multiprocessing Manager Shared Object Proxies</h1>
+<p>Python’s <code>multiprocessing.Manager</code> enables safe data
+sharing across multiple processes by spawning a dedicated server process
+that holds the actual state of shared objects. Because operating system
+processes do not share memory by default, worker processes cannot access
+these objects directly. Instead, the manager returns proxy objects that
+mirror the real objects' APIs and communicate with the centralized
+server over Inter-Process Communication (IPC) channels. This article
+explains the underlying mechanics of how these server process proxies
+function, transmit method calls, and coordinate data access.</p>
+<h3 id="the-server-process-architecture">The Server Process
+Architecture</h3>
+<p>When you instantiate <code>multiprocessing.Manager()</code>
+(specifically a <code>SyncManager</code>), Python launches a separate,
+standalone server process in the background.</p>
+<p>Any shared object created through the manager—such as a list,
+dictionary, <code>Namespace</code>, or lock—is instantiated and stored
+exclusively in the memory space of this server process. The worker
+processes never directly allocate, modify, or read the underlying data
+structures. Instead, the manager acts as a centralized host, protecting
+shared state from concurrent memory corruption without requiring
+low-level shared-memory buffers.</p>
+<h3 id="the-anatomy-of-a-proxy-object">The Anatomy of a Proxy
+Object</h3>
+<p>When a worker requests a shared object (for instance, by calling
+<code>manager.list()</code>), the manager does not return the list
+itself. Instead, it constructs an instance of <code>BaseProxy</code> (or
+an auto-generated subclass via <code>MakeProxyType</code>).</p>
+<p>A proxy object is an interface intermediary that:</p>
+<ol type="1">
+<li><strong>Exposes public methods:</strong> It intercepts operations
+that belong to the underlying target object (such as
+<code>.append()</code>, <code>.pop()</code>, or
+<code>__getitem__</code>).</li>
+<li><strong>Holds a connection identifier:</strong> It maintains a
+reference to the manager server’s address and an internal object ID
+(token) identifying which object in the server's registry it corresponds
+to.</li>
+<li><strong>Implements serialization:</strong> Proxies are pickleable,
+allowing them to be passed as arguments across process boundaries to
+multiple worker processes.</li>
+</ol>
+<h3 id="method-interception-and-ipc-mechanism">Method Interception and
+IPC Mechanism</h3>
+<p>When a worker calls a method on a proxy object, the proxy executes
+the following sequence:</p>
+<ol type="1">
+<li><strong>Packaging the Call:</strong> The proxy intercepts the method
+name, positional arguments, and keyword arguments.</li>
+<li><strong>Serialization (Pickling):</strong> The arguments are
+serialized using <code>pickle</code>.</li>
+<li><strong>IPC Transmission:</strong> The serialized payload is
+transmitted across an IPC connection (typically a Unix domain socket on
+POSIX systems or a named pipe on Windows) to the manager process.</li>
+<li><strong>Execution on the Server:</strong> The server process
+receives the message, unpickles the arguments, identifies the target
+object by its registered token, and executes the actual method on the
+target object.</li>
+<li><strong>Returning the Result:</strong> The server captures the
+return value (or any raised exception), serializes it, and sends it back
+through the connection to the proxy.</li>
+<li><strong>Unpacking:</strong> The proxy unpickles the response and
+presents it to the calling worker as if it were executed locally.</li>
+</ol>
+<h3 id="handling-mutable-nested-objects">Handling Mutable Nested
+Objects</h3>
+<p>Because the proxy system relies on IPC and serialization, modifying
+nested mutable objects inside a manager structure requires specific
+handling.</p>
+<p>If a manager-hosted list contains a standard Python dictionary:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>shared_list <span class="op">=</span> manager.<span class="bu">list</span>([{<span class="st">&quot;key&quot;</span>: <span class="st">&quot;value&quot;</span>}])</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>shared_list[<span class="dv">0</span>][<span class="st">&quot;key&quot;</span>] <span class="op">=</span> <span class="st">&quot;new_value&quot;</span>  <span class="co"># Fails to persist</span></span></code></pre></div>
+<p>The expression <code>shared_list[0]</code> causes the manager server
+to serialize the dictionary, send a copy over IPC, and reconstruct a
+local, unshared dictionary in the worker process. Mutating
+<code>["key"]</code> modifies only this local copy; the change is never
+sent back to the server process. To persist the update, the worker must
+reassign the entire modified dictionary back to the index:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>item <span class="op">=</span> shared_list[<span class="dv">0</span>]</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>item[<span class="st">&quot;key&quot;</span>] <span class="op">=</span> <span class="st">&quot;new_value&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>shared_list[<span class="dv">0</span>] <span class="op">=</span> item  <span class="co"># Triggers proxy __setitem__ over IPC</span></span></code></pre></div>
+<p>Alternatively, nested data structures must themselves be created
+using the manager (e.g., nesting a <code>manager.dict()</code> inside a
+<code>manager.list()</code>), ensuring both levels are wrapped in
+proxies.</p>
+<h3 id="process-synchronization-and-garbage-collection">Process
+Synchronization and Garbage Collection</h3>
+<p>The manager's server process runs an internal event loop that
+processes requests sequentially or coordinates them using thread pools
+and locks. Because all mutations funnel through this single process,
+race conditions that corrupt memory are prevented at the C-level,
+although logical race conditions still require explicit synchronization
+via <code>manager.Lock()</code>.</p>
+<p>For memory management, proxy objects register finalizers. When all
+worker processes drop references to a proxy object and it is garbage
+collected, a dereferencing message is sent back to the manager server.
+When an object's reference count reaches zero within the manager
+process, it is freed from the server's registry.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

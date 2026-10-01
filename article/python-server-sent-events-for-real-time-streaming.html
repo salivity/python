@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Server-Sent Events for Real-Time Streaming - python</title>
+    <meta name="description" content="This article provides an overview of how Python manages Server-Sent Events (SSE) to deliver real-time, unidirectional data from a web server to clients over standard HTTP. It examines the underlying SSE protocol requirements, contrasts how synchronous (W">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-server-sent-events-for-real-time-streaming">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Server-Sent Events for Real-Time Streaming - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-server-sent-events-for-real-time-streaming" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of how Python manages Server-Sent Events (SSE) to deliver real-time, unidirectional data from a web server to clients over standard HTTP. It examines the underlying SSE protocol requirements, contrasts how synchronous (W" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-server-sent-events-for-real-time-streaming">Python
+Server-Sent Events for Real-Time Streaming</h1>
+<p>This article provides an overview of how Python manages Server-Sent
+Events (SSE) to deliver real-time, unidirectional data from a web server
+to clients over standard HTTP. It examines the underlying SSE protocol
+requirements, contrasts how synchronous (WSGI) and asynchronous (ASGI)
+Python frameworks handle persistent streaming connections, provides code
+implementations for popular frameworks like FastAPI and Flask, and
+outlines best practices for scaling real-time endpoints in
+production.</p>
+<h2 id="understanding-the-sse-protocol-in-http">Understanding the SSE
+Protocol in HTTP</h2>
+<p>Server-Sent Events allow a client to establish a persistent,
+long-lived connection over standard HTTP/HTTPS. Unlike WebSockets, which
+provide full-duplex communication, SSE is strictly unidirectional: the
+server continuously pushes data to the client.</p>
+<p>To handle an SSE stream, the Python web server must respond with
+specific HTTP headers:</p>
+<ul>
+<li><code>Content-Type: text/event-stream</code>: Informs the client
+that the connection is an event stream.</li>
+<li><code>Cache-Control: no-cache</code>: Prevents intermediary proxies
+from caching partial responses.</li>
+<li><code>Connection: keep-alive</code>: Maintains an open TCP
+connection without terminating after sending data.</li>
+</ul>
+<p>The data payload sent over the stream must follow a plain-text
+structure ending with a double newline:</p>
+<pre class="text"><code>data: {&quot;message&quot;: &quot;hello world&quot;}
+</code></pre>
+<p>Optional fields include <code>event:</code> (custom event type),
+<code>id:</code> (unique message identifier for reconnection tracking),
+and <code>retry:</code> (reconnection timeout in milliseconds).</p>
+<h2 id="synchronous-vs-asynchronous-python-for-sse">Synchronous vs.
+Asynchronous Python for SSE</h2>
+<p>Python handles persistent streaming connections differently depending
+on whether the framework runs on WSGI (Web Server Gateway Interface) or
+ASGI (Asynchronous Server Gateway Interface).</p>
+<h3 id="the-wsgi-limitation">The WSGI Limitation</h3>
+<p>Synchronous WSGI frameworks, such as standard Flask or Django
+configurations, allocate one operating system thread or process per open
+HTTP connection. Because an SSE connection remains open indefinitely,
+each connected client monopolizes a server worker. In high-concurrency
+environments, this quickly leads to worker starvation and connection
+limits unless coupled with gevent or specialized event-loop
+patching.</p>
+<h3 id="the-asgi-solution">The ASGI Solution</h3>
+<p>Modern Python real-time streaming relies predominantly on ASGI
+frameworks like FastAPI, Starlette, or Quart, executed on servers like
+Uvicorn or Hypercorn. Under ASGI, an open connection is suspended using
+Python’s native <code>asyncio</code> event loop. The server can maintain
+thousands of concurrent, idle, or intermittently streaming SSE
+connections using minimal memory and a single operating system
+thread.</p>
+<h2 id="implementing-sse-with-fastapi-asgi">Implementing SSE with
+FastAPI (ASGI)</h2>
+<p>FastAPI utilizes Starlette's <code>StreamingResponse</code> to
+deliver async generator streams. An asynchronous generator yields
+SSE-formatted strings periodically while awaiting events.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> datetime <span class="im">import</span> datetime</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastapi <span class="im">import</span> FastAPI</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastapi.responses <span class="im">import</span> StreamingResponse</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> FastAPI()</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> event_generator():</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="va">True</span>:</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Check for disconnection or wait for an event source</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> asyncio.sleep(<span class="dv">1</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        current_time <span class="op">=</span> datetime.utcnow().isoformat()</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">yield</span> <span class="ss">f&quot;data: </span><span class="ch">{{\&quot;</span><span class="ss">timestamp</span><span class="ch">\&quot;</span><span class="ss">: </span><span class="ch">\&quot;</span><span class="sc">{</span>current_time<span class="sc">}</span><span class="ch">\&quot;}}\n\n</span><span class="ss">&quot;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="at">@app.get</span>(<span class="st">&quot;/stream&quot;</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> stream_events():</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> StreamingResponse(</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        event_generator(),</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>        media_type<span class="op">=</span><span class="st">&quot;text/event-stream&quot;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    )</span></code></pre></div>
+<p>In this implementation, <code>asyncio.sleep(1)</code> yields control
+back to the event loop, allowing the server to handle other concurrent
+requests until the timer expires.</p>
+<h2 id="implementing-sse-with-flask-wsgi">Implementing SSE with Flask
+(WSGI)</h2>
+<p>Flask can stream responses using standard Python generators combined
+with its <code>stream_with_context</code> decorator.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> flask <span class="im">import</span> Flask, Response, stream_with_context</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> Flask(<span class="va">__name__</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> generate_events():</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="va">True</span>:</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        time.sleep(<span class="dv">1</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">yield</span> <span class="ss">f&quot;data: Server heartbeat</span><span class="ch">\n\n</span><span class="ss">&quot;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="at">@app.route</span>(<span class="st">&quot;/stream&quot;</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> sse_endpoint():</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> Response(</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        stream_with_context(generate_events()),</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        mimetype<span class="op">=</span><span class="st">&quot;text/event-stream&quot;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&quot;__main__&quot;</span>:</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    app.run(threaded<span class="op">=</span><span class="va">True</span>)</span></code></pre></div>
+<p>In Flask, running with <code>threaded=True</code> is mandatory to
+avoid blocking the entire server for a single client, though production
+deployments typically require an async worker model (such as Gunicorn
+running Gthread or Gevent workers).</p>
+<h2 id="connection-lifecycle-and-scalability">Connection Lifecycle and
+Scalability</h2>
+<p>Handling production SSE endpoints requires managing edge cases around
+disconnections, buffering, and horizontal scaling.</p>
+<h3 id="detecting-client-disconnections">Detecting Client
+Disconnections</h3>
+<p>When a client closes a browser tab or loses network connectivity, the
+server must stop the generator to prevent resource leakage. In ASGI
+frameworks, the underlying server detects a broken socket and raises an
+exception (such as <code>asyncio.CancelledError</code>) inside the async
+generator, which should be caught to clean up resources:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> event_generator():</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">while</span> <span class="va">True</span>:</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>            <span class="cf">await</span> asyncio.sleep(<span class="dv">1</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>            <span class="cf">yield</span> <span class="ss">f&quot;data: ping</span><span class="ch">\n\n</span><span class="ss">&quot;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> asyncio.CancelledError:</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Clean up database connections or queue subscriptions</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span></code></pre></div>
+<h3 id="reverse-proxies-and-buffering">Reverse Proxies and
+Buffering</h3>
+<p>When deploying Python applications behind reverse proxies like Nginx,
+response buffering must be explicitly disabled. By default, Nginx
+buffers HTTP responses, preventing SSE events from arriving at the
+client in real time.</p>
+<p>To disable buffering, add the following header in Python or configure
+it directly in Nginx:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>headers <span class="op">=</span> {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;X-Accel-Buffering&quot;</span>: <span class="st">&quot;no&quot;</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Cache-Control&quot;</span>: <span class="st">&quot;no-cache&quot;</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="scaling-across-multiple-servers">Scaling Across Multiple
+Servers</h3>
+<p>Because SSE connections are stateful and persistent, distributing
+events across multiple Python server instances requires an external
+message broker. A common pattern involves using Redis Pub/Sub:</p>
+<ol type="1">
+<li>The client establishes an SSE connection with an arbitrary Python
+instance.</li>
+<li>The Python worker subscribes to a specific Redis channel via an
+asynchronous client like <code>redis-py</code>.</li>
+<li>When an event occurs anywhere in the infrastructure, it is published
+to the Redis channel.</li>
+<li>The Python worker receives the message from Redis and forwards it to
+the client through the active SSE generator.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

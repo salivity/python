@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Code Objects: co_varnames, co_consts, co_names - python</title>
+    <meta name="description" content="When Python compiles source code into bytecode, it encapsulates the executable instructions and execution context into an immutable structure called a code object (types.CodeType). Key attributes within this object—specifically covarnames, coconsts, an">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-code-objects-co-varnames-co-consts-co-names">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Code Objects: co_varnames, co_consts, co_names - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-code-objects-co-varnames-co-consts-co-names" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When Python compiles source code into bytecode, it encapsulates the executable instructions and execution context into an immutable structure called a code object (types.CodeType). Key attributes within this object—specifically covarnames, coconsts, an" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-code-objects-co_varnames-co_consts-co_names">Python Code
+Objects: co_varnames, co_consts, co_names</h1>
+<p>When Python compiles source code into bytecode, it encapsulates the
+executable instructions and execution context into an immutable
+structure called a code object (<code>types.CodeType</code>). Key
+attributes within this object—specifically <code>co_varnames</code>,
+<code>co_consts</code>, and <code>co_names</code>—act as indexed lookup
+tables that the Python Virtual Machine (PVM) relies on to execute
+operations with high efficiency. Instead of repeatedly resolving
+variable and constant names dynamically at runtime via slow string
+searches, the PVM uses these tuples to map bytecode instructions
+directly to precomputed memory offsets.</p>
+<h3 id="how-the-python-virtual-machine-uses-lookup-tables">How the
+Python Virtual Machine Uses Lookup Tables</h3>
+<p>Python bytecode runs on an evaluation loop where instructions operate
+on an evaluation stack. Bytecode operations take integer arguments that
+represent indices into arrays stored in the code object. When an
+instruction like <code>LOAD_CONST 1</code> executes, the PVM does not
+evaluate a value directly; it retrieves the item located at index
+<code>1</code> from the code object's internal constant table.</p>
+<p>This design drastically reduces memory overhead through string
+interning and deduplication, while making lookups an <span
+class="math inline">\(O(1)\)</span> array-indexing operation.</p>
+<hr />
+<h3
+id="co_consts-managing-literals-and-nested-code"><code>co_consts</code>:
+Managing Literals and Nested Code</h3>
+<p>The <code>co_consts</code> tuple stores every literal value defined
+within the scope of the code block.</p>
+<ul>
+<li><strong>Contents</strong>: Numeric literals, string literals,
+booleans, <code>None</code>, immutable containers (like tuples
+containing constants), and nested code objects (such as inner functions,
+lambdas, and class definitions).</li>
+<li><strong>Bytecode Instructions</strong>: Primarily
+<code>LOAD_CONST</code>.</li>
+<li><strong>Internal Purpose</strong>: Every function begins execution
+with <code>co_consts</code> holding all static data the function needs.
+For example, Python automatically inserts <code>None</code> as the first
+item in <code>co_consts</code> if a function requires an implicit
+<code>return None</code>. When inner functions or classes are created,
+their corresponding compiled code objects are stored inside the outer
+function's <code>co_consts</code> tuple and loaded when the definition
+line is executed.</li>
+</ul>
+<hr />
+<h3
+id="co_varnames-fast-local-variable-resolution"><code>co_varnames</code>:
+Fast Local Variable Resolution</h3>
+<p>The <code>co_varnames</code> tuple contains the names of all local
+variables used within a code object, starting with the function
+arguments.</p>
+<ul>
+<li><strong>Contents</strong>: Positional arguments, keyword arguments,
+<code>*args</code>, <code>**kwargs</code>, and local variables assigned
+within the function body.</li>
+<li><strong>Bytecode Instructions</strong>: <code>LOAD_FAST</code>,
+<code>STORE_FAST</code>, <code>DELETE_FAST</code>.</li>
+<li><strong>Internal Purpose</strong>: Accessing global variables
+requires dictionary lookups, which introduce performance overhead. To
+solve this, Python optimizes function-level scope using "fast locals."
+When a call frame is created, Python allocates a contiguous C array on
+the stack sized to match <code>len(co_varnames)</code>. Bytecode
+instructions like <code>LOAD_FAST 0</code> directly read the memory
+offset for index <code>0</code> rather than querying a dictionary.
+<code>co_varnames</code> preserves these names primarily for debugging,
+introspection, and reconstructing tracebacks.</li>
+</ul>
+<hr />
+<h3
+id="co_names-resolving-globals-built-ins-and-attributes"><code>co_names</code>:
+Resolving Globals, Built-ins, and Attributes</h3>
+<p>The <code>co_names</code> tuple contains names referenced in the code
+block that are not local variables.</p>
+<ul>
+<li><strong>Contents</strong>: Global variables, built-in functions,
+module names, and attribute names accessed on objects.</li>
+<li><strong>Bytecode Instructions</strong>: <code>LOAD_GLOBAL</code>,
+<code>STORE_GLOBAL</code>, <code>LOAD_NAME</code>,
+<code>LOAD_ATTR</code>, <code>STORE_ATTR</code>.</li>
+<li><strong>Internal Purpose</strong>: Because the PVM cannot predict at
+compile time what values an external scope or object attribute will
+hold, it cannot assign them fixed array slots like
+<code>co_varnames</code>. Instead, Python stores the string name in
+<code>co_names</code>. When the bytecode encounters
+<code>LOAD_GLOBAL 0</code>, it fetches the string name at index
+<code>0</code> of <code>co_names</code> and passes it to the dictionary
+lookup routine for the global and built-in scopes. Similarly,
+<code>LOAD_ATTR 1</code> takes the string at index <code>1</code> to
+query an object’s <code>__dict__</code> or descriptor mechanism.</li>
+</ul>
+<hr />
+<h3 id="practical-example">Practical Example</h3>
+<p>Consider the following function:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calculate_area(radius):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    factor <span class="op">=</span> <span class="dv">2</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> factor <span class="op">*</span> math.pi <span class="op">*</span> radius</span></code></pre></div>
+<p>Inspecting its code object (<code>calculate_area.__code__</code>)
+reveals how the compiler distributes symbols across these three
+tuples:</p>
+<ul>
+<li><strong><code>co_varnames</code></strong> evaluates to
+<code>('radius', 'factor')</code>. These are resolved using
+<code>LOAD_FAST</code> and <code>STORE_FAST</code> via fixed frame
+offsets.</li>
+<li><strong><code>co_consts</code></strong> evaluates to
+<code>(None, 2)</code>. Index <code>0</code> holds the default return
+value <code>None</code>, and index <code>1</code> holds the literal
+<code>2</code>, retrieved via <code>LOAD_CONST</code>.</li>
+<li><strong><code>co_names</code></strong> evaluates to
+<code>('math', 'pi')</code>. The module <code>math</code> and its
+attribute <code>pi</code> are resolved dynamically at runtime using
+<code>LOAD_GLOBAL</code> and <code>LOAD_ATTR</code>.</li>
+</ul>
+<p>By separating identifiers into local indices
+(<code>co_varnames</code>), literal values (<code>co_consts</code>), and
+dynamic symbols (<code>co_names</code>), Python balances static
+execution performance with the dynamism of a runtime-evaluated
+language.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

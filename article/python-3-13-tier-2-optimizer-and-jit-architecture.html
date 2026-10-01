@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python 3.13 Tier 2 Optimizer and JIT Architecture - python</title>
+    <meta name="description" content="Python 3.13 introduces an experimental multi-tier execution engine designed to significantly improve runtime performance through a Tier 2 optimizer and a Just-In-Time (JIT) compiler. This article provides a technical overview of how Python 3.13 identifie">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-3-13-tier-2-optimizer-and-jit-architecture">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python 3.13 Tier 2 Optimizer and JIT Architecture - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-3-13-tier-2-optimizer-and-jit-architecture" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python 3.13 introduces an experimental multi-tier execution engine designed to significantly improve runtime performance through a Tier 2 optimizer and a Just-In-Time (JIT) compiler. This article provides a technical overview of how Python 3.13 identifie" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-313-tier-2-optimizer-and-jit-architecture">Python 3.13
+Tier 2 Optimizer and JIT Architecture</h1>
+<p>Python 3.13 introduces an experimental multi-tier execution engine
+designed to significantly improve runtime performance through a Tier 2
+optimizer and a Just-In-Time (JIT) compiler. This article provides a
+technical overview of how Python 3.13 identifies performance-critical
+code paths, lowers high-level bytecode into a streamlined
+micro-operation (uop) intermediate representation, applies
+optimizations, and leverages a lightweight copy-and-patch JIT
+compilation model to emit native machine code without the overhead of a
+heavy runtime compiler.</p>
+<h3 id="the-multi-tier-execution-pipeline">The Multi-Tier Execution
+Pipeline</h3>
+<p>The traditional CPython virtual machine operates strictly as an
+interpreter. In Python 3.13, execution is split into distinct tiers:</p>
+<ol type="1">
+<li><strong>Tier 1 (Adaptive Interpreter):</strong> The baseline
+execution engine. It runs standard Python bytecode and uses the adaptive
+specializing interpreter introduced in Python 3.11. Tier 1 dynamically
+updates bytecode instructions with type-specialized variants (such as
+optimizing generic binary additions into integer-specific additions) and
+tracks execution frequency using internal counters.</li>
+<li><strong>Tier 2 (Optimizer and JIT):</strong> When Tier 1 execution
+counters exceed a designated threshold, the code is deemed "hot."
+Control then transitions to the Tier 2 framework, which constructs
+linear execution paths, optimizes them, and optionally compiles them to
+native machine code.</li>
+</ol>
+<h3 id="trace-construction-and-micro-operations-uops">Trace Construction
+and Micro-Operations (uops)</h3>
+<p>Tier 2 operates on straight-line execution sequences called traces
+rather than entire functions or basic blocks.</p>
+<ul>
+<li><strong>Trace Projection:</strong> A trace begins at a hot branch or
+loop header and follows actual execution flow across function calls and
+loop iterations. The trace recorder tracks the exact sequence of
+executed instructions until it encounters a backward jump, a
+deoptimization condition, or reaches a maximum instruction limit.</li>
+<li><strong>Micro-Operation (uop) Lowering:</strong> Standard Python
+bytecode instructions can be complex and encompass multiple discrete
+operations (e.g., type checks, reference counting, and value
+extraction). The Tier 2 optimizer breaks these high-level bytecodes down
+into fine-grained intermediate representation (IR) instructions called
+micro-operations or <strong>uops</strong>.</li>
+</ul>
+<p>Breaking instructions into uops isolates pure computation from safety
+checks, exposing granular optimization opportunities that were
+previously hidden within monolithic bytecode routines.</p>
+<h3 id="tier-2-optimization-passes">Tier 2 Optimization Passes</h3>
+<p>Once a trace is converted into a sequence of uops, it forms an
+extended basic block (often referred to as a superblock). The Tier 2
+optimizer runs several lightweight optimization passes over this
+representation:</p>
+<ul>
+<li><strong>Abstract Interpretation:</strong> The optimizer evaluates
+the trace using an abstract interpreter to deduce value ranges, constant
+values, and object types across the sequence.</li>
+<li><strong>Redundant Guard Removal:</strong> Because Python is
+dynamically typed, Tier 1 relies on conditional type checks ("guards")
+before executing specialized logic. If the Tier 2 abstract interpreter
+proves that an object's type has not changed between two operations,
+subsequent redundant checks are eliminated.</li>
+<li><strong>Constant Propagation and Dead Code Elimination:</strong>
+Invariants and constant operations are evaluated ahead of time, and
+unreachable micro-operations are pruned from the trace.</li>
+</ul>
+<p>If JIT compilation is disabled, the optimized uop sequence can still
+be executed directly by a dedicated Tier 2 uop interpreter, yielding
+performance benefits over the baseline Tier 1 loop.</p>
+<h3 id="the-copy-and-patch-jit-architecture">The Copy-and-Patch JIT
+Architecture</h3>
+<p>When the experimental JIT is enabled
+(<code>--enable-experimental-jit</code>), the optimized trace is
+compiled into native machine code using a
+<strong>copy-and-patch</strong> compilation strategy.</p>
+<p>Unlike traditional JIT compilers (such as PyPy or V8) that rely on
+large runtime frameworks like LLVM or custom machine code generators,
+CPython's copy-and-patch JIT decouples the compiler infrastructure from
+the runtime:</p>
+<ol type="1">
+<li><strong>Ahead-of-Time Stencil Generation:</strong> During the build
+process of CPython itself, an external C compiler (Clang/LLVM) compiles
+small C code templates corresponding to each individual uop into object
+files.</li>
+<li><strong>Stencil Extraction:</strong> A build-time tool parses these
+object files to extract the raw machine code bytes and records
+relocations ("holes") where runtime values—such as pointers to Python
+objects, targets for jumps, and cache indices—must be placed.</li>
+<li><strong>Runtime Assembly (Copy and Patch):</strong> At runtime, when
+a uop trace is passed to the JIT, the engine simply copies the
+precompiled machine code stencils into contiguous executable memory and
+patches the designated holes with the live runtime addresses.</li>
+</ol>
+<h3 id="deoptimization-and-bailouts">Deoptimization and Bailouts</h3>
+<p>Because Python remains fully dynamic, native code execution must
+handle cases where runtime assumptions are violated (e.g.,
+monkey-patching a method or passing a float into a function specialized
+for integers).</p>
+<p>Each guarded condition in the compiled trace retains a direct bailout
+path. If a guard fails during native execution, the JIT transfers
+control back to the Tier 1 interpreter at the exact corresponding
+bytecode offset. This ensures 100% compatibility with CPython semantics,
+frame inspection tools, and standard debugging interfaces without
+risking state corruption.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

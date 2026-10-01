@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Distributed Tracing via OpenTelemetry - python</title>
+    <meta name="description" content="This article explains how OpenTelemetry auto-instrumentation captures distributed traces across Python web services without requiring manual code changes. It details the underlying mechanics, including runtime monkey patching, context propagation across">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-distributed-tracing-via-open-telemetry">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Distributed Tracing via OpenTelemetry - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-distributed-tracing-via-open-telemetry" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how OpenTelemetry auto-instrumentation captures distributed traces across Python web services without requiring manual code changes. It details the underlying mechanics, including runtime monkey patching, context propagation across" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-distributed-tracing-via-opentelemetry">Python Distributed
+Tracing via OpenTelemetry</h1>
+<p>This article explains how OpenTelemetry auto-instrumentation captures
+distributed traces across Python web services without requiring manual
+code changes. It details the underlying mechanics, including runtime
+monkey patching, context propagation across service boundaries, and the
+automated capture and export of distributed span data.</p>
+<h2 id="runtime-monkey-patching">Runtime Monkey Patching</h2>
+<p>OpenTelemetry auto-instrumentation operates primarily through dynamic
+bytecode modification, commonly known as monkey patching. When an
+application is launched using the <code>opentelemetry-instrument</code>
+CLI command, the agent inspects the Python runtime environment before
+the application code executes.</p>
+<p>The agent detects installed frameworks and libraries—such as Flask,
+FastAPI, Django, <code>requests</code>, <code>httpx</code>, and database
+drivers like <code>psycopg2</code>—and dynamically wraps critical
+functions with tracing logic. These wrapper functions execute custom
+code immediately before and after the original library functions,
+allowing the agent to capture timings, parameters, and errors
+transparently.</p>
+<h2 id="inbound-context-extraction">Inbound Context Extraction</h2>
+<p>When a Python web service receives an incoming HTTP request, the
+auto-instrumented web framework hooks intercept the request before
+routing it to the application logic. The instrumentation inspects the
+incoming HTTP headers for distributed tracing metadata, adhering to
+standards like the W3C Trace Context specification
+(<code>traceparent</code> and <code>tracestate</code> headers).</p>
+<p>If trace headers exist, the agent extracts the <code>TraceId</code>
+and <code>ParentSpanId</code>. It then creates a new server span
+representing the work done by the local service and assigns this span as
+a child of the incoming trace context. If no trace headers are found,
+the agent generates a new root <code>TraceId</code>, initiating a new
+trace.</p>
+<h2 id="in-process-context-management">In-Process Context
+Management</h2>
+<p>To maintain trace continuity within the application, OpenTelemetry
+relies on Python's built-in <code>contextvars</code> module. This
+mechanism provides thread-safe and asynchronous task-safe storage for
+the active span context across concurrent operations.</p>
+<p>Whenever the application initiates internal operations—such as
+executing an ORM query, calling a cache, or processing a task
+asynchronously—the auto-instrumentation for those respective libraries
+queries <code>contextvars</code> to retrieve the current active span.
+The library then creates a child span linked directly to the ongoing
+server span, capturing details like SQL queries, execution duration, and
+status codes without explicit developer intervention.</p>
+<h2 id="outbound-context-injection">Outbound Context Injection</h2>
+<p>When a service makes an external downstream call using an
+instrumented HTTP client like <code>requests</code> or
+<code>aiohttp</code>, the client-side wrapper intercepts the outbound
+request before it hits the network socket.</p>
+<p>The wrapper reads the currently active span context from
+<code>contextvars</code> and injects the trace information back into the
+outbound request's HTTP headers. It serializes the current
+<code>TraceId</code> and the newly generated client <code>SpanId</code>
+into the <code>traceparent</code> header. This ensures that the
+downstream service receives the context and can continue the same
+distributed trace.</p>
+<h2 id="span-lifecycle-and-data-export">Span Lifecycle and Data
+Export</h2>
+<p>When a monitored operation finishes, the corresponding wrapper
+records completion metadata, marks any captured exceptions, and
+calculates the total duration. The span is then passed to an in-memory
+batch span processor.</p>
+<p>The processor aggregates completed spans asynchronously to prevent
+performance bottlenecks on the application's main execution threads. At
+designated intervals or buffer thresholds, the processor sends the
+telemetry data via OpenTelemetry Protocol (OTLP) over gRPC or HTTP to an
+OpenTelemetry Collector or tracing backend.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

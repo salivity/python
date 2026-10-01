@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python async def vs Generator-Based Coroutines - python</title>
+    <meta name="description" content="Python’s asynchronous programming landscape underwent a major architectural shift when native coroutines (async def) replaced generator-based coroutines (@asyncio.coroutine and yield from). While both mechanisms enable cooperative multitasking by pausi">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-async-def-vs-generator-based-coroutines">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python async def vs Generator-Based Coroutines - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-async-def-vs-generator-based-coroutines" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s asynchronous programming landscape underwent a major architectural shift when native coroutines (async def) replaced generator-based coroutines (@asyncio.coroutine and yield from). While both mechanisms enable cooperative multitasking by pausi" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-async-def-vs-generator-based-coroutines">Python async def
+vs Generator-Based Coroutines</h1>
+<p>Python’s asynchronous programming landscape underwent a major
+architectural shift when native coroutines (<code>async def</code>)
+replaced generator-based coroutines (<code>@asyncio.coroutine</code> and
+<code>yield from</code>). While both mechanisms enable cooperative
+multitasking by pausing and resuming execution, they differ
+fundamentally in Python's type system, internal protocols, execution
+safety, and syntax. Understanding these differences clarifies why
+generator coroutines were completely removed in Python 3.11 and how
+native coroutines provide robust, first-class asynchronous support.</p>
+<h2 id="distinct-protocols-and-internal-types">Distinct Protocols and
+Internal Types</h2>
+<p>The primary fundamental difference lies in Python’s internal type
+system.</p>
+<p>Generator-based coroutines are generators. They rely on the generator
+protocol:</p>
+<ul>
+<li>They are instances of <code>types.GeneratorType</code>.</li>
+<li>They pause execution using the <code>yield</code> or
+<code>yield from</code> expressions.</li>
+<li>They implement <code>__iter__()</code> and <code>__next__()</code>
+alongside generator-specific control methods like <code>.send()</code>,
+<code>.throw()</code>, and <code>.close()</code>.</li>
+</ul>
+<p>Native coroutines, introduced via <code>async def</code>, are
+entirely distinct types:</p>
+<ul>
+<li>They are instances of <code>types.CoroutineType</code>.</li>
+<li>They pause execution using the <code>await</code> expression.</li>
+<li>They implement the <code>__await__()</code> method, deliberately
+separating asynchronous suspension from standard iteration.</li>
+</ul>
+<p>Because native coroutines do not implement <code>__next__()</code> or
+<code>__iter__()</code>, they cannot be iterated over like data streams.
+This separation eliminates the conceptual blurring between producing
+values (iteration) and yielding control to an event loop
+(concurrency).</p>
+<h2 id="syntax-and-ambiguity">Syntax and Ambiguity</h2>
+<p>Before Python 3.5, asynchronous code relied on the
+<code>@asyncio.coroutine</code> decorator wrapping a standard generator
+function:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Legacy generator-based coroutine</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">@asyncio.coroutine</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_data():</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">yield</span> <span class="cf">from</span> asyncio.sleep(<span class="dv">1</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;data&quot;</span></span></code></pre></div>
+<p>Because this syntax relied on <code>yield from</code>, it was
+impossible to determine at a glance whether a function was an
+asynchronous task or a lazy sequence producer without inspecting
+decorators and context.</p>
+<p>Native coroutines introduce dedicated keywords:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Native coroutine</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> fetch_data():</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> asyncio.sleep(<span class="dv">1</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;data&quot;</span></span></code></pre></div>
+<p>The <code>async</code> and <code>await</code> keywords make the
+developer's intent explicit to both the compiler and static analysis
+tools.</p>
+<h2 id="error-handling-and-debugging-safety">Error Handling and
+Debugging Safety</h2>
+<p>Generator-based coroutines suffered from silent failures. If a
+developer called a generator coroutine without using
+<code>yield from</code>, the function simply returned a generator object
+that sat unexecuted. The interpreter could not identify whether the
+omission was a bug or intentional deferred execution.</p>
+<p>Native coroutines introduce compiler-level safeguards:</p>
+<ol type="1">
+<li><strong>Unawaited Coroutine Warnings:</strong> If an
+<code>async def</code> function is called without being awaited or
+scheduled on an event loop, Python raises a
+<code>RuntimeWarning: coroutine '...' was never awaited</code> when the
+object is garbage-collected.</li>
+<li><strong>Static Type Checking:</strong> Type checkers (such as Mypy
+and Pyright) can strictly differentiate between
+<code>Coroutine[Any, Any, T]</code> and
+<code>Generator[YieldType, SendType, ReturnType]</code>, catching
+control-flow bugs before runtime.</li>
+</ol>
+<h2 id="asynchronous-context-managers-and-iterators">Asynchronous
+Context Managers and Iterators</h2>
+<p>Native coroutines expand Python's grammar to support asynchronous
+iteration and resource management, which generator-based coroutines
+could not natively support:</p>
+<ul>
+<li><strong>Asynchronous Context Managers:</strong> Managed via
+<code>async with</code>, powered by the <code>__aenter__()</code> and
+<code>__aexit__()</code> methods.</li>
+<li><strong>Asynchronous Iterators:</strong> Managed via
+<code>async for</code>, powered by the <code>__aiter__()</code> and
+<code>__anext__()</code> methods.</li>
+</ul>
+<p>These structures allow non-blocking resource acquisition (such as
+database connections) and streaming data over network sockets while
+maintaining readable context management patterns.</p>
+<h2 id="performance-and-deprecation">Performance and Deprecation</h2>
+<p>At the runtime level, <code>async def</code> coroutines benefit from
+C-level optimizations in CPython. Native coroutines bypass the overhead
+of standard generator frame evaluation when executing <code>await</code>
+chains, leading to faster context switching in modern event loops.</p>
+<p>Generator-based coroutines were formally deprecated in Python 3.8 and
+removed entirely in Python 3.11. <code>async def</code> and
+<code>await</code> represent the modern, performant, and permanently
+established foundation of Python concurrency.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

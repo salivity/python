@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Async File I/O in Python With aiofiles - python</title>
+    <meta name="description" content="This article explores how Python manages asynchronous file operations using the aiofiles library. While Python's built-in asyncio library provides robust support for asynchronous network operations, standard local filesystem access remains inherently syn">
+    <link rel="canonical" href="https://salivity.github.io/python/article/async-file-i-o-in-python-with-aiofiles">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Async File I/O in Python With aiofiles - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/async-file-i-o-in-python-with-aiofiles" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how Python manages asynchronous file operations using the aiofiles library. While Python's built-in asyncio library provides robust support for asynchronous network operations, standard local filesystem access remains inherently syn" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="async-file-io-in-python-with-aiofiles">Async File I/O in Python
+With aiofiles</h1>
+<p>This article explores how Python manages asynchronous file operations
+using the <code>aiofiles</code> library. While Python's built-in
+<code>asyncio</code> library provides robust support for asynchronous
+network operations, standard local filesystem access remains inherently
+synchronous and blocking. This guide explains why the operating system
+creates this limitation, how <code>aiofiles</code> bypasses it using
+thread pools, and how to implement non-blocking read and write
+operations in your asynchronous applications.</p>
+<h3 id="the-problem-with-standard-file-io-in-asyncio">The Problem With
+Standard File I/O in Asyncio</h3>
+<p>Python’s <code>asyncio</code> event loop is built around OS-level I/O
+multiplexing systems such as <code>epoll</code> on Linux,
+<code>kqueue</code> on macOS, and <code>IOCP</code> on Windows. These
+notification systems are designed for non-blocking network sockets,
+pipes, and IPC channels.</p>
+<p>Regular disk files behave differently. Most operating systems do not
+provide universal, reliable, non-blocking notification interfaces for
+standard filesystem reads and writes. When you call standard functions
+like <code>open()</code>, <code>read()</code>, or <code>write()</code>,
+the operating system blocks the calling thread until the disk completes
+the physical I/O request. In an asynchronous Python application, running
+standard synchronous file functions directly freezes the single-threaded
+event loop, preventing all concurrent coroutines and network tasks from
+executing until the disk operation finishes.</p>
+<h3 id="how-aiofiles-enables-asynchronous-file-io">How aiofiles Enables
+Asynchronous File I/O</h3>
+<p>The <code>aiofiles</code> library provides an asynchronous interface
+for file handling by delegating blocking file operations to a background
+thread pool managed by <code>asyncio</code>.</p>
+<p>Instead of freezing the main thread where the event loop resides,
+<code>aiofiles</code> dispatches blocking system calls to separate
+worker threads using an executor (such as Python’s
+<code>ThreadPoolExecutor</code>). The coroutine awaits the completion of
+the thread's task, releasing the event loop to execute other concurrent
+tasks in the meantime. Once the worker thread finishes the read or write
+operation, the result is returned to the coroutine, and execution
+resumes seamlessly.</p>
+<h3 id="basic-usage-of-aiofiles">Basic Usage of aiofiles</h3>
+<p>To use <code>aiofiles</code>, install it via pip:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install aiofiles</span></code></pre></div>
+<p>The syntax matches Python’s standard file-handling conventions,
+utilizing asynchronous context managers (<code>async with</code>) and
+asynchronous iteration:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> aiofiles</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> write_data(filename: <span class="bu">str</span>, content: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="cf">with</span> aiofiles.<span class="bu">open</span>(filename, mode<span class="op">=</span><span class="st">&#39;w&#39;</span>) <span class="im">as</span> f:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> f.write(content)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> read_data(filename: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="cf">with</span> aiofiles.<span class="bu">open</span>(filename, mode<span class="op">=</span><span class="st">&#39;r&#39;</span>) <span class="im">as</span> f:</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Read the entire file asynchronously</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        data <span class="op">=</span> <span class="cf">await</span> f.read()</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;File content: </span><span class="sc">{</span>data<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> stream_lines(filename: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="cf">with</span> aiofiles.<span class="bu">open</span>(filename, mode<span class="op">=</span><span class="st">&#39;r&#39;</span>) <span class="im">as</span> f:</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Iterate over lines asynchronously</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">async</span> <span class="cf">for</span> line <span class="kw">in</span> f:</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(line.strip())</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main() <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> write_data(<span class="st">&quot;example.txt&quot;</span>, <span class="st">&quot;Hello, Async World!</span><span class="ch">\n</span><span class="st">Line 2&quot;</span>)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> read_data(<span class="st">&quot;example.txt&quot;</span>)</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> stream_lines(<span class="st">&quot;example.txt&quot;</span>)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&quot;__main__&quot;</span>:</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    asyncio.run(main())</span></code></pre></div>
+<h3 id="performance-considerations-and-alternatives">Performance
+Considerations and Alternatives</h3>
+<p>Because <code>aiofiles</code> offloads work to a thread pool, it
+introduces minor thread synchronization overhead. It does not make
+physical disk read and write speeds faster. Instead, it prevents
+blocking the primary event loop.</p>
+<ul>
+<li><strong>Web Servers and APIs:</strong> <code>aiofiles</code> is
+ideal in environments like FastAPI or aiohttp where a server must handle
+incoming file uploads or serve local assets without stalling hundreds of
+concurrent HTTP connections.</li>
+<li><strong>Heavy Disk-Bound Tasks:</strong> For batch processing
+scripts dedicated solely to sequential file processing, traditional
+synchronous I/O or multiprocessing is generally more performant due to
+lower overhead.</li>
+<li><strong>Alternative Approaches:</strong> Python 3.9+ includes
+<code>asyncio.to_thread()</code>, which allows developers to run
+standard synchronous file operations in a background thread manually
+without external libraries:</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> write_sync(filepath: <span class="bu">str</span>, text: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> <span class="bu">open</span>(filepath, <span class="st">&#39;w&#39;</span>) <span class="im">as</span> f:</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        f.write(text)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main() <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> asyncio.to_thread(write_sync, <span class="st">&quot;file.txt&quot;</span>, <span class="st">&quot;content&quot;</span>)</span></code></pre></div>
+<p>While <code>asyncio.to_thread</code> works well for simple one-off
+file tasks, <code>aiofiles</code> provides a more ergonomic, complete
+API with support for asynchronous file streaming, iteration, and seek
+operations.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

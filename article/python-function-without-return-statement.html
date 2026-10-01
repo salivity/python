@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Function Without Return Statement - python</title>
+    <meta name="description" content="In Python, every function returns a value upon completion, regardless of whether you include an explicit return statement. When a function executes to the end of its code block without encountering a return directive, Python automatically provides a defa">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-function-without-return-statement">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Function Without Return Statement - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-function-without-return-statement" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, every function returns a value upon completion, regardless of whether you include an explicit return statement. When a function executes to the end of its code block without encountering a return directive, Python automatically provides a defa" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-function-without-return-statement">Python Function
+Without Return Statement</h1>
+<p>In Python, every function returns a value upon completion, regardless
+of whether you include an explicit <code>return</code> statement. When a
+function executes to the end of its code block without encountering a
+return directive, Python automatically provides a default return value
+of <code>None</code>. This article explains the mechanics of how Python
+handles omitted return statements, how the default <code>None</code>
+value behaves, and why functions are often written this way.</p>
+<h2 id="the-default-none-return-value">The Default <code>None</code>
+Return Value</h2>
+<p>When a function does not specify a return value, Python does not
+produce an error or leave the caller with an undefined variable.
+Instead, the runtime environment implicitly executes an invisible
+<code>return None</code> at the very end of the function body.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> greet(name):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Hello, </span><span class="sc">{</span>name<span class="sc">}</span><span class="ss">!&quot;</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> greet(<span class="st">&quot;Alice&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">type</span>(result))</span></code></pre></div>
+<p>Output:</p>
+<pre class="text"><code>Hello, Alice!
+None
+&lt;class &#39;NoneType&#39;&gt;</code></pre>
+<p>In this example, the <code>greet</code> function prints text to the
+console, but it has no <code>return</code> statement. When
+<code>result</code> captures the output of <code>greet("Alice")</code>,
+it receives the value <code>None</code>, which is a singleton object of
+the type <code>NoneType</code>.</p>
+<h2 id="bare-return-statements">Bare Return Statements</h2>
+<p>A related scenario occurs when a function includes a
+<code>return</code> keyword without an accompanying expression. A bare
+<code>return</code> immediately exits the function and also evaluates to
+<code>None</code>.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process_data(data):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> data:</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span>  <span class="co"># Exits early and returns None</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Processing: </span><span class="sc">{</span>data<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> process_data([])</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(output)  <span class="co"># Output: None</span></span></code></pre></div>
+<p>In this case, the bare <code>return</code> serves as a control-flow
+tool to terminate the function early while consistently yielding
+<code>None</code>.</p>
+<h2 id="functions-designed-for-side-effects">Functions Designed for Side
+Effects</h2>
+<p>Functions that omit return statements are commonly referred to as
+"procedures" or "void functions" in other programming languages. In
+Python, these functions are typically written to perform side effects
+rather than compute and produce data. Common side effects include:</p>
+<ul>
+<li>Displaying output to the terminal using <code>print()</code>.</li>
+<li>Writing data to a file, database, or network socket.</li>
+<li>Modifying a mutable object in place (such as modifying a list via
+<code>.append()</code> or <code>.sort()</code>).</li>
+</ul>
+<p>For example, Python's built-in <code>list.sort()</code> method sorts
+a list in place and does not include a return statement, returning
+<code>None</code> by default to remind the developer that the original
+object was mutated rather than a new list being created.</p>
+<h2 id="common-pitfalls">Common Pitfalls</h2>
+<p>Assigning the result of a function with no explicit return statement
+to a variable is a frequent source of bugs for beginners:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>numbers <span class="op">=</span> [<span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>]</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>sorted_numbers <span class="op">=</span> numbers.sort()  <span class="co"># numbers.sort() returns None</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(sorted_numbers)  <span class="co"># Output: None</span></span></code></pre></div>
+<p>Because <code>sort()</code> has no explicit return value,
+<code>sorted_numbers</code> holds <code>None</code> rather than the
+sorted list. Understanding that functions without an explicit return
+always yield <code>None</code> prevents unexpected
+<code>TypeError</code> or <code>AttributeError</code> exceptions later
+in execution.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

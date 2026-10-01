@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Running Background Threads with asyncio.to_thread - python</title>
+    <meta name="description" content="Python's asyncio.tothread() provides a clean, high-level API introduced in Python 3.9 to run blocking, synchronous code inside a separate worker thread without stalling the asynchronous event loop. By replacing older, more verbose patterns like loop.runi">
+    <link rel="canonical" href="https://salivity.github.io/python/article/running-background-threads-with-asyncio-to-thread">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Running Background Threads with asyncio.to_thread - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/running-background-threads-with-asyncio-to-thread" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's asyncio.tothread() provides a clean, high-level API introduced in Python 3.9 to run blocking, synchronous code inside a separate worker thread without stalling the asynchronous event loop. By replacing older, more verbose patterns like loop.runi" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="running-background-threads-with-asyncioto_thread">Running
+Background Threads with asyncio.to_thread</h1>
+<p>Python's <code>asyncio.to_thread()</code> provides a clean,
+high-level API introduced in Python 3.9 to run blocking, synchronous
+code inside a separate worker thread without stalling the asynchronous
+event loop. By replacing older, more verbose patterns like
+<code>loop.run_in_executor()</code>, it streamlines developer workflows,
+natively handles keyword arguments, and automatically manages execution
+contexts. This article explains the mechanics of
+<code>asyncio.to_thread()</code>, how it simplifies concurrent
+programming, and when to use it in your applications.</p>
+<h2 id="the-problem-with-blocking-code-in-asyncio">The Problem with
+Blocking Code in Asyncio</h2>
+<p>The Python <code>asyncio</code> event loop operates on a single
+thread. When a synchronous, long-running operation—such as reading a
+local file, making a request with the <code>requests</code> library, or
+performing heavy computation—is executed directly inside a coroutine, it
+blocks the entire event loop. As a result, no other coroutines can run
+until that operation completes, defeating the purpose of asynchronous
+concurrency.</p>
+<h2 id="the-traditional-approach-looprun_in_executor">The Traditional
+Approach: <code>loop.run_in_executor()</code></h2>
+<p>Before Python 3.9, the standard way to run blocking code in a
+background thread was using <code>loop.run_in_executor()</code>. While
+functional, this approach introduced unnecessary boilerplate:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functools <span class="im">import</span> partial</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> blocking_task(name, delay<span class="op">=</span><span class="dv">1</span>):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    time.sleep(delay)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f&quot;Task </span><span class="sc">{</span>name<span class="sc">}</span><span class="ss"> complete&quot;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    loop <span class="op">=</span> asyncio.get_running_loop()</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Required functools.partial to pass keyword arguments</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> <span class="cf">await</span> loop.run_in_executor(</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">None</span>, partial(blocking_task, <span class="st">&quot;Alpha&quot;</span>, delay<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(result)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>asyncio.run(main())</span></code></pre></div>
+<p>This pattern required explicitly retrieving the current event loop,
+passing <code>None</code> to specify the default
+<code>ThreadPoolExecutor</code>, and wrapping functions with
+<code>functools.partial</code> because <code>run_in_executor()</code>
+does not natively accept keyword arguments.</p>
+<h2 id="how-asyncioto_thread-simplifies-the-workflow">How
+<code>asyncio.to_thread()</code> Simplifies the Workflow</h2>
+<p><code>asyncio.to_thread()</code> is an abstraction layer over
+<code>run_in_executor()</code> that addresses these developer friction
+points. It takes a callable along with any positional
+(<code>*args</code>) and keyword (<code>**kwargs</code>) arguments,
+returning a coroutine that can be awaited directly.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> blocking_task(name, delay<span class="op">=</span><span class="dv">1</span>):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    time.sleep(delay)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f&quot;Task </span><span class="sc">{</span>name<span class="sc">}</span><span class="ss"> complete&quot;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Direct invocation with native arg and kwarg support</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> <span class="cf">await</span> asyncio.to_thread(blocking_task, <span class="st">&quot;Alpha&quot;</span>, delay<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(result)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>asyncio.run(main())</span></code></pre></div>
+<h3 id="key-improvements">Key Improvements</h3>
+<ol type="1">
+<li><strong>No Manual Loop Management</strong>: You do not need to call
+<code>asyncio.get_running_loop()</code> or interact with low-level loop
+APIs.</li>
+<li><strong>Native Keyword Argument Support</strong>:
+<code>to_thread()</code> accepts arbitrary <code>*args</code> and
+<code>**kwargs</code>, eliminating the need to import and wrap calls in
+<code>functools.partial</code>.</li>
+<li><strong>Context Variable Propagation</strong>: Unlike basic thread
+implementations, <code>asyncio.to_thread()</code> automatically copies
+the current <code>contextvars</code> context into the worker thread. Any
+context variables established in the async task remain accessible within
+the synchronous target function.</li>
+<li><strong>Readability</strong>: Code intent is clear and concise,
+making synchronous-to-asynchronous bridges easier to maintain and
+audit.</li>
+</ol>
+<h2 id="when-to-use-asyncioto_thread">When to Use
+<code>asyncio.to_thread()</code></h2>
+<p><code>asyncio.to_thread()</code> is best suited for offloading
+blocking I/O tasks where an asynchronous alternative does not exist or
+is impractical to implement, such as:</p>
+<ul>
+<li>Using synchronous database drivers or legacy third-party SDKs.</li>
+<li>Interacting with local file systems via standard built-ins
+(<code>open()</code>, <code>pathlib</code>).</li>
+<li>Running short CPU-bound tasks where thread creation overhead is
+negligible.</li>
+</ul>
+<p>For heavy, sustained CPU-bound processing,
+<code>asyncio.to_thread()</code> is still constrained by Python's Global
+Interpreter Lock (GIL). In those scenarios, delegating tasks to a
+separate process using
+<code>concurrent.futures.ProcessPoolExecutor</code> with
+<code>run_in_executor()</code> remains the optimal approach.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

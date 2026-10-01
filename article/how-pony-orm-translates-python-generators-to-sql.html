@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Pony ORM Translates Python Generators to SQL - python</title>
+    <meta name="description" content="Pony ORM uniquely allows developers to write database queries using native Python generator expressions rather than custom method-chaining APIs or raw SQL strings. Instead of executing the generator in the Python runtime, Pony intercepts the expression,">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-pony-orm-translates-python-generators-to-sql">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Pony ORM Translates Python Generators to SQL - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-pony-orm-translates-python-generators-to-sql" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Pony ORM uniquely allows developers to write database queries using native Python generator expressions rather than custom method-chaining APIs or raw SQL strings. Instead of executing the generator in the Python runtime, Pony intercepts the expression," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-pony-orm-translates-python-generators-to-sql">How Pony ORM
+Translates Python Generators to SQL</h1>
+<p>Pony ORM uniquely allows developers to write database queries using
+native Python generator expressions rather than custom method-chaining
+APIs or raw SQL strings. Instead of executing the generator in the
+Python runtime, Pony intercepts the expression, decompiles its
+underlying bytecode back into an Abstract Syntax Tree (AST), translates
+the Python operations into equivalent SQL expressions, and executes an
+optimized query against the relational database.</p>
+<h3 id="1-bytecode-inspection-via-execution-frame">1. Bytecode
+Inspection via Execution Frame</h3>
+<p>When a query function like
+<code>select(p for p in Person if p.age &gt; 20)</code> is invoked, Pony
+ORM does not iterate through the generator. Instead, it inspects the
+generator object passed as an argument. Using Python's internal frame
+inspection capabilities (primarily via <code>sys._getframe</code>), Pony
+extracts the code object and bytecode instructions of the generator
+expression before it executes.</p>
+<h3 id="2-decompiling-bytecode-into-an-abstract-syntax-tree-ast">2.
+Decompiling Bytecode into an Abstract Syntax Tree (AST)</h3>
+<p>Python runtimes execute bytecode rather than raw source code, meaning
+the original source text might not always be accessible at runtime (such
+as in compiled <code>.pyc</code> environments). To solve this, Pony
+incorporates its own decompiler. It reads the raw bytecode instructions
+(such as <code>LOAD_FAST</code>, <code>COMPARE_OP</code>, and
+<code>BINARY_ADD</code>) and reconstructs an internal Abstract Syntax
+Tree representing the logical structure of the iteration, filtering
+conditions, and projections.</p>
+<h3 id="3-symbol-resolution-and-context-mapping">3. Symbol Resolution
+and Context Mapping</h3>
+<p>Once the AST is reconstructed, Pony resolves the identifiers and
+variables used in the generator:</p>
+<ul>
+<li><strong>Entities and Attributes:</strong> Identifiers matching Pony
+<code>Entity</code> models (such as <code>Person</code>) and their
+attributes (<code>p.age</code>) are identified and mapped to database
+tables and columns.</li>
+<li><strong>External Variables:</strong> Local and global variables
+referenced from outer scopes are extracted from the calling frame's
+closure or local/global namespaces and converted into parameterized
+query values.</li>
+</ul>
+<h3 id="4-translating-ast-nodes-to-sql-expressions">4. Translating AST
+Nodes to SQL Expressions</h3>
+<p>Pony walks the generated AST and translates Python language
+constructs into relational database operations:</p>
+<ul>
+<li><strong>Operators and Comparisons:</strong> Standard operators such
+as <code>==</code>, <code>!=</code>, <code>&lt;</code>, and
+<code>in</code> are mapped to <code>=</code>, <code>&lt;&gt;</code>,
+<code>&lt;</code>, and <code>IN</code>. Logical operators
+<code>and</code>, <code>or</code>, and <code>not</code> become
+<code>AND</code>, <code>OR</code>, and <code>NOT</code>.</li>
+<li><strong>String and Collection Operations:</strong> Built-in Python
+methods are translated to SQL equivalents. For example,
+<code>p.name.startswith("A")</code> is translated into a
+<code>LIKE 'A%'</code> clause.</li>
+<li><strong>Relationship Traversal:</strong> Traversing relationships in
+Python (e.g., <code>order.customer.name</code>) automatically triggers
+the generation of the necessary <code>JOIN</code> clauses between
+associated tables.</li>
+<li><strong>Aggregations and Slices:</strong> Functions like
+<code>count()</code>, <code>sum()</code>, <code>min()</code>, and Python
+slicing syntax (<code>[:10]</code>) are mapped to SQL aggregate
+functions and <code>LIMIT</code>/<code>OFFSET</code> clauses.</li>
+</ul>
+<h3 id="5-dialect-specific-sql-generation-and-execution">5.
+Dialect-Specific SQL Generation and Execution</h3>
+<p>After constructing the intermediate SQL tree, Pony renders the final
+SQL string tailored to the target database dialect (such as PostgreSQL,
+MySQL, SQLite, or Oracle). All user-supplied literals and Python
+variables are automatically replaced with positional or named bind
+parameters to prevent SQL injection vulnerabilities. The generated query
+is executed through the database driver, and the returned records are
+mapped back into managed entity instances within Pony’s identity
+map.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

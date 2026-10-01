@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python ipaddress Subnet Overlaps and Host Ranges - python</title>
+    <meta name="description" content="Python’s standard library includes the ipaddress module, which provides native, robust classes for parsing, analyzing, and manipulating IPv4 and IPv6 network definitions. This article outlines the specific methods and attributes available in IPv4Networ">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-ipaddress-subnet-overlaps-and-host-ranges">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python ipaddress Subnet Overlaps and Host Ranges - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-ipaddress-subnet-overlaps-and-host-ranges" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s standard library includes the ipaddress module, which provides native, robust classes for parsing, analyzing, and manipulating IPv4 and IPv6 network definitions. This article outlines the specific methods and attributes available in IPv4Networ" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-ipaddress-subnet-overlaps-and-host-ranges">Python
+ipaddress Subnet Overlaps and Host Ranges</h1>
+<p>Python’s standard library includes the <code>ipaddress</code> module,
+which provides native, robust classes for parsing, analyzing, and
+manipulating IPv4 and IPv6 network definitions. This article outlines
+the specific methods and attributes available in
+<code>IPv4Network</code> and <code>IPv6Network</code> to determine if
+CIDR blocks intersect, evaluate hierarchical containment, and extract
+usable host ranges and boundary addresses.</p>
+<h2 id="detecting-subnet-overlaps-and-containment">Detecting Subnet
+Overlaps and Containment</h2>
+<p>The <code>ipaddress</code> module provides built-in methods to
+determine whether two CIDR blocks collide or nest within one
+another.</p>
+<h3 id="checking-for-overlaps-with-overlaps">Checking for Overlaps with
+<code>overlaps()</code></h3>
+<p>The <code>network.overlaps(other)</code> method accepts another
+network object and returns a boolean indicating whether the two subnets
+share any IP addresses. This checks for partial, total, or mutual
+overlap.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ipaddress</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>net1 <span class="op">=</span> ipaddress.ip_network(<span class="st">&quot;192.168.1.0/24&quot;</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>net2 <span class="op">=</span> ipaddress.ip_network(<span class="st">&quot;192.168.1.128/25&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>net3 <span class="op">=</span> ipaddress.ip_network(<span class="st">&quot;192.168.2.0/24&quot;</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(net1.overlaps(net2))  <span class="co"># True</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(net1.overlaps(net3))  <span class="co"># False</span></span></code></pre></div>
+<h3
+id="checking-subnet-hierarchy-with-subnet_of-and-supernet_of">Checking
+Subnet Hierarchy with <code>subnet_of()</code> and
+<code>supernet_of()</code></h3>
+<p>To determine direct containment rather than general intersection, use
+<code>subnet_of()</code> and <code>supernet_of()</code>:</p>
+<ul>
+<li><strong><code>net_a.subnet_of(net_b)</code></strong>: Returns
+<code>True</code> if <code>net_a</code> is entirely contained within
+<code>net_b</code>.</li>
+<li><strong><code>net_a.supernet_of(net_b)</code></strong>: Returns
+<code>True</code> if <code>net_a</code> fully encompasses
+<code>net_b</code>.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>parent <span class="op">=</span> ipaddress.ip_network(<span class="st">&quot;10.0.0.0/16&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>child <span class="op">=</span> ipaddress.ip_network(<span class="st">&quot;10.0.5.0/24&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(child.subnet_of(parent))    <span class="co"># True</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(parent.supernet_of(child))  <span class="co"># True</span></span></code></pre></div>
+<p>You can also use Python's <code>in</code> operator to test if an
+individual IP address or a smaller network falls within a target
+network:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>ip <span class="op">=</span> ipaddress.ip_address(<span class="st">&quot;10.0.5.15&quot;</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(ip <span class="kw">in</span> parent)  <span class="co"># True</span></span></code></pre></div>
+<hr />
+<h2 id="computing-host-ranges-and-boundary-addresses">Computing Host
+Ranges and Boundary Addresses</h2>
+<p>When working with CIDR blocks, determining the usable host addresses
+and the theoretical boundaries requires different properties depending
+on your use case.</p>
+<h3 id="boundary-properties">Boundary Properties</h3>
+<p>Network objects provide direct access to edge boundaries through
+property attributes:</p>
+<ul>
+<li><strong><code>network_address</code></strong>: Returns the first IP
+address of the CIDR block (the network ID).</li>
+<li><strong><code>broadcast_address</code></strong>: Returns the last IP
+address of the block (the broadcast IP for IPv4).</li>
+<li><strong><code>num_addresses</code></strong>: Returns the total count
+of addresses in the block, including network and broadcast IDs.</li>
+<li>**<code>netmask</code> / <strong><code>hostmask</code></strong>:
+Returns the subnet mask or inverse wildcard mask.</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>net <span class="op">=</span> ipaddress.ip_network(<span class="st">&quot;172.16.0.0/22&quot;</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(net.network_address)    <span class="co"># 172.16.0.0</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(net.broadcast_address)  <span class="co"># 172.16.3.255</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(net.num_addresses)      <span class="co"># 1024</span></span></code></pre></div>
+<h3 id="iterating-usable-hosts-with-hosts">Iterating Usable Hosts with
+<code>hosts()</code></h3>
+<p>The <code>network.hosts()</code> method returns an iterator over
+usable IP addresses. By default, for IPv4 subnets with a prefix length
+shorter than <code>/31</code>, it automatically excludes the network
+address and the broadcast address:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>net <span class="op">=</span> ipaddress.ip_network(<span class="st">&quot;192.168.10.0/29&quot;</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Iterate through usable host IPs</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> host <span class="kw">in</span> net.hosts():</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(host)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Outputs: 192.168.10.1 through 192.168.10.6</span></span></code></pre></div>
+<p><em>(Note: For <code>/31</code> point-to-point links defined under
+RFC 3021 and <code>/32</code> single-host blocks, <code>hosts()</code>
+returns all addresses in the block rather than excluding the
+boundaries.)</em></p>
+<h3 id="calculating-first-and-last-usable-hosts-directly">Calculating
+First and Last Usable Hosts Directly</h3>
+<p>For large subnets, iterating through <code>network.hosts()</code> to
+find the first and last usable IP can be slow and memory-intensive.
+Because network objects support indexing, boundaries can be retrieved
+directly in constant time:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>net <span class="op">=</span> ipaddress.ip_network(<span class="st">&quot;10.50.0.0/16&quot;</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> net.prefixlen <span class="op">&lt;=</span> <span class="dv">30</span>:</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    first_usable <span class="op">=</span> net[<span class="dv">1</span>]</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    last_usable <span class="op">=</span> net[<span class="op">-</span><span class="dv">2</span>]</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    first_usable <span class="op">=</span> net[<span class="dv">0</span>]</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    last_usable <span class="op">=</span> net[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;First Host: </span><span class="sc">{</span>first_usable<span class="sc">}</span><span class="ss">&quot;</span>)  <span class="co"># 10.50.0.1</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Last Host:  </span><span class="sc">{</span>last_usable<span class="sc">}</span><span class="ss">&quot;</span>)   <span class="co"># 10.50.255.254</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

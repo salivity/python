@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python symtable: Introspect Variable Scopes - python</title>
+    <meta name="description" content="Python's built-in symtable module provides direct access to the compiler’s internal symbol tables, allowing developers to statically analyze the scope and binding behavior of identifiers without executing the underlying source code. This article explai">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-symtable-introspect-variable-scopes">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python symtable: Introspect Variable Scopes - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-symtable-introspect-variable-scopes" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's built-in symtable module provides direct access to the compiler’s internal symbol tables, allowing developers to statically analyze the scope and binding behavior of identifiers without executing the underlying source code. This article explai" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-symtable-introspect-variable-scopes">Python symtable:
+Introspect Variable Scopes</h1>
+<p>Python's built-in <code>symtable</code> module provides direct access
+to the compiler’s internal symbol tables, allowing developers to
+statically analyze the scope and binding behavior of identifiers without
+executing the underlying source code. This article explains the primary
+functions of <code>symtable</code>, how it constructs hierarchical scope
+trees, and how to inspect whether variables are local, global, free, or
+assigned.</p>
+<h3 id="what-is-the-symtable-module">What is the <code>symtable</code>
+Module?</h3>
+<p>During compilation, Python parses source code into an Abstract Syntax
+Tree (AST) and builds a symbol table to determine the scope of every
+identifier (variables, functions, classes). The <code>symtable</code>
+module exposes this compilation phase to Python code.</p>
+<p>Unlike runtime introspection tools like <code>globals()</code> or
+<code>locals()</code>, <code>symtable</code> operates entirely
+statically. It can analyze code that might have unmet runtime
+dependencies or destructive side effects without running it.</p>
+<h3 id="core-entry-point-symtablesymtable">Core Entry Point:
+<code>symtable.symtable()</code></h3>
+<p>The primary interface of the module is the <code>symtable()</code>
+factory function:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> symtable</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>table <span class="op">=</span> symtable.symtable(code, filename, compile_type)</span></code></pre></div>
+<ul>
+<li><strong><code>code</code></strong>: The Python source string to
+analyze.</li>
+<li><strong><code>filename</code></strong>: A string representing the
+file name (used for syntax error reporting).</li>
+<li><strong><code>compile_type</code></strong>: The kind of code:
+<code>'exec'</code> (modules/scripts), <code>'eval'</code> (single
+expressions), or <code>'single'</code> (interactive statements).</li>
+</ul>
+<p>The function returns a top-level <code>SymbolTable</code> instance
+representing the global or module-level scope.</p>
+<h3 id="the-symboltable-interface">The <code>SymbolTable</code>
+Interface</h3>
+<p>A <code>SymbolTable</code> object represents a distinct namespace
+block. It contains metadata about the block and provides methods to
+traverse nested scopes and inspect contained identifiers:</p>
+<ul>
+<li><strong><code>get_type()</code></strong>: Returns the scope type as
+a string: <code>'module'</code>, <code>'function'</code>, or
+<code>'class'</code>.</li>
+<li><strong><code>get_name()</code></strong>: Returns the name of the
+block (e.g., <code>'top'</code> for the module, or the function/class
+name).</li>
+<li><strong><code>get_symbols()</code></strong>: Returns a sequence of
+<code>Symbol</code> instances representing all identifiers declared or
+referenced in this scope.</li>
+<li><strong><code>get_children()</code></strong>: Returns a list of
+nested <code>SymbolTable</code> instances (such as inner functions or
+class definitions).</li>
+<li><strong><code>is_nested()</code></strong>: Returns <code>True</code>
+if the block is contained within an outer function or closure.</li>
+</ul>
+<h3 id="inspecting-identifiers-with-symbol-objects">Inspecting
+Identifiers with <code>Symbol</code> Objects</h3>
+<p>Each identifier within a <code>SymbolTable</code> is represented by a
+<code>Symbol</code> instance. These objects provide boolean query
+methods that expose the variable’s scope rules:</p>
+<ul>
+<li><strong><code>is_local()</code></strong>: <code>True</code> if the
+variable is local to this scope.</li>
+<li><strong><code>is_global()</code></strong>: <code>True</code> if the
+identifier is declared <code>global</code> or belongs to the module
+scope.</li>
+<li><strong><code>is_nonlocal()</code></strong>: <code>True</code> if
+declared with the <code>nonlocal</code> statement.</li>
+<li><strong><code>is_free()</code></strong>: <code>True</code> if the
+variable is referenced in the block but defined in an enclosing scope (a
+closure variable), without being declared global.</li>
+<li><strong><code>is_assigned()</code></strong>: <code>True</code> if
+the identifier is assigned a value in this scope (e.g., assignment
+statement, loop target).</li>
+<li><strong><code>is_referenced()</code></strong>: <code>True</code> if
+the identifier is read or called in this scope.</li>
+<li><strong><code>is_parameter()</code></strong>: <code>True</code> if
+the identifier is a function argument.</li>
+</ul>
+<h3 id="practical-example">Practical Example</h3>
+<p>The following script analyzes a function containing local, global,
+and closure variables:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> symtable</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>source_code <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="st">global_var = 10</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="st">def outer(param):</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="st">    local_var = 20</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="st">    global global_var</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="st">    </span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="st">    def inner():</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="st">        nonlocal local_var</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="st">        return local_var + global_var + param</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>top <span class="op">=</span> symtable.symtable(source_code, <span class="st">&quot;&lt;string&gt;&quot;</span>, <span class="st">&quot;exec&quot;</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Access the &#39;outer&#39; function scope</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>outer_func <span class="op">=</span> [child <span class="cf">for</span> child <span class="kw">in</span> top.get_children() <span class="cf">if</span> child.get_name() <span class="op">==</span> <span class="st">&quot;outer&quot;</span>][<span class="dv">0</span>]</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Scope: </span><span class="sc">{</span>outer_func<span class="sc">.</span>get_name()<span class="sc">}</span><span class="ss"> (</span><span class="sc">{</span>outer_func<span class="sc">.</span>get_type()<span class="sc">}</span><span class="ss">)&quot;</span>)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> sym <span class="kw">in</span> outer_func.get_symbols():</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    flags <span class="op">=</span> []</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> sym.is_parameter(): flags.append(<span class="st">&quot;parameter&quot;</span>)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> sym.is_local(): flags.append(<span class="st">&quot;local&quot;</span>)</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> sym.is_global(): flags.append(<span class="st">&quot;global&quot;</span>)</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> sym.is_assigned(): flags.append(<span class="st">&quot;assigned&quot;</span>)</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot; - </span><span class="sc">{</span>sym<span class="sc">.</span>get_name()<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span><span class="st">&#39;, &#39;</span><span class="sc">.</span>join(flags)<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Access the &#39;inner&#39; function scope</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>inner_func <span class="op">=</span> outer_func.get_children()[<span class="dv">0</span>]</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;</span><span class="ch">\n</span><span class="ss">Scope: </span><span class="sc">{</span>inner_func<span class="sc">.</span>get_name()<span class="sc">}</span><span class="ss"> (</span><span class="sc">{</span>inner_func<span class="sc">.</span>get_type()<span class="sc">}</span><span class="ss">)&quot;</span>)</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> sym <span class="kw">in</span> inner_func.get_symbols():</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>    flags <span class="op">=</span> []</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> sym.is_free(): flags.append(<span class="st">&quot;free (enclosed)&quot;</span>)</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> sym.is_global(): flags.append(<span class="st">&quot;global&quot;</span>)</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> sym.is_referenced(): flags.append(<span class="st">&quot;referenced&quot;</span>)</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot; - </span><span class="sc">{</span>sym<span class="sc">.</span>get_name()<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span><span class="st">&#39;, &#39;</span><span class="sc">.</span>join(flags)<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>Output:</p>
+<pre class="text"><code>Scope: outer (function)
+ - param: parameter, local, assigned
+ - local_var: local, assigned
+ - global_var: global
+ - inner: local, assigned
+
+Scope: inner (function)
+ - local_var: free (enclosed), referenced
+ - global_var: global, referenced
+ - param: free (enclosed), referenced</code></pre>
+<h3 id="primary-use-cases">Primary Use Cases</h3>
+<ol type="1">
+<li><strong>Static Analysis and Linters</strong>: Identifying unused
+variables, unbound local variables, or accidental shadowing of outer
+variables.</li>
+<li><strong>Refactoring Engines</strong>: Safely renaming identifiers by
+confirming scope boundaries without breaking name bindings.</li>
+<li><strong>Security Audits</strong>: Checking if untrusted scripts
+attempt to access or modify specific global namespaces before running
+them in a restricted environment.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

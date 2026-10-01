@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How concurrent.futures.wait Works in Python - python</title>
+    <meta name="description" content="Python's concurrent.futures.wait() function pauses execution by leveraging low-level synchronization primitives—primarily condition variables and threading events—coupled with callback mechanisms on Future objects. Instead of busy-waiting or polling">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-concurrent-futures-wait-works-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How concurrent.futures.wait Works in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-concurrent-futures-wait-works-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's concurrent.futures.wait() function pauses execution by leveraging low-level synchronization primitives—primarily condition variables and threading events—coupled with callback mechanisms on Future objects. Instead of busy-waiting or polling" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-concurrentfutureswait-works-in-python">How
+concurrent.futures.wait Works in Python</h1>
+<p>Python's <code>concurrent.futures.wait()</code> function pauses
+execution by leveraging low-level synchronization primitives—primarily
+condition variables and threading events—coupled with callback
+mechanisms on <code>Future</code> objects. Instead of busy-waiting or
+polling continuously, it registers internal listeners with each task and
+blocks the calling thread at the operating system level until a
+specified completion condition or timeout is satisfied.</p>
+<h3 id="the-waiter-object-and-condition-variables">The Waiter Object and
+Condition Variables</h3>
+<p>When you invoke
+<code>concurrent.futures.wait(fs, timeout, return_when)</code>, the
+function does not repeatedly query each <code>Future</code> in a loop.
+Instead, it instantiates an internal synchronization object derived from
+a private <code>_Waiter</code> class. Depending on the
+<code>return_when</code> parameter (<code>FIRST_COMPLETED</code>,
+<code>FIRST_EXCEPTION</code>, or <code>ALL_COMPLETED</code>), the
+implementation chooses a specialized waiter subclass, such as
+<code>_FirstCompletedWaiter</code> or
+<code>_AllCompletedWaiter</code>.</p>
+<p>At the heart of this waiter object is a
+<code>threading.Condition</code> or a <code>threading.Event</code>
+primitive. This primitive wraps an OS-level mutex and condition
+variable, providing the underlying mechanism required to suspend and
+resume thread execution efficiently.</p>
+<h3 id="callback-registration-via-add_done_callback">Callback
+Registration via <code>add_done_callback</code></h3>
+<p>To track when individual tasks finish, the <code>wait()</code>
+function iterates over the provided collection of <code>Future</code>
+instances and registers a notification method from the waiter object
+using <code>Future.add_done_callback()</code>.</p>
+<p>If any tasks have already completed before <code>wait()</code> is
+called, the waiter immediately records them. For all pending futures,
+the registered callback ensures that the completion of any task triggers
+a direct update to the waiter's internal state.</p>
+<h3 id="thread-suspension">Thread Suspension</h3>
+<p>Once the callbacks are attached, the calling thread acquires the
+waiter's condition lock and evaluates whether the exit criteria are
+already met. If not, the thread invokes
+<code>waiter.event.wait(timeout)</code> (or
+<code>condition.wait(timeout)</code>).</p>
+<p>This operation releases the underlying lock and transitions the
+calling thread from a runnable state to a blocked (sleeping) state
+managed by the operating system's scheduler. While blocked, the thread
+consumes virtually zero CPU cycles, allowing system resources to be
+utilized entirely by worker threads or other processes.</p>
+<h3 id="task-completion-and-state-signatures">Task Completion and State
+Signatures</h3>
+<p>As worker threads or processes complete tasks, they invoke
+<code>Future.set_result()</code> or <code>Future.set_exception()</code>.
+These methods transition the future's state to finished, acquire the
+future's internal lock, and execute all attached callbacks
+sequentially.</p>
+<p>When the waiter's callback runs:</p>
+<ol type="1">
+<li>It records the completed future into a localized collection of
+finished tasks.</li>
+<li>It evaluates whether the <code>return_when</code> condition has been
+satisfied (for example, verifying if the completed task raised an
+exception under <code>FIRST_EXCEPTION</code>, or counting if all futures
+have reported back under <code>ALL_COMPLETED</code>).</li>
+<li>If the criteria are met, the callback triggers the condition
+variable by calling <code>notify()</code> or sets the event flag via
+<code>set()</code>.</li>
+</ol>
+<h3 id="wake-up-and-result-partitioning">Wake-Up and Result
+Partitioning</h3>
+<p>The notification wakes the sleeping caller thread, which re-acquires
+the mutex and exits the blocking wait call. If a specified timeout
+expires before the conditions are met, the OS scheduler wakes the thread
+automatically.</p>
+<p>Finally, <code>concurrent.futures.wait()</code> performs cleanup:</p>
+<ul>
+<li>It removes any unused callbacks from unfinished futures to prevent
+memory leaks and unnecessary notifications later.</li>
+<li>It splits the original collection of futures into two distinct
+<code>namedtuple</code> sets: <code>done</code> and
+<code>not_done</code>.</li>
+<li>It returns <code>DoneAndNotDoneFutures(done, not_done)</code> to the
+caller, allowing standard execution flow to resume.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

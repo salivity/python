@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StratifiedKFold vs KFold for Imbalanced Data - python</title>
+    <meta name="description" content="When evaluating machine learning models on datasets with imbalanced target classes, standard validation techniques can produce misleading results. This article explains why StratifiedKFold is preferred over standard KFold cross-validation in Python's sci">
+    <link rel="canonical" href="https://salivity.github.io/python/article/stratified-k-fold-vs-k-fold-for-imbalanced-data">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="StratifiedKFold vs KFold for Imbalanced Data - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/stratified-k-fold-vs-k-fold-for-imbalanced-data" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When evaluating machine learning models on datasets with imbalanced target classes, standard validation techniques can produce misleading results. This article explains why StratifiedKFold is preferred over standard KFold cross-validation in Python's sci" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="stratifiedkfold-vs-kfold-for-imbalanced-data">StratifiedKFold vs
+KFold for Imbalanced Data</h1>
+<p>When evaluating machine learning models on datasets with imbalanced
+target classes, standard validation techniques can produce misleading
+results. This article explains why <code>StratifiedKFold</code> is
+preferred over standard <code>KFold</code> cross-validation in Python's
+scikit-learn. You will learn the mechanics of both approaches, the risks
+of standard splitting on skewed classes, and how stratification ensures
+reliable evaluation metrics across all folds.</p>
+<h3 id="the-problem-with-standard-kfold-on-imbalanced-data">The Problem
+with Standard <code>KFold</code> on Imbalanced Data</h3>
+<p>Standard <code>KFold</code> divides a dataset into <span
+class="math inline">\(k\)</span> consecutive or randomly shuffled
+subsets without considering the target values. In a balanced dataset
+(e.g., a 50/50 binary split), random assignment generally yields
+balanced subsets naturally.</p>
+<p>However, when working with imbalanced targets—such as fraud detection
+(99% negative, 1% positive) or rare disease diagnosis—random sampling
+can dramatically distort the class distribution across splits:</p>
+<ul>
+<li><strong>Zero-Minority Folds:</strong> A validation fold might end up
+with zero instances of the minority class, making it impossible to
+compute metrics like Precision, Recall, or ROC-AUC.</li>
+<li><strong>Over-Represented Folds:</strong> Another fold might receive
+an unnaturally high concentration of minority cases, leading to
+pessimistic or erratic performance estimates.</li>
+<li><strong>Training Instability:</strong> If the training subset for a
+fold lacks adequate minority class examples, algorithms that rely on
+class frequencies may fail to generalize properly.</li>
+</ul>
+<h3 id="how-stratifiedkfold-solves-the-issue">How
+<code>StratifiedKFold</code> Solves the Issue</h3>
+<p><code>StratifiedKFold</code> is a variation of <code>KFold</code>
+that enforces class balance across all splits. It acts as a stratified
+sampler, ensuring that each fold contains approximately the same
+percentage of samples of each target class as the complete dataset.</p>
+<p>For example, if your target variable has an 85:15
+negative-to-positive ratio, <code>StratifiedKFold</code> guarantees that
+every single training and test split preserves that 85:15 ratio.</p>
+<h3 id="key-benefits-of-stratifiedkfold">Key Benefits of
+<code>StratifiedKFold</code></h3>
+<ol type="1">
+<li><strong>Consistent Evaluation Metrics:</strong> Metrics sensitive to
+class imbalance (such as the F1-score, Balanced Accuracy, and Average
+Precision) remain stable across folds because the baseline positive rate
+does not fluctuate.</li>
+<li><strong>Reduced Variance:</strong> By eliminating distribution drift
+between folds, the variance of cross-validation scores decreases, giving
+a more reliable estimate of out-of-sample model performance.</li>
+<li><strong>Prevention of Edge Cases:</strong> It eliminates the risk of
+training on a fold completely devoid of a specific class, avoiding
+runtime errors or broken loss functions.</li>
+</ol>
+<h3 id="python-implementation-example">Python Implementation
+Example</h3>
+<p>Using <code>scikit-learn</code>, switching from <code>KFold</code> to
+<code>StratifiedKFold</code> requires only a change of class:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.datasets <span class="im">import</span> make_classification</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.linear_model <span class="im">import</span> LogisticRegression</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> StratifiedKFold, cross_val_score</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate an imbalanced binary dataset (95% class 0, 5% class 1)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>X, y <span class="op">=</span> make_classification(</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    n_samples<span class="op">=</span><span class="dv">1000</span>, </span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span>[<span class="fl">0.95</span>, <span class="fl">0.05</span>], </span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    random_state<span class="op">=</span><span class="dv">42</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize StratifiedKFold</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>cv <span class="op">=</span> StratifiedKFold(n_splits<span class="op">=</span><span class="dv">5</span>, shuffle<span class="op">=</span><span class="va">True</span>, random_state<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Evaluate using an appropriate metric for imbalanced data</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> LogisticRegression()</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>scores <span class="op">=</span> cross_val_score(model, X, y, cv<span class="op">=</span>cv, scoring<span class="op">=</span><span class="st">&#39;f1&#39;</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Mean F1-Score: </span><span class="sc">{</span>scores<span class="sc">.</span>mean()<span class="sc">:.4f}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<h3 id="conclusion">Conclusion</h3>
+<p>For regression tasks or balanced classification problems, standard
+<code>KFold</code> is sufficient. However, for any classification task
+where classes are imbalanced, <code>StratifiedKFold</code> should always
+be the default choice in Python to preserve the true target distribution
+and avoid evaluation bias.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

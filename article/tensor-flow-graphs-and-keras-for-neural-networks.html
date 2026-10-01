@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TensorFlow Graphs and Keras for Neural Networks - python</title>
+    <meta name="description" content="This article explores how TensorFlow combines low-level computational tensor graphs with high-level Keras APIs to construct, optimize, and train neural networks in Python. You will learn the mechanics behind computational graphs, how Keras provides an ac">
+    <link rel="canonical" href="https://salivity.github.io/python/article/tensor-flow-graphs-and-keras-for-neural-networks">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="TensorFlow Graphs and Keras for Neural Networks - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/tensor-flow-graphs-and-keras-for-neural-networks" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how TensorFlow combines low-level computational tensor graphs with high-level Keras APIs to construct, optimize, and train neural networks in Python. You will learn the mechanics behind computational graphs, how Keras provides an ac" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="tensorflow-graphs-and-keras-for-neural-networks">TensorFlow
+Graphs and Keras for Neural Networks</h1>
+<p>This article explores how TensorFlow combines low-level computational
+tensor graphs with high-level Keras APIs to construct, optimize, and
+train neural networks in Python. You will learn the mechanics behind
+computational graphs, how Keras provides an accessible interface for
+model building, and how TensorFlow bridges the two to balance rapid
+developer prototyping with high-performance execution.</p>
+<h2 id="understanding-computational-tensor-graphs">Understanding
+Computational Tensor Graphs</h2>
+<p>At its core, TensorFlow represents computation using directed acyclic
+graphs (DAGs), commonly referred to as computational graphs or tensor
+graphs.</p>
+<ul>
+<li><strong>Nodes:</strong> Represent operations (such as addition,
+matrix multiplication, or activation functions).</li>
+<li><strong>Edges:</strong> Represent the data—multidimensional arrays
+known as tensors—flowing between these operations.</li>
+</ul>
+<h3 id="eager-execution-vs-graph-execution">Eager Execution vs. Graph
+Execution</h3>
+<p>Modern TensorFlow (version 2.x and later) defaults to <strong>Eager
+Execution</strong>. This means operations are evaluated immediately in
+standard Python fashion, making debugging, inspecting tensor values, and
+writing control flow intuitive.</p>
+<p>However, to achieve maximum performance and portability, TensorFlow
+relies on <strong>Graph Execution</strong>. By decorating a Python
+function with <code>@tf.function</code>, TensorFlow uses AutoGraph to
+parse standard Python code and compile it into a static, optimized
+computation graph.</p>
+<h3 id="benefits-of-the-computation-graph">Benefits of the Computation
+Graph</h3>
+<ol type="1">
+<li><strong>Optimization:</strong> TensorFlow can fuse operations (e.g.,
+combining activation functions with matrix multiplication) and prune
+unused nodes.</li>
+<li><strong>Parallelism:</strong> Independent operations across
+different graph branches can execute simultaneously across multiple CPU
+cores or GPUs.</li>
+<li><strong>Portability:</strong> Once serialized, a computational graph
+can run independently of the Python runtime, facilitating deployment on
+mobile devices (TensorFlow Lite), servers (TensorFlow Serving), or
+browsers (TensorFlow.js).</li>
+</ol>
+<hr />
+<h2 id="the-role-of-the-keras-api-in-tensorflow">The Role of the Keras
+API in TensorFlow</h2>
+<p>While computational graphs manage data flow and hardware
+acceleration, writing raw graph operations manually can be verbose and
+error-prone. TensorFlow solves this by integrating
+<strong>Keras</strong> (<code>tf.keras</code>) as its official,
+high-level API for model design.</p>
+<p>Keras abstracts tensor management and mathematical operations into
+modular building blocks:</p>
+<ul>
+<li><strong>Layers (<code>tf.keras.layers</code>):</strong> Pre-built
+functional units (e.g., <code>Dense</code>, <code>Conv2D</code>,
+<code>LSTM</code>) that package weight variables, bias vectors, and
+activation calculations.</li>
+<li><strong>Losses and Optimizers (<code>tf.keras.losses</code>,
+<code>tf.keras.optimizers</code>):</strong> Built-in math routines that
+calculate error metrics and apply gradient descent algorithms.</li>
+<li><strong>Metrics and Callbacks:</strong> Tools to monitor performance
+during training and perform actions like early stopping or model
+checkpointing.</li>
+</ul>
+<h3 id="modeling-paradigms-in-keras">Modeling Paradigms in Keras</h3>
+<p>Keras provides three primary approaches to model design,
+accommodating different complexity levels:</p>
+<ol type="1">
+<li><strong>Sequential API:</strong> Ideal for linear stacks of layers
+where each layer has exactly one input and one output.</li>
+<li><strong>Functional API:</strong> Best for complex architectures
+involving shared layers, multiple inputs, or multiple outputs (such as
+ResNet skip connections).</li>
+<li><strong>Model Subclassing:</strong> Allows developers to implement
+custom forward passes by subclassing <code>tf.keras.Model</code> and
+overriding the <code>call</code> method, offering maximum
+flexibility.</li>
+</ol>
+<hr />
+<h2 id="how-graphs-and-keras-work-together">How Graphs and Keras Work
+Together</h2>
+<p>TensorFlow integrates computational graphs and Keras to deliver both
+usability and performance:</p>
+<ol type="1">
+<li><strong>Layer Encapsulation:</strong> When a Keras layer is created,
+it declares the necessary tensor variables (weights and biases) and
+defines how incoming tensors are transformed.</li>
+<li><strong>Graph Compilation via <code>model.compile()</code>:</strong>
+When configuring the model with an optimizer, loss function, and
+metrics, TensorFlow sets up the mathematical equations needed for both
+the forward pass and the backward pass (automatic differentiation via
+<code>tf.GradientTape</code>).</li>
+<li><strong>Automated Acceleration during
+<code>model.fit()</code>:</strong> The built-in training loop in Keras
+wraps execution within graph mode automatically. It traces the forward
+pass, calculates gradients, and applies updates inside a compiled graph,
+ensuring high-throughput GPU and TPU utilization without requiring the
+user to write low-level graph code.</li>
+</ol>
+<hr />
+<h2 id="practical-implementation-in-python">Practical Implementation in
+Python</h2>
+<p>Below is a standard workflow demonstrating how Keras creates a model
+that TensorFlow executes using graph-accelerated routines:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tensorflow <span class="im">as</span> tf</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tensorflow.keras <span class="im">import</span> layers, models</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Define model architecture using the Keras Sequential API</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> models.Sequential([</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    layers.Input(shape<span class="op">=</span>(<span class="dv">28</span>, <span class="dv">28</span>)),</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    layers.Flatten(),</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    layers.Dense(<span class="dv">128</span>, activation<span class="op">=</span><span class="st">&#39;relu&#39;</span>),</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    layers.Dropout(<span class="fl">0.2</span>),</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    layers.Dense(<span class="dv">10</span>, activation<span class="op">=</span><span class="st">&#39;softmax&#39;</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Compile model (defines loss, optimizer, and metrics for graph execution)</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">compile</span>(</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    optimizer<span class="op">=</span><span class="st">&#39;adam&#39;</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    loss<span class="op">=</span><span class="st">&#39;sparse_categorical_crossentropy&#39;</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    metrics<span class="op">=</span>[<span class="st">&#39;accuracy&#39;</span>]</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Training (TensorFlow runs compiled graphs under the hood)</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co"># dummy_x and dummy_y represent input data and target labels</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>dummy_x <span class="op">=</span> tf.random.uniform((<span class="dv">100</span>, <span class="dv">28</span>, <span class="dv">28</span>))</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>dummy_y <span class="op">=</span> tf.random.uniform((<span class="dv">100</span>,), minval<span class="op">=</span><span class="dv">0</span>, maxval<span class="op">=</span><span class="dv">10</span>, dtype<span class="op">=</span>tf.int32)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>model.fit(dummy_x, dummy_y, epochs<span class="op">=</span><span class="dv">5</span>, batch_size<span class="op">=</span><span class="dv">32</span>)</span></code></pre></div>
+<p>Through this architecture, TensorFlow allows developers to design
+models using high-level Keras abstractions while delegating performance
+optimization and hardware scaling to underlying tensor graphs.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

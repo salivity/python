@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Combine Iterables Using itertools.chain - python</title>
+    <meta name="description" content="The itertools.chain() function in Python provides an efficient way to treat multiple sequences as a single continuous iterable. Instead of concatenating data structures in memory using operators like + or unpacking syntax, itertools.chain() traverses eac">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-combine-iterables-using-itertools-chain">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Combine Iterables Using itertools.chain - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-combine-iterables-using-itertools-chain" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The itertools.chain() function in Python provides an efficient way to treat multiple sequences as a single continuous iterable. Instead of concatenating data structures in memory using operators like + or unpacking syntax, itertools.chain() traverses eac" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-combine-iterables-using-itertoolschain">How to Combine
+Iterables Using itertools.chain</h1>
+<p>The <code>itertools.chain()</code> function in Python provides an
+efficient way to treat multiple sequences as a single continuous
+iterable. Instead of concatenating data structures in memory using
+operators like <code>+</code> or unpacking syntax,
+<code>itertools.chain()</code> traverses each provided iterable
+sequentially and yields elements on demand. This article explains how
+<code>itertools.chain()</code> works under the hood, demonstrates its
+basic usage, highlights its memory benefits, and covers the alternative
+<code>chain.from_iterable()</code> method.</p>
+<h3 id="how-itertoolschain-works">How <code>itertools.chain()</code>
+Works</h3>
+<p>The <code>itertools.chain()</code> function accepts zero or more
+iterables as arguments (such as lists, tuples, sets, or generators) and
+returns an iterator.</p>
+<p>When iteration begins, <code>chain()</code> reads items from the
+first iterable until it is exhausted. It then automatically advances to
+the next iterable, continuing this process until all supplied iterables
+have been fully consumed.</p>
+<p>Because it operates as an iterator, elements are evaluated lazily. It
+does not construct an intermediate collection holding all combined
+items, which avoids the memory overhead of duplicating large
+datasets.</p>
+<h3 id="basic-syntax-and-example">Basic Syntax and Example</h3>
+<p>To use <code>chain()</code>, import it from the built-in
+<code>itertools</code> module and pass the iterables as positional
+arguments:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> itertools <span class="im">import</span> chain</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>list_a <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>]</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>tuple_b <span class="op">=</span> (<span class="st">&#39;a&#39;</span>, <span class="st">&#39;b&#39;</span>, <span class="st">&#39;c&#39;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>set_c <span class="op">=</span> {<span class="dv">10</span>, <span class="dv">20</span>}</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>combined <span class="op">=</span> chain(list_a, tuple_b, set_c)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> item <span class="kw">in</span> combined:</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(item, end<span class="op">=</span><span class="st">&#39; &#39;</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: 1 2 3 a b c 10 20</span></span></code></pre></div>
+<h3 id="memory-efficiency-vs-concatenation">Memory Efficiency vs.
+Concatenation</h3>
+<p>Combining collections using list addition
+(<code>list_a + list_b</code>) or unpacking
+(<code>[*list_a, *list_b]</code>) allocates new memory to store the
+merged result. For large collections, this can cause significant memory
+spikes.</p>
+<p>In contrast, <code>itertools.chain()</code> maintains references to
+the original iterables and yields elements one at a time. The memory
+footprint remains minimal and constant regardless of the number or size
+of the collections being combined.</p>
+<h3 id="using-chainfrom_iterable">Using
+<code>chain.from_iterable()</code></h3>
+<p>When your input is already structured as an iterable of iterables
+(such as a list of lists or a generator of streams), passing them
+directly into <code>chain()</code> requires unpacking
+(<code>chain(*nested_list)</code>), which forces Python to evaluate the
+outer collection into memory before passing it as arguments.</p>
+<p>To handle pre-nested iterables efficiently, use the class method
+<code>chain.from_iterable()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> itertools <span class="im">import</span> chain</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>nested_data <span class="op">=</span> [[<span class="dv">1</span>, <span class="dv">2</span>], [<span class="dv">3</span>, <span class="dv">4</span>], [<span class="dv">5</span>, <span class="dv">6</span>]]</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>flattened <span class="op">=</span> chain.from_iterable(nested_data)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">list</span>(flattened))</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: [1, 2, 3, 4, 5, 6]</span></span></code></pre></div>
+<p><code>chain.from_iterable()</code> lazily pulls each sub-iterable
+only when needed, making it suitable for flattening streams or
+generators of unknown or infinite length.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

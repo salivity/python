@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python __delattr__: Deleting Instance Attributes - python</title>
+    <meta name="description" content="In Python, the delattr method is a special hook that intercepts and customizes the deletion of an object's attributes. This article covers how delattr works under the hood, why you might override it in your custom classes, how to implement it safely with">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-delattr-deleting-instance-attributes">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python __delattr__: Deleting Instance Attributes - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-delattr-deleting-instance-attributes" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, the delattr method is a special hook that intercepts and customizes the deletion of an object's attributes. This article covers how delattr works under the hood, why you might override it in your custom classes, how to implement it safely with" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-delattr-deleting-instance-attributes">Python
+<strong>delattr</strong>: Deleting Instance Attributes</h1>
+<p>In Python, the <code>__delattr__</code> method is a special hook that
+intercepts and customizes the deletion of an object's attributes. This
+article covers how <code>__delattr__</code> works under the hood, why
+you might override it in your custom classes, how to implement it safely
+without causing infinite recursion, and the best practices for
+controlling attribute lifecycle in object-oriented Python
+programming.</p>
+<h2 id="what-is-__delattr__">What Is <code>__delattr__</code>?</h2>
+<p><code>__delattr__</code> is a built-in magic method invoked
+automatically whenever an attribute deletion is attempted on an
+instance. This typically happens through either the <code>del</code>
+keyword or the built-in <code>delattr()</code> function:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span> obj.attribute</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># or</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">delattr</span>(obj, <span class="st">&quot;attribute&quot;</span>)</span></code></pre></div>
+<p>Both operations translate internally to a call to
+<code>obj.__delattr__("attribute")</code>. By default, Python classes
+inherit this method from the base <code>object</code> class, which
+simply deletes the attribute from the instance's internal dictionary
+(<code>__dict__</code>) or raises an <code>AttributeError</code> if the
+attribute does not exist.</p>
+<h2 id="why-override-__delattr__">Why Override
+<code>__delattr__</code>?</h2>
+<p>Overriding <code>__delattr__</code> allows developers to intercept
+the deletion process to enforce business logic, enforce immutability, or
+perform cleanup operations. Common use cases include:</p>
+<ul>
+<li><strong>Preventing Attribute Deletion:</strong> Protecting critical
+configuration data or immutable attributes from being removed at
+runtime.</li>
+<li><strong>Logging and Auditing:</strong> Tracking when and where
+certain state changes or deletions occur.</li>
+<li><strong>Resource Cleanup:</strong> Closing file handles, terminating
+database connections, or freeing memory when an attribute reference is
+cleared.</li>
+<li><strong>Validation:</strong> Ensuring dependent attributes are
+updated or validated before a specific property is discarded.</li>
+</ul>
+<h2 id="how-to-implement-__delattr__-safely">How to Implement
+<code>__delattr__</code> Safely</h2>
+<p>When overriding <code>__delattr__</code>, you must define it to
+accept two parameters: <code>self</code> and <code>name</code> (the
+string representing the attribute to delete).</p>
+<p>To properly perform the deletion without creating an infinite
+recursion loop, you must delegate the actual deletion to the superclass
+using <code>super().__delattr__(name)</code>. Using
+<code>del self.name</code> inside <code>__delattr__</code> will call
+<code>__delattr__</code> again, resulting in a
+<code>RecursionError</code>.</p>
+<p>Here is an example demonstrating attribute protection and custom
+logging:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Account:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, account_id, balance):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.account_id <span class="op">=</span> account_id</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.balance <span class="op">=</span> balance</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__delattr__</span>(<span class="va">self</span>, name):</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Prevent deletion of critical attributes</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> name <span class="op">==</span> <span class="st">&quot;account_id&quot;</span>:</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">AttributeError</span>(<span class="st">&quot;Cannot delete the protected attribute: account_id&quot;</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Logging: Deleting attribute &#39;</span><span class="sc">{</span>name<span class="sc">}</span><span class="ss">&#39;&quot;</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Safely delegate the actual removal to object.__delattr__</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__delattr__</span>(name)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Usage</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>acc <span class="op">=</span> Account(<span class="st">&quot;ACC-12345&quot;</span>, <span class="fl">500.0</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Allowed deletion</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span> acc.balance  <span class="co"># Outputs: Logging: Deleting attribute &#39;balance&#39;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Blocked deletion</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="kw">del</span> acc.account_id</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">AttributeError</span> <span class="im">as</span> e:</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(e)  <span class="co"># Outputs: Cannot delete the protected attribute: account_id</span></span></code></pre></div>
+<h2 id="error-handling-and-best-practices">Error Handling and Best
+Practices</h2>
+<ol type="1">
+<li><strong>Always Raise <code>AttributeError</code>:</strong> If you
+wish to reject a deletion, raise an <code>AttributeError</code> rather
+than generic exceptions like <code>ValueError</code> or
+<code>Exception</code> to adhere to standard Python conventions.</li>
+<li><strong>Handle Missing Attributes Gracefully:</strong> By delegating
+unrecognized or missing attributes to
+<code>super().__delattr__(name)</code>, Python automatically raises an
+<code>AttributeError</code> when an attribute does not exist,
+maintaining standard behavior.</li>
+<li><strong>Be Cautious with Slots:</strong> If your class uses
+<code>__slots__</code>, <code>__delattr__</code> still intercepts
+attribute removal, but the underlying deletion is handled by descriptor
+mechanisms instead of modifying <code>__dict__</code>. Relying on
+<code>super().__delattr__(name)</code> ensures compatibility regardless
+of whether <code>__slots__</code> is implemented.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

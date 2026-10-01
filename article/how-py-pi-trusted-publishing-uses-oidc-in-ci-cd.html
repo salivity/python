@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How PyPI Trusted Publishing Uses OIDC in CI/CD - python</title>
+    <meta name="description" content="Trusted Publishing on the Python Package Index (PyPI) utilizes OpenID Connect (OIDC) to establish a cryptographic trust relationship between PyPI and continuous integration (CI/CD) providers like GitHub Actions, GitLab CI, and Google Cloud. This article">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-py-pi-trusted-publishing-uses-oidc-in-ci-cd">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How PyPI Trusted Publishing Uses OIDC in CI/CD - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-py-pi-trusted-publishing-uses-oidc-in-ci-cd" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Trusted Publishing on the Python Package Index (PyPI) utilizes OpenID Connect (OIDC) to establish a cryptographic trust relationship between PyPI and continuous integration (CI/CD) providers like GitHub Actions, GitLab CI, and Google Cloud. This article" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-pypi-trusted-publishing-uses-oidc-in-cicd">How PyPI Trusted
+Publishing Uses OIDC in CI/CD</h1>
+<p>Trusted Publishing on the Python Package Index (PyPI) utilizes OpenID
+Connect (OIDC) to establish a cryptographic trust relationship between
+PyPI and continuous integration (CI/CD) providers like GitHub Actions,
+GitLab CI, and Google Cloud. This article examines how this mechanism
+functions, why it replaces static credentials, and the architectural
+process of exchanging temporary cryptographic identity proofs for
+short-lived package upload privileges.</p>
+<h3 id="the-problem-with-traditional-api-tokens">The Problem with
+Traditional API Tokens</h3>
+<p>Historically, publishing a Python wheel or source distribution
+required developers to generate a long-lived PyPI API token and store it
+as a secret inside their CI/CD platform (such as repository secrets in
+GitHub). This approach introduced significant supply chain
+vulnerabilities:</p>
+<ul>
+<li><strong>Credential Leakage:</strong> Static secrets can accidentally
+be printed to build logs, leaked through compromised build environments,
+or extracted by malicious third-party dependencies during the build
+phase.</li>
+<li><strong>Lack of Expiration:</strong> Long-lived tokens often remain
+valid indefinitely, making forgotten or abandoned credentials permanent
+attack vectors.</li>
+<li><strong>Management Overhead:</strong> Organizations had to manually
+rotate, track, and audit secrets across multiple repositories and
+environments.</li>
+</ul>
+<h3 id="the-architecture-of-oidc-based-trusted-publishing">The
+Architecture of OIDC-Based Trusted Publishing</h3>
+<p>Trusted Publishing eliminates the need to store secrets in your CI/CD
+platform entirely. Instead, it relies on OpenID Connect (OIDC), an
+identity layer built on top of the OAuth 2.0 framework.</p>
+<p>The publishing process follows a deterministic exchange:</p>
+<ol type="1">
+<li><strong>Trust Configuration:</strong> The package maintainer
+configures a "Trusted Publisher" directly inside their PyPI account or
+organization settings. This defines trusted parameters, including the
+CI/CD provider (e.g., GitHub), the repository owner and name, the
+workflow filename, and optional constraints such as specific branches or
+tags.</li>
+<li><strong>Identity Token Generation:</strong> When a build runs, the
+CI runner requests a signed JSON Web Token (JWT) from its platform's
+internal OIDC token service. This token contains structured claims about
+the job execution, such as <code>repository</code>,
+<code>workflow</code>, <code>ref</code>, and <code>actor</code>.</li>
+<li><strong>Token Exchange:</strong> The build step (for example, the
+official <code>pypa/gh-action-pypi-publish</code> action) sends this
+unsigned identity token to the PyPI token exchange endpoint
+(<code>https://pypi.org/_/oidc/mint-token</code>).</li>
+<li><strong>Claim Verification:</strong> PyPI fetches the CI provider's
+public keys via its OpenID Connect discovery document and verifies the
+cryptographic signature on the JWT. PyPI then checks the token's claims
+against the pre-configured parameters saved for that project.</li>
+<li><strong>Ephemeral Credential Issuance:</strong> Once verified, PyPI
+mints an ephemeral, highly restricted API token. This token is scoped
+exclusively to the specific package and expires automatically within
+minutes (typically 15 minutes).</li>
+<li><strong>Artifact Upload:</strong> The CI runner uses this
+short-lived token to authenticate the upload of artifacts via standard
+PyPI APIs before the token expires.</li>
+</ol>
+<h3 id="security-and-operational-benefits">Security and Operational
+Benefits</h3>
+<p>By shifting from stored secrets to ephemeral claims-based
+authentication, Trusted Publishing improves supply chain security:</p>
+<ul>
+<li><strong>Zero Secret Storage:</strong> Maintainers no longer need to
+copy, paste, or manage static credentials in repository settings.
+Compromised build environments yield no permanent secrets.</li>
+<li><strong>Granular Scoping:</strong> Tokens are valid strictly for the
+intended repository, branch, and package, preventing privilege
+escalation.</li>
+<li><strong>Provable Provenance:</strong> Because PyPI verifies the
+exact build identity directly with the provider, releases can be
+verified as originating exclusively from the designated CI/CD pipeline,
+laying the groundwork for verifiable software supply chain attestation
+(SLSA).</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

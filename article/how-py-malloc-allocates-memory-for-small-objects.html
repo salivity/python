@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How PyMalloc Allocates Memory for Small Objects - python</title>
+    <meta name="description" content="This article explores PyMalloc, CPython's specialized memory allocator designed to handle small object allocations efficiently. Standard system allocators incur significant performance overhead and memory fragmentation when handling the frequent, short-l">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-py-malloc-allocates-memory-for-small-objects">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How PyMalloc Allocates Memory for Small Objects - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-py-malloc-allocates-memory-for-small-objects" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores PyMalloc, CPython's specialized memory allocator designed to handle small object allocations efficiently. Standard system allocators incur significant performance overhead and memory fragmentation when handling the frequent, short-l" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-pymalloc-allocates-memory-for-small-objects">How PyMalloc
+Allocates Memory for Small Objects</h1>
+<p>This article explores PyMalloc, CPython's specialized memory
+allocator designed to handle small object allocations efficiently.
+Standard system allocators incur significant performance overhead and
+memory fragmentation when handling the frequent, short-lived, small
+allocations typical in Python programs. PyMalloc solves this by
+introducing a tiered memory hierarchy consisting of arenas, pools, and
+blocks, which caches memory requests for objects 512 bytes or smaller to
+maximize speed and minimize system call overhead.</p>
+<h2 id="the-small-object-problem-in-cpython">The Small Object Problem in
+CPython</h2>
+<p>Everything in Python is an object, from simple integers and
+floating-point numbers to short strings and tuples. A typical Python
+runtime creates and destroys millions of these small data structures. If
+CPython relied solely on standard C library allocators
+(<code>malloc</code> and <code>free</code>) for every single object, two
+main issues would arise:</p>
+<ol type="1">
+<li><strong>System Call and Bookkeeping Overhead:</strong> Standard
+allocators store metadata (such as allocation size) adjacent to every
+allocated block, often adding 8 to 16 bytes of overhead per object. For
+an 8-byte integer, doubling or tripling the memory footprint for
+metadata is highly inefficient.</li>
+<li><strong>Memory Fragmentation:</strong> Constant allocation and
+deallocation of varied tiny sizes leads to external fragmentation,
+leaving the operating system unable to allocate contiguous blocks
+despite having sufficient total free memory.</li>
+</ol>
+<h2 id="the-three-tier-architecture-arenas-pools-and-blocks">The
+Three-Tier Architecture: Arenas, Pools, and Blocks</h2>
+<p>PyMalloc avoids general-purpose allocation overhead by pre-allocating
+large chunks of system memory and slicing them into uniform partitions.
+It manages this through three distinct abstractions:</p>
+<h3 id="1-blocks">1. Blocks</h3>
+<p>A block is the smallest unit of memory returned to an application
+requesting space. PyMalloc restricts its operations to objects up to 512
+bytes (in 64-bit systems). Blocks are grouped into fixed-size classes
+spaced 8 bytes apart: 8 bytes, 16 bytes, 24 bytes, up to 512 bytes
+(providing 64 distinct size classes). When Python requests memory for an
+object, PyMalloc rounds the request up to the nearest size class and
+assigns an appropriately sized block.</p>
+<h3 id="2-pools">2. Pools</h3>
+<p>A pool is a 4 KB block of memory—typically matching the system's
+virtual memory page size. Each pool is dedicated exclusively to a single
+size class. For instance, one pool may only manage 32-byte blocks, while
+another exclusively manages 64-byte blocks.</p>
+<p>Key pool optimizations include:</p>
+<ul>
+<li><strong>Embedded Free Lists:</strong> Pools track free blocks using
+a singly linked list embedded directly within the unused blocks
+themselves, eliminating extra memory tracking structures.</li>
+<li><strong>Pool States:</strong> A pool is categorized as
+<em>empty</em>, <em>used</em>, or <em>full</em>. Pools of the same size
+class with the <em>used</em> state are linked together in a doubly
+linked list. When an allocation request arrives, PyMalloc immediately
+grabs the first available block from the head pool in that size class's
+list in <span class="math inline">\(O(1)\)</span> time.</li>
+</ul>
+<h3 id="3-arenas">3. Arenas</h3>
+<p>An arena is a 256 KB memory chunk allocated directly from the system
+heap using <code>malloc</code> (or <code>mmap</code>). An arena acts as
+a container for 64 pools (each 4 KB). Arenas provide the boundary
+between Python's custom allocator and the host operating system. When
+all pools within an arena become completely empty, the entire 256 KB
+arena can be returned to the operating system, mitigating long-term
+memory bloat.</p>
+<h2 id="how-allocations-and-deallocations-work">How Allocations and
+Deallocations Work</h2>
+<p>When an object requires memory:</p>
+<ol type="1">
+<li><strong>Size Check:</strong> If the requested allocation is greater
+than 512 bytes, PyMalloc delegates the request directly to the standard
+system allocator (<code>malloc</code>).</li>
+<li><strong>Pool Selection:</strong> For allocations <span
+class="math inline">\(\le\)</span> 512 bytes, the size is mapped to its
+corresponding size class index. PyMalloc checks the linked list of used
+pools for that class.</li>
+<li><strong>Block Extraction:</strong> PyMalloc retrieves a free block
+from the active pool's free list in constant time (<span
+class="math inline">\(O(1)\)</span>) and marks the block as occupied. If
+the pool becomes full, it is removed from the active list. If no used
+pool exists, an empty pool within an arena is initialized for that size
+class.</li>
+</ol>
+<p>When an object is destroyed:</p>
+<ol type="1">
+<li>PyMalloc identifies which pool the block belongs to using bitmask
+operations on the memory address, avoiding lookups in global hash
+tables.</li>
+<li>The block is added back to the pool's free list in <span
+class="math inline">\(O(1)\)</span> time.</li>
+<li>If the pool was previously marked as full, it is moved back into the
+active used list for its size class.</li>
+<li>If freeing the block leaves the entire pool empty, the pool is made
+available to be repurposed for any size class within its arena.</li>
+</ol>
+<p>By bypassing kernel-level memory management for small structures,
+enforcing uniform block sizes, and handling allocation logic via
+lightweight linked lists, PyMalloc minimizes metadata overhead, prevents
+fragmentation, and maintains predictable, constant-time performance for
+Python's memory operations.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

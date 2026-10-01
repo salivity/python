@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Garbage Collection and Circular References - python</title>
+    <meta name="description" content="Python manages memory and tracks object lifetimes primarily through reference counting, supplemented by a generational cyclic garbage collector. While reference counting immediately frees objects whose reference counters fall to zero, it cannot resolve c">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-garbage-collection-and-circular-references">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Garbage Collection and Circular References - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-garbage-collection-and-circular-references" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python manages memory and tracks object lifetimes primarily through reference counting, supplemented by a generational cyclic garbage collector. While reference counting immediately frees objects whose reference counters fall to zero, it cannot resolve c" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-garbage-collection-and-circular-references">Python
+Garbage Collection and Circular References</h1>
+<p>Python manages memory and tracks object lifetimes primarily through
+reference counting, supplemented by a generational cyclic garbage
+collector. While reference counting immediately frees objects whose
+reference counters fall to zero, it cannot resolve circular references
+on its own. To prevent memory leaks caused by isolated reference cycles,
+CPython utilizes an auxiliary garbage collection algorithm that tracks
+container objects across three generations, isolates unreachable groups
+by simulating reference decrements, and frees cyclical memory
+structures.</p>
+<h3 id="tracking-object-lifetimes-reference-counting">Tracking Object
+Lifetimes: Reference Counting</h3>
+<p>At the core of CPython's memory management is reference counting.
+Every Python object contains a base structure (<code>PyObject</code>)
+that includes an internal field called <code>ob_refcnt</code>.</p>
+<ul>
+<li><strong>Increments:</strong> When an object is instantiated,
+assigned to a variable, passed to a function, or appended to a
+container, its <code>ob_refcnt</code> increases by one.</li>
+<li><strong>Decrements:</strong> When a variable goes out of scope, is
+reassigned, or explicitly deleted with <code>del</code>, its
+<code>ob_refcnt</code> decreases by one.</li>
+<li><strong>Immediate Deallocation:</strong> As soon as an object's
+reference counter hits zero, its memory is instantly freed, along with
+any resources it holds.</li>
+</ul>
+<p>While deterministic and efficient for the vast majority of
+operations, reference counting fails when two or more objects reference
+each other, creating an isolated cycle.</p>
+<h3 id="the-problem-of-circular-references">The Problem of Circular
+References</h3>
+<p>A circular reference occurs when objects directly or indirectly hold
+references to one another. For example, if object A references object B,
+and object B references object A, both maintain a reference count of at
+least one. If all outside references to A and B are deleted, both
+objects become inaccessible to the running program, but their reference
+counts never drop to zero. As a result, standard reference counting
+cannot reclaim their memory.</p>
+<h3 id="detecting-cyclic-references">Detecting Cyclic References</h3>
+<p>To resolve reference cycles, Python runs an active cyclic garbage
+collection algorithm designed specifically to inspect container
+objects—such as lists, dictionaries, sets, tuples, and custom class
+instances. Atomic types like integers, strings, and floats cannot hold
+references to other objects and are therefore ignored by this
+system.</p>
+<p>Python tracks container objects by linking them together into doubly
+linked lists. When a garbage collection run begins, the detector
+performs the following steps:</p>
+<ol type="1">
+<li><strong>Copying Reference Counts:</strong> The collector copies each
+container's reference count into a dedicated internal field
+(<code>gc_refs</code>).</li>
+<li><strong>Subtracting Internal References:</strong> The collector
+iterates through the tracked container objects and inspects every object
+they point to. For each internal reference found within the tracked set,
+the collector decrements the target object's <code>gc_refs</code>.</li>
+<li><strong>Isolating Cycles:</strong> After all internal links are
+accounted for, objects with <code>gc_refs &gt; 0</code> are deemed
+reachable from outside the isolated set (such as from global variables
+or the active execution stack).</li>
+<li><strong>Rescuing Reachable Chains:</strong> Any object marked as
+reachable also marks all objects it points to as reachable, propagating
+until no more reachable objects can be found.</li>
+<li><strong>Reclaiming Garbage:</strong> Any remaining objects that
+still have a <code>gc_refs</code> of zero are confirmed to be members of
+an isolated, unreachable reference cycle. The collector clears their
+references, drops their true reference counts to zero, and triggers
+deallocation.</li>
+</ol>
+<h3 id="generational-garbage-collection">Generational Garbage
+Collection</h3>
+<p>Scanning every container object on every garbage collection pass
+would cause severe performance bottlenecks. Python optimizes this
+process using the weak generational hypothesis: most allocated objects
+have short lifespans and die shortly after creation.</p>
+<p>The cyclic garbage collector organizes tracked containers into three
+generations:</p>
+<ul>
+<li><strong>Generation 0:</strong> Newly created container objects are
+placed here. This generation is inspected frequently.</li>
+<li><strong>Generation 1:</strong> Objects that survive a Generation 0
+collection are promoted to Generation 1, which is scanned less
+often.</li>
+<li><strong>Generation 2:</strong> Objects that survive a Generation 1
+collection are promoted to Generation 2, representing long-lived objects
+(such as modules and long-running services). This generation is scanned
+the least frequently.</li>
+</ul>
+<h3 id="collection-triggers-and-thresholds">Collection Triggers and
+Thresholds</h3>
+<p>The garbage collector triggers scans based on allocation thresholds
+rather than fixed time intervals. CPython tracks the net difference
+between allocations and deallocations.</p>
+<p>When the net allocations in Generation 0 exceed a predefined
+threshold (by default, 700 net allocations), a Generation 0 collection
+is triggered. Each time Generation 0 is collected, a counter for
+Generation 1 increments. When that counter exceeds its threshold
+(defaulting to 10), Generation 0 and Generation 1 are collected
+together. Similarly, after Generation 1 is collected a set number of
+times (defaulting to 10), a full collection runs across all three
+generations.</p>
+<p>By confining cyclic detection sweeps primarily to young objects,
+Python maintains minimal execution overhead while continuously
+preventing circular references from exhausting system memory.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

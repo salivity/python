@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why os.scandir Is Faster Than os.listdir in Python - python</title>
+    <meta name="description" content="Python's os.scandir() outperforms os.listdir() during filesystem traversals by significantly reducing the number of expensive system calls required to inspect directory contents. While os.listdir() returns a simple list of filename strings, requiring add">
+    <link rel="canonical" href="https://salivity.github.io/python/article/why-os-scandir-is-faster-than-os-listdir-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Why os.scandir Is Faster Than os.listdir in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/why-os-scandir-is-faster-than-os-listdir-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's os.scandir() outperforms os.listdir() during filesystem traversals by significantly reducing the number of expensive system calls required to inspect directory contents. While os.listdir() returns a simple list of filename strings, requiring add" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="why-osscandir-is-faster-than-oslistdir-in-python">Why os.scandir
+Is Faster Than os.listdir in Python</h1>
+<p>Python's <code>os.scandir()</code> outperforms
+<code>os.listdir()</code> during filesystem traversals by significantly
+reducing the number of expensive system calls required to inspect
+directory contents. While <code>os.listdir()</code> returns a simple
+list of filename strings, requiring additional system calls to determine
+whether an item is a file, directory, or symlink,
+<code>os.scandir()</code> yields an iterator of <code>os.DirEntry</code>
+objects. These objects capture and expose the file attribute metadata
+that modern operating systems already retrieve while reading directory
+structures, eliminating the need for subsequent stat operations and
+drastically accelerating traversal speeds.</p>
+<h3 id="the-system-call-bottleneck-in-oslistdir">The System Call
+Bottleneck in <code>os.listdir()</code></h3>
+<p>When you use <code>os.listdir()</code>, Python requests only the
+names of the entries within a directory. If your code needs to do
+anything useful with those entries—such as filtering directories,
+finding file sizes, or modifying file permissions—you must invoke
+functions like <code>os.path.isdir()</code>,
+<code>os.path.isfile()</code>, or <code>os.stat()</code>.</p>
+<p>Every time one of these functions is called on a path string, the
+operating system must execute a separate <code>stat</code> system call
+(<code>stat()</code> or <code>lstat()</code> on POSIX systems, and
+<code>GetFileAttributesEx()</code> on Windows). In a directory
+containing 10,000 files, checking whether each item is a directory
+requires:</p>
+<ol type="1">
+<li>One system call to read the directory via
+<code>os.listdir()</code>.</li>
+<li>10,000 independent <code>stat</code> system calls to inspect each
+file.</li>
+</ol>
+<p>These redundant kernel context switches create massive I/O overhead,
+particularly across network filesystems (NFS, SMB) and spinning hard
+disks, leading to slow traversal times.</p>
+<h3 id="how-osscandir-optimizes-metadata-retrieval">How
+<code>os.scandir()</code> Optimizes Metadata Retrieval</h3>
+<p>Introduced via PEP 471, <code>os.scandir()</code> interacts directly
+with the operating system’s underlying directory-reading APIs:</p>
+<ul>
+<li><strong>POSIX:</strong> Functions like <code>readdir()</code> return
+a <code>dirent</code> structure that often includes a
+<code>d_type</code> field containing the file type.</li>
+<li><strong>Windows:</strong> The <code>FindFirstFileW</code> and
+<code>FindNextFileW</code> system APIs return a
+<code>WIN32_FIND_DATA</code> structure, which includes the file's
+attributes, size, and timestamp data alongside the file's name.</li>
+</ul>
+<p><code>os.scandir()</code> wraps these low-level calls and
+encapsulates the returned data inside <code>os.DirEntry</code> objects.
+Because the operating system supplies this metadata during the initial
+directory read, Python does not need to issue subsequent system calls to
+determine whether an entry is a file, directory, or symlink.</p>
+<h3 id="attribute-caching-with-osdirentry">Attribute Caching with
+<code>os.DirEntry</code></h3>
+<p>An <code>os.DirEntry</code> object exposes methods such as
+<code>is_dir()</code>, <code>is_file()</code>,
+<code>is_symlink()</code>, and <code>stat()</code>.</p>
+<p>When you call <code>entry.is_dir()</code> or
+<code>entry.is_file()</code>:</p>
+<ol type="1">
+<li>Python checks the cached file type already retrieved from the
+underlying OS directory read.</li>
+<li>If the operating system provided the file type (which is standard on
+Windows and modern POSIX filesystems like ext4, Btrfs, and APFS), the
+method returns immediately without a system call.</li>
+<li>On Windows, <code>entry.stat()</code> uses the cached
+<code>WIN32_FIND_DATA</code> attributes, meaning retrieving file size or
+modification time also avoids an extra system call.</li>
+<li>If a system call is ever necessary (e.g., following a symlink or on
+a rare POSIX filesystem that does not populate <code>d_type</code>), the
+result is cached within the <code>os.DirEntry</code> instance for
+subsequent lookups.</li>
+</ol>
+<h3 id="memory-and-streaming-efficiency">Memory and Streaming
+Efficiency</h3>
+<p>In addition to avoiding system calls, <code>os.scandir()</code>
+returns an iterator rather than pre-allocating a complete list in
+memory. For directories containing millions of files,
+<code>os.listdir()</code> must allocate memory for the entire list of
+strings before your program can process the first item.
+<code>os.scandir()</code> streams <code>os.DirEntry</code> objects on
+demand, decreasing memory usage and allowing programs to begin
+processing files immediately.</p>
+<p>Because of these low-level advantages, directory traversal with
+<code>os.scandir()</code> is typically 2 to 3 times faster on POSIX
+systems and 8 to 20 times faster on Windows systems compared to
+traditional <code>os.listdir()</code> and <code>os.stat()</code>
+workflows.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

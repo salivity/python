@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding asyncio.iscoroutine in Python - python</title>
+    <meta name="description" content="The asyncio.iscoroutine() function is a runtime introspection tool in Python used to determine whether a specific object is an active coroutine object. As asynchronous applications grow in complexity, functions and event loops often receive values dynami">
+    <link rel="canonical" href="https://salivity.github.io/python/article/understanding-asyncio-iscoroutine-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding asyncio.iscoroutine in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/understanding-asyncio-iscoroutine-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The asyncio.iscoroutine() function is a runtime introspection tool in Python used to determine whether a specific object is an active coroutine object. As asynchronous applications grow in complexity, functions and event loops often receive values dynami" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-asyncioiscoroutine-in-python">Understanding
+asyncio.iscoroutine in Python</h1>
+<p>The <code>asyncio.iscoroutine()</code> function is a runtime
+introspection tool in Python used to determine whether a specific object
+is an active coroutine object. As asynchronous applications grow in
+complexity, functions and event loops often receive values dynamically,
+ranging from standard synchronous types to awaiting coroutines. This
+article explains the core purpose of <code>asyncio.iscoroutine()</code>,
+distinguishes it from related inspection helpers, and demonstrates how
+it prevents execution errors during runtime verification.</p>
+<h3 id="core-purpose-of-asyncioiscoroutine">Core Purpose of
+<code>asyncio.iscoroutine()</code></h3>
+<p>The primary purpose of <code>asyncio.iscoroutine(obj)</code> is to
+verify whether an object is a coroutine object—an instance produced by
+invoking an <code>async def</code> function or an object decorated with
+<code>@types.coroutine</code>.</p>
+<p>In asynchronous Python, calling an <code>async def</code> function
+does not immediately execute its body. Instead, it returns a coroutine
+object that encapsulates the suspended execution state.
+<code>asyncio.iscoroutine()</code> evaluates this returned object at
+runtime, returning <code>True</code> if it is an instantiated coroutine
+and <code>False</code> for anything else, including regular primitives,
+generators, and even the uncalled coroutine function itself.</p>
+<h3 id="coroutine-object-vs-coroutine-function">Coroutine Object vs.
+Coroutine Function</h3>
+<p>A frequent source of bugs in asynchronous programming is confusing a
+coroutine function (the definition) with a coroutine object (the
+instance). Python provides distinct utilities for both:</p>
+<ul>
+<li><strong><code>asyncio.iscoroutinefunction(func)</code></strong>:
+Evaluates whether <code>func</code> is the callable declaration defined
+with <code>async def</code>.</li>
+<li><strong><code>asyncio.iscoroutine(obj)</code></strong>: Evaluates
+whether <code>obj</code> is the result of invoking an
+<code>async def</code> function.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> sample_task():</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;completed&quot;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Checking the function itself</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(asyncio.iscoroutine(sample_task))          <span class="co"># False</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(asyncio.iscoroutinefunction(sample_task))  <span class="co"># True</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Checking the invocation result (the coroutine object)</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>coro_obj <span class="op">=</span> sample_task()</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(asyncio.iscoroutine(coro_obj))          <span class="co"># True</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(asyncio.iscoroutinefunction(coro_obj))  <span class="co"># False</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Clean up coroutine object</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>asyncio.run(coro_obj)</span></code></pre></div>
+<h3 id="key-use-cases-in-runtime-verification">Key Use Cases in Runtime
+Verification</h3>
+<h4 id="1-building-dual-syncasync-apis">1. Building Dual Sync/Async
+APIs</h4>
+<p>Libraries and frameworks frequently accept callbacks from users that
+may be either synchronous functions or asynchronous coroutine functions.
+When an un-awaited callable is invoked, runtime code must inspect the
+returned value. If <code>asyncio.iscoroutine(result)</code> evaluates to
+<code>True</code>, the framework knows it must schedule or
+<code>await</code> the object; otherwise, it can process the returned
+data immediately.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> execute_handler(handler):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> handler()</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> asyncio.iscoroutine(result):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="cf">await</span> result</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> result</span></code></pre></div>
+<h4 id="2-dynamic-task-scheduling">2. Dynamic Task Scheduling</h4>
+<p>When orchestrating tasks dynamically, an application might pass
+execution objects across queues, pipelines, or thread boundaries.
+<code>asyncio.iscoroutine()</code> ensures that an object placed into an
+event loop pipeline is genuinely awaitable as a native coroutine before
+passing it to operations like <code>asyncio.create_task()</code> or
+<code>asyncio.gather()</code>.</p>
+<h4 id="3-preventing-unawaited-coroutine-leaks">3. Preventing Unawaited
+Coroutine Leaks</h4>
+<p>Failing to await a coroutine object results in a runtime
+<code>RuntimeWarning: coroutine '...' was never awaited</code>, and the
+intended logic never executes. Using <code>asyncio.iscoroutine()</code>
+as an assertion or validation check ensures that execution objects are
+not discarded unintentionally or stored where normal data was
+expected.</p>
+<h3 id="summary">Summary</h3>
+<p><code>asyncio.iscoroutine()</code> serves as a defensive programming
+mechanism in Python's asynchronous ecosystem. By validating instantiated
+coroutine objects at runtime, it enables flexible callback handling,
+ensures safe task scheduling, and guards against unawaited execution
+bugs.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python multiprocessing.set_start_method Explained - python</title>
+    <meta name="description" content="Python's multiprocessing.setstartmethod() function allows developers to configure how the operating system creates and initializes child processes. This article explains the three primary start methods—spawn, fork, and forkserver—examining how they f">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-multiprocessing-set-start-method-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python multiprocessing.set_start_method Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-multiprocessing-set-start-method-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's multiprocessing.setstartmethod() function allows developers to configure how the operating system creates and initializes child processes. This article explains the three primary start methods—spawn, fork, and forkserver—examining how they f" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-multiprocessingset_start_method-explained">Python
+multiprocessing.set_start_method Explained</h1>
+<p>Python's <code>multiprocessing.set_start_method()</code> function
+allows developers to configure how the operating system creates and
+initializes child processes. This article explains the three primary
+start methods—<code>spawn</code>, <code>fork</code>, and
+<code>forkserver</code>—examining how they function across Windows,
+macOS, and Linux, and detailing the correct syntax, platform defaults,
+and safety considerations required to avoid deadlocks and execution
+errors.</p>
+<hr />
+<h3 id="what-does-set_start_method-do">What Does
+<code>set_start_method()</code> Do?</h3>
+<p>When creating concurrent processes in Python, the operating system
+must allocate memory, duplicate or initialize the Python interpreter,
+and load necessary application code. The
+<code>multiprocessing.set_start_method(method, force=False)</code>
+function determines the underlying operating system mechanism used to
+spawn these worker processes.</p>
+<p>The function takes two parameters:</p>
+<ul>
+<li><code>method</code>: A string specifying the start method
+(<code>'spawn'</code>, <code>'fork'</code>, or
+<code>'forkserver'</code>).</li>
+<li><code>force</code>: A boolean flag. If <code>False</code> (default),
+calling the function more than once raises a <code>RuntimeError</code>.
+If <code>True</code>, the start method is overridden.</li>
+</ul>
+<p>Because the start method sets global configuration for the process
+runtime, it should be called at most once, early in execution, inside
+the <code>if __name__ == '__main__':</code> block.</p>
+<hr />
+<h3 id="the-three-process-initialization-strategies">The Three Process
+Initialization Strategies</h3>
+<h4 id="1-spawn">1. <code>spawn</code></h4>
+<p>With <code>spawn</code>, the parent process starts a completely fresh
+Python interpreter process.</p>
+<ul>
+<li><strong>Mechanism:</strong> The child process only inherits the
+resources necessary to run the target worker's <code>run()</code>
+method. Unnecessary file descriptors and handles from the parent are not
+inherited. The module code is freshly imported by the child.</li>
+<li><strong>Performance:</strong> Slower than <code>fork</code> because
+it boots a new interpreter and re-executes imports.</li>
+<li><strong>Safety:</strong> High. It eliminates memory corruption and
+deadlocks caused by inherited thread states.</li>
+<li><strong>Platform Availability:</strong> Windows, macOS, and
+Linux.</li>
+</ul>
+<h4 id="2-fork">2. <code>fork</code></h4>
+<p>With <code>fork</code>, the operating system uses the standard POSIX
+<code>fork()</code> system call to duplicate the parent process.</p>
+<ul>
+<li><strong>Mechanism:</strong> The child process is an exact memory
+clone of the parent at the moment of creation, using Copy-on-Write
+(CoW). No re-importing of modules occurs.</li>
+<li><strong>Performance:</strong> Very fast, as no new interpreter
+initialization is required.</li>
+<li><strong>Safety:</strong> Low in multi-threaded programs.
+<code>fork()</code> copies the entire process state but only copies the
+calling thread into the child. If another thread in the parent held a
+mutex or lock during the fork, that lock remains permanently locked in
+the child process, frequently causing silent deadlocks.</li>
+<li><strong>Platform Availability:</strong> Linux and Unix-like
+platforms. Not available on Windows.</li>
+</ul>
+<h4 id="3-forkserver">3. <code>forkserver</code></h4>
+<p>With <code>forkserver</code>, a dedicated server process is started
+alongside the main application.</p>
+<ul>
+<li><strong>Mechanism:</strong> Whenever a new process is requested, the
+parent connects to the fork server and requests a fork. Because the fork
+server is strictly single-threaded, invoking <code>os.fork()</code> from
+it does not inherit hazardous thread states or open locks.</li>
+<li><strong>Performance:</strong> Slower than a direct
+<code>fork</code>, but substantially faster than
+<code>spawn</code>.</li>
+<li><strong>Safety:</strong> High. Avoids the threading hazards
+associated with raw <code>fork</code>.</li>
+<li><strong>Platform Availability:</strong> Unix platforms that support
+passing file descriptors over Unix pipes.</li>
+</ul>
+<hr />
+<h3 id="cross-platform-defaults-and-behavior">Cross-Platform Defaults
+and Behavior</h3>
+<p>Different operating systems handle process creation differently,
+which determines their supported and default start methods:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Platform</th>
+<th style="text-align: left;">Default Start Method</th>
+<th style="text-align: left;">Supported Methods</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Windows</strong></td>
+<td style="text-align: left;"><code>spawn</code></td>
+<td style="text-align: left;"><code>spawn</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>macOS</strong></td>
+<td style="text-align: left;"><code>spawn</code> (since Python 3.8)</td>
+<td style="text-align: left;"><code>spawn</code>,
+<code>forkserver</code>, <code>fork</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Linux / POSIX</strong></td>
+<td style="text-align: left;"><code>fork</code></td>
+<td style="text-align: left;"><code>fork</code>, <code>spawn</code>,
+<code>forkserver</code></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Windows:</strong> The Windows kernel does not have a native
+<code>fork()</code> system call. Therefore, <code>spawn</code> is the
+only supported strategy.</li>
+<li><strong>macOS:</strong> Historically, macOS defaulted to
+<code>fork</code>. However, Apple's system libraries (such as
+CoreFoundation and Objective-C runtimes) are explicitly fork-unsafe
+without an immediate <code>exec()</code>, causing frequent crashes.
+Starting in Python 3.8, macOS defaulted to <code>spawn</code>.</li>
+<li><strong>Linux:</strong> Defaults to <code>fork</code> for
+performance and historical compatibility. However, applications
+utilizing third-party C-extensions, thread pools, or graphics drivers
+(like CUDA) often encounter race conditions with <code>fork</code>,
+making explicit use of <code>spawn</code> or <code>forkserver</code>
+recommended.</li>
+</ul>
+<hr />
+<h3 id="usage-example-and-best-practices">Usage Example and Best
+Practices</h3>
+<p>To configure the start method safely across all environments, wrap
+the setup code inside the standard entry point check:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> multiprocessing</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> worker_task(value):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Task executed with value: </span><span class="sc">{</span>value<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&#39;__main__&#39;</span>:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Set the initialization strategy</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    multiprocessing.set_start_method(<span class="st">&#39;spawn&#39;</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    process <span class="op">=</span> multiprocessing.Process(target<span class="op">=</span>worker_task, args<span class="op">=</span>(<span class="dv">42</span>,))</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    process.start()</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    process.join()</span></code></pre></div>
+<h4 id="key-considerations">Key Considerations</h4>
+<ol type="1">
+<li><strong>Protect the Entry Point:</strong> When using
+<code>spawn</code> or <code>forkserver</code>, the child process imports
+the main module to access the target function. Without the
+<code>if __name__ == '__main__':</code> guard, importing the module
+triggers an infinite loop of process creation.</li>
+<li><strong>Context Isolation:</strong> If an application requires
+different start methods for different tasks, avoid changing the global
+state with <code>set_start_method()</code>. Instead, use
+<code>multiprocessing.get_context('spawn')</code> or
+<code>multiprocessing.get_context('forkserver')</code> to create
+isolated context objects with specific creation strategies.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

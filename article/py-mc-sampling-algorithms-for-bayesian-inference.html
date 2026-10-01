@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyMC Sampling Algorithms for Bayesian Inference - python</title>
+    <meta name="description" content="PyMC is a leading Python library for probabilistic programming and Bayesian statistical modeling that provides an array of sampling algorithms to approximate complex posterior distributions. For continuous parameters, it predominantly uses gradient-based">
+    <link rel="canonical" href="https://salivity.github.io/python/article/py-mc-sampling-algorithms-for-bayesian-inference">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PyMC Sampling Algorithms for Bayesian Inference - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/py-mc-sampling-algorithms-for-bayesian-inference" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="PyMC is a leading Python library for probabilistic programming and Bayesian statistical modeling that provides an array of sampling algorithms to approximate complex posterior distributions. For continuous parameters, it predominantly uses gradient-based" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pymc-sampling-algorithms-for-bayesian-inference">PyMC Sampling
+Algorithms for Bayesian Inference</h1>
+<p>PyMC is a leading Python library for probabilistic programming and
+Bayesian statistical modeling that provides an array of sampling
+algorithms to approximate complex posterior distributions. For
+continuous parameters, it predominantly uses gradient-based Markov Chain
+Monte Carlo (MCMC) algorithms like the No-U-Turn Sampler (NUTS), while
+also offering classical algorithms like Metropolis-Hastings and Slice
+sampling for non-differentiable or discrete spaces. Additionally, PyMC
+incorporates advanced population methods like Sequential Monte Carlo
+(SMC) to handle multimodal geometries and facilitate model
+comparison.</p>
+<h3 id="no-u-turn-sampler-nuts">No-U-Turn Sampler (NUTS)</h3>
+<p>NUTS is the default MCMC engine in PyMC for continuous random
+variables. It is an extension of Hamiltonian Monte Carlo (HMC) that
+simulates physical dynamics along the posterior surface using gradient
+information provided by PyMC's computational backend (PyTensor).</p>
+<p>Unlike standard HMC, which requires manual tuning of trajectory
+lengths and step sizes, NUTS automatically tunes the step size during
+the warm-up phase and determines when the trajectory begins to turn back
+on itself. This prevents wasted computation, eliminates random walk
+behavior, and allows efficient exploration of high-dimensional parameter
+spaces with complex correlations.</p>
+<h3 id="metropolis-hastings">Metropolis-Hastings</h3>
+<p>The <code>pm.Metropolis</code> step method implements the classical
+random-walk Metropolis-Hastings algorithm. It proposes transitions based
+on a Gaussian distribution centered at the current state and accepts or
+rejects them according to the Metropolis acceptance probability.</p>
+<p>Because it does not rely on gradient calculations, Metropolis is
+computationally lightweight per step, making it a reliable fallback for
+models with non-differentiable likelihoods or when gradients are
+unavailable. However, it suffers from slow mixing and random-walk
+behavior in high dimensions.</p>
+<h3 id="binary-and-categorical-samplers">Binary and Categorical
+Samplers</h3>
+<p>For discrete parameters where gradient-based methods cannot operate,
+PyMC provides specialized discrete step methods:</p>
+<ul>
+<li><strong>BinaryMetropolis:</strong> Tailored specifically for binary
+variables (Bernoulli or deterministic boolean switches), proposing flips
+between 0 and 1.</li>
+<li><strong>CategoricalGibbsMetropolis:</strong> Designed for discrete
+variables with categorical outcomes, updating states by cycling through
+potential categories based on conditional probabilities.</li>
+</ul>
+<h3 id="slice-sampling">Slice Sampling</h3>
+<p>The <code>pm.Slice</code> algorithm draws samples uniformly from the
+region under the probability density function. It adaptively defines an
+interval around the current state and shrinks it until an acceptable
+point is sampled. Slice sampling is more robust to step-size tuning than
+Metropolis-Hastings and mixes better across flat or constrained targets,
+though it requires multiple likelihood evaluations per step.</p>
+<h3 id="sequential-monte-carlo-smc">Sequential Monte Carlo (SMC)</h3>
+<p>Sequential Monte Carlo (<code>pm.sample_smc</code>) is a
+particle-based sampling algorithm fundamentally different from standard
+MCMC chains. It maintains a population of particles that gradually
+transitions from the prior distribution to the posterior distribution
+through a series of intermediate stages.</p>
+<p>SMC is particularly effective for:</p>
+<ul>
+<li><strong>Multimodal distributions:</strong> Overcoming energy
+barriers that trap single MCMC chains.</li>
+<li><strong>Marginal likelihood estimation:</strong> Directly computing
+model evidence for Bayesian model selection.</li>
+<li><strong>Approximate Bayesian Computation (SMC-ABC):</strong>
+Inferring parameters for simulator-based models where the likelihood
+function is intractable.</li>
+</ul>
+<h3 id="differential-evolution-metropolis-demetropolis">Differential
+Evolution Metropolis (DEMetropolis)</h3>
+<p>PyMC includes <code>pm.DEMetropolis</code> (and its variations, such
+as <code>DEMetropolisZ</code>), which is a population MCMC method. It
+runs multiple chains in parallel and uses vector differences between
+pairs of chains to generate proposals. This approach allows the sampler
+to efficiently learn the orientation and scale of correlated parameters
+without requiring analytical gradients.</p>
+<h3 id="compound-step-methods">Compound Step Methods</h3>
+<p>In models containing both continuous and discrete parameters, PyMC
+uses a compound step method. It automatically inspects the model graph
+and assigns the optimal sampler to each variable subset—typically
+assigning NUTS to all continuous variables and Metropolis,
+BinaryMetropolis, or CategoricalGibbsMetropolis to discrete
+ones—executing them sequentially within each iteration.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

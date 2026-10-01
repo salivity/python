@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coordinating Async Teardown with AsyncExitStack - python</title>
+    <meta name="description" content="Managing multiple asynchronous resources in Python can quickly lead to deeply nested code and fragile cleanup logic. Python's contextlib.AsyncExitStack provides a programmatic approach to handling dynamic context managers and deferred cleanup callbacks.">
+    <link rel="canonical" href="https://salivity.github.io/python/article/coordinating-async-teardown-with-async-exit-stack">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Coordinating Async Teardown with AsyncExitStack - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/coordinating-async-teardown-with-async-exit-stack" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Managing multiple asynchronous resources in Python can quickly lead to deeply nested code and fragile cleanup logic. Python's contextlib.AsyncExitStack provides a programmatic approach to handling dynamic context managers and deferred cleanup callbacks." />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="coordinating-async-teardown-with-asyncexitstack">Coordinating
+Async Teardown with AsyncExitStack</h1>
+<p>Managing multiple asynchronous resources in Python can quickly lead
+to deeply nested code and fragile cleanup logic. Python's
+<code>contextlib.AsyncExitStack</code> provides a programmatic approach
+to handling dynamic context managers and deferred cleanup callbacks.
+This article examines the core advantages of
+<code>AsyncExitStack</code>, illustrating how it simplifies exception
+handling, guarantees deterministic LIFO teardown, accommodates
+variable-length resource sets, and enables cross-scope lifecycle
+management.</p>
+<h3 id="dynamic-resource-allocation">Dynamic Resource Allocation</h3>
+<p>Standard <code>async with</code> statements require developers to
+know the number of context managers ahead of time. This creates
+limitations when the number of resources depends on runtime
+configuration, such as opening a dynamic pool of network connections or
+processing a batch of files.</p>
+<p><code>AsyncExitStack</code> allows context managers to be entered
+programmatically within loops or conditional blocks using
+<code>enter_async_context()</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> contextlib <span class="im">import</span> AsyncExitStack</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> open_connections(endpoints):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="cf">with</span> AsyncExitStack() <span class="im">as</span> stack:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        connections <span class="op">=</span> [</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>            <span class="cf">await</span> stack.enter_async_context(<span class="ex">connect</span>(endpoint))</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> endpoint <span class="kw">in</span> endpoints</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        ]</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> process_data(connections)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># All opened connections are automatically closed here</span></span></code></pre></div>
+<h3 id="deterministic-lifo-unwinding-on-failure">Deterministic LIFO
+Unwinding on Failure</h3>
+<p>When acquiring multiple resources sequentially, a failure midway
+through the process leaves already-acquired resources in an
+indeterminate state unless wrapped in extensive
+<code>try...finally</code> blocks.</p>
+<p><code>AsyncExitStack</code> strictly enforces Last-In, First-Out
+(LIFO) unwinding. If an exception occurs while acquiring the fourth
+resource in a series, <code>AsyncExitStack</code> automatically unwinds
+and calls the exit handlers of the first three resources in reverse
+order, preventing resource leaks without boilerplate error handling.</p>
+<h3 id="unified-handling-of-sync-and-async-teardowns">Unified Handling
+of Sync and Async Teardowns</h3>
+<p>Complex systems frequently mix asynchronous context managers with
+synchronous context managers and arbitrary cleanup functions.
+<code>AsyncExitStack</code> unifies these patterns under a single
+coordinator:</p>
+<ul>
+<li><code>enter_async_context()</code>: For asynchronous context
+managers.</li>
+<li><code>enter_context()</code>: For standard synchronous context
+managers.</li>
+<li><code>push_async_callback()</code>: For custom async teardown
+functions or coroutines.</li>
+<li><code>callback()</code>: For standard synchronous functions.</li>
+</ul>
+<p>This flexibility eliminates the need to wrap synchronous teardowns in
+artificial async constructs or manage separate synchronous and
+asynchronous exit scopes.</p>
+<h3 id="preventing-the-pyramid-of-doom">Preventing the "Pyramid of
+Doom"</h3>
+<p>Nesting several <code>async with</code> statements degrades
+readability and makes refactoring difficult:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="cf">with</span> resource_a() <span class="im">as</span> a:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="cf">with</span> resource_b() <span class="im">as</span> b:</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">async</span> <span class="cf">with</span> resource_c() <span class="im">as</span> c:</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>            <span class="cf">await</span> perform_work(a, b, c)</span></code></pre></div>
+<p>Using <code>AsyncExitStack</code> flattens the hierarchy into a
+clean, linear sequence:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="cf">with</span> AsyncExitStack() <span class="im">as</span> stack:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="cf">await</span> stack.enter_async_context(resource_a())</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="cf">await</span> stack.enter_async_context(resource_b())</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> <span class="cf">await</span> stack.enter_async_context(resource_c())</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> perform_work(a, b, c)</span></code></pre></div>
+<h3 id="cross-scope-lifecycle-management-with-pop_all">Cross-Scope
+Lifecycle Management with <code>pop_all()</code></h3>
+<p>In factory functions or setup phases of long-lived services,
+resources often need to be initialized inside one function and torn down
+later in another.</p>
+<p><code>AsyncExitStack.pop_all()</code> transfers the entire state of
+active exit handlers to a new stack instance. If setup completes
+successfully, ownership of the cleanup lifecycle moves to the caller. If
+an error occurs prior to calling <code>pop_all()</code>, the enclosing
+stack catches the failure and immediately cleans up any resources
+acquired up to that point.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

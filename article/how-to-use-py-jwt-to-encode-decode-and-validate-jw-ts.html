@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use PyJWT to Encode, Decode, and Validate JWTs - python</title>
+    <meta name="description" content="JSON Web Tokens (JWTs) provide a stateless, compact mechanism for securely transmitting information between parties as a JSON object. This article demonstrates how to use Python's PyJWT library to manage the complete lifecycle of authentication tokens. Y">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-use-py-jwt-to-encode-decode-and-validate-jw-ts">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use PyJWT to Encode, Decode, and Validate JWTs - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-use-py-jwt-to-encode-decode-and-validate-jw-ts" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="JSON Web Tokens (JWTs) provide a stateless, compact mechanism for securely transmitting information between parties as a JSON object. This article demonstrates how to use Python's PyJWT library to manage the complete lifecycle of authentication tokens. Y" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-use-pyjwt-to-encode-decode-and-validate-jwts">How to Use
+PyJWT to Encode, Decode, and Validate JWTs</h1>
+<p>JSON Web Tokens (JWTs) provide a stateless, compact mechanism for
+securely transmitting information between parties as a JSON object. This
+article demonstrates how to use Python's <code>PyJWT</code> library to
+manage the complete lifecycle of authentication tokens. You will learn
+how to encode data payloads into signed tokens, decode them back into
+readable Python dictionaries, and automatically validate cryptographic
+signatures and standard claims such as expiration dates.</p>
+<h3 id="installing-pyjwt">Installing PyJWT</h3>
+<p>To begin working with JWTs in Python, install the <code>PyJWT</code>
+package using pip. If you plan to use asymmetric cryptographic
+algorithms like RS256, install it with the cryptography dependency:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install pyjwt</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Or for asymmetric algorithm support:</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="st">&quot;pyjwt[crypto]&quot;</span></span></code></pre></div>
+<h3 id="encoding-a-json-web-token">Encoding a JSON Web Token</h3>
+<p>Encoding converts a Python dictionary (the payload) into a signed
+token string. The payload typically contains user identifiers and
+standard JWT claims.</p>
+<p>The <code>jwt.encode()</code> function takes three primary
+arguments:</p>
+<ol type="1">
+<li><strong>Payload</strong>: The claims dictionary containing user data
+and reserved claims like <code>exp</code> (expiration time) and
+<code>iat</code> (issued at).</li>
+<li><strong>Key</strong>: A secret string for symmetric algorithms (such
+as HMAC SHA-256) or a private key for asymmetric algorithms (such as
+RSA).</li>
+<li><strong>Algorithm</strong>: The hashing algorithm to sign the token
+(e.g., <code>"HS256"</code>).</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> datetime</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jwt</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Secret key used for signing symmetric tokens</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>SECRET_KEY <span class="op">=</span> <span class="st">&quot;your-super-secret-key&quot;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the payload</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>payload <span class="op">=</span> {</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;user_id&quot;</span>: <span class="dv">42</span>,</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;username&quot;</span>: <span class="st">&quot;johndoe&quot;</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;iat&quot;</span>: datetime.datetime.now(datetime.timezone.utc),</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;exp&quot;</span>: datetime.datetime.now(datetime.timezone.utc) <span class="op">+</span> datetime.timedelta(hours<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Encode the token</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>token <span class="op">=</span> jwt.encode(payload, SECRET_KEY, algorithm<span class="op">=</span><span class="st">&quot;HS256&quot;</span>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;Encoded Token:&quot;</span>, token)</span></code></pre></div>
+<p>In PyJWT version 2.0 and later, <code>jwt.encode()</code> returns a
+standard <code>str</code> rather than raw bytes.</p>
+<h3 id="decoding-and-validating-tokens">Decoding and Validating
+Tokens</h3>
+<p>The <code>jwt.decode()</code> method simultaneously unpacks the
+payload, verifies the cryptographic signature, and checks standard
+registered claims.</p>
+<p>To prevent algorithm downgrade attacks, PyJWT requires you to
+explicitly pass an <code>algorithms</code> list containing the allowed
+hashing methods:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    decoded_payload <span class="op">=</span> jwt.decode(token, SECRET_KEY, algorithms<span class="op">=</span>[<span class="st">&quot;HS256&quot;</span>])</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Decoded Payload:&quot;</span>, decoded_payload)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> jwt.ExpiredSignatureError:</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;The token has expired.&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> jwt.InvalidTokenError:</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;The token signature is invalid or malformed.&quot;</span>)</span></code></pre></div>
+<h3 id="how-pyjwt-validates-claims">How PyJWT Validates Claims</h3>
+<p>When <code>jwt.decode()</code> runs, it performs automatic security
+checks:</p>
+<ul>
+<li><strong>Signature Verification</strong>: PyJWT re-hashes the token's
+header and payload using the provided key and compares the result
+against the token's original signature. If any data was altered in
+transit, decoding fails immediately.</li>
+<li><strong>Expiration (<code>exp</code>)</strong>: If an
+<code>exp</code> claim is present, PyJWT compares it to the current UTC
+time. If the token is past its expiration, it raises
+<code>jwt.ExpiredSignatureError</code>.</li>
+<li><strong>Not Before (<code>nbf</code>)</strong>: If present, PyJWT
+ensures the current time is after the specified <code>nbf</code>
+timestamp.</li>
+<li><strong>Issuer (<code>iss</code>) and Audience
+(<code>aud</code>)</strong>: You can enforce issuer and audience checks
+by passing <code>issuer="expected_issuer"</code> or
+<code>audience="expected_audience"</code> directly into
+<code>jwt.decode()</code>.</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>decoded_payload <span class="op">=</span> jwt.decode(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    token,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    SECRET_KEY,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    algorithms<span class="op">=</span>[<span class="st">&quot;HS256&quot;</span>],</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    audience<span class="op">=</span><span class="st">&quot;my-api&quot;</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    issuer<span class="op">=</span><span class="st">&quot;auth-service&quot;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<h3 id="best-practices-for-pyjwt-authentication">Best Practices for
+PyJWT Authentication</h3>
+<ul>
+<li><strong>Do Not Store Sensitive Secrets in Payloads</strong>: JWT
+payloads are Base64URL-encoded, not encrypted. Anyone who intercepts the
+token can read the data unless the token is an encrypted JWT (JWE).</li>
+<li><strong>Always Enforce the Algorithm</strong>: Never omit the
+<code>algorithms</code> parameter during decoding, as this prevents
+malicious actors from setting the algorithm header to
+<code>"none"</code>.</li>
+<li><strong>Handle Errors Explicitly</strong>: Catch specific exceptions
+such as <code>jwt.ExpiredSignatureError</code> and
+<code>jwt.InvalidTokenError</code> to return clear HTTP status codes
+(such as <code>401 Unauthorized</code>) in authentication
+middleware.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Regex: Why Use Raw Strings (r"...") - python</title>
+    <meta name="description" content="This article explains the operational purpose of prefixing regular expression patterns with r"..." (raw strings) in Python. You will learn how Python interprets escape sequences, why regular expressions create a conflict known as the "backslash plague,"">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-regex-why-use-raw-strings-r">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Regex: Why Use Raw Strings (r"...") - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-regex-why-use-raw-strings-r" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the operational purpose of prefixing regular expression patterns with r"..." (raw strings) in Python. You will learn how Python interprets escape sequences, why regular expressions create a conflict known as the "backslash plague,"" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-regex-why-use-raw-strings-r">Python Regex: Why Use Raw
+Strings (r"...")</h1>
+<p>This article explains the operational purpose of prefixing regular
+expression patterns with <code>r"..."</code> (raw strings) in Python.
+You will learn how Python interprets escape sequences, why regular
+expressions create a conflict known as the "backslash plague," and how
+raw strings ensure that regex patterns are passed to the regex engine
+exactly as written without unintended modifications.</p>
+<h2 id="the-dual-layer-escaping-problem">The Dual-Layer Escaping
+Problem</h2>
+<p>Python processes string literals through two distinct phases when
+working with the <code>re</code> module:</p>
+<ol type="1">
+<li><strong>Python String Compilation:</strong> Python parses the string
+literal itself and evaluates any standard escape sequences, such as
+<code>\n</code> (newline), <code>\t</code> (tab), or <code>\b</code>
+(ASCII backspace).</li>
+<li><strong>Regex Engine Interpretation:</strong> The resulting
+characters are passed to the <code>re</code> engine, which interprets
+its own syntax using the backslash, such as <code>\d</code> (digit),
+<code>\w</code> (word character), or <code>\b</code> (word
+boundary).</li>
+</ol>
+<p>When you use a standard string literal (without the <code>r</code>
+prefix), Python's string parser processes backslashes first. This
+creates conflicts whenever a regex token overlaps with a Python escape
+sequence.</p>
+<p>For example, the regex token <code>\b</code> represents a word
+boundary. In a standard Python string, <code>"\b"</code> is immediately
+evaluated by Python as an ASCII backspace character (ASCII code 8). When
+passed to <code>re.compile("\bword\b")</code>, the regex engine receives
+an actual backspace character instead of the regex instruction for a
+word boundary.</p>
+<p>To resolve this using standard strings, you must escape the backslash
+so Python passes a literal <code>\</code> to the regex engine:
+<code>"\\bword\\b"</code>.</p>
+<h2 id="the-backslash-plague">The "Backslash Plague"</h2>
+<p>The issue escalates significantly when attempting to match a literal
+backslash character in text.</p>
+<ul>
+<li>The regex engine requires <code>\\</code> to match a single literal
+<code>\</code>.</li>
+<li>To produce two literal backslashes in a standard Python string, each
+backslash must itself be escaped: <code>"\\\\"</code>.</li>
+</ul>
+<p>Writing four backslashes to match a single backslash degrades
+readability and drastically increases the likelihood of syntax bugs.</p>
+<h2 id="how-raw-strings-solve-the-issue">How Raw Strings Solve the
+Issue</h2>
+<p>Prefixing a string with <code>r</code> or <code>R</code> designates
+it as a <strong>raw string literal</strong>. In a raw string, Python
+disables standard escape processing. A backslash is treated as a literal
+backslash character rather than an escape operator.</p>
+<ul>
+<li>In a standard string: <code>"\d"</code> may trigger a
+<code>SyntaxWarning</code> or <code>DeprecationWarning</code> in modern
+Python versions because <code>\d</code> is not a valid Python string
+escape sequence.</li>
+<li>In a raw string: <code>r"\d"</code> is passed directly to the
+<code>re</code> engine as the two characters <code>\</code> and
+<code>d</code>, which the regex engine correctly recognizes as a digit
+selector.</li>
+</ul>
+<h2 id="operational-comparison">Operational Comparison</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Target Pattern</th>
+<th style="text-align: left;">Standard String Syntax</th>
+<th style="text-align: left;">Raw String Syntax
+(<code>r"..."</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Word boundary</td>
+<td style="text-align: left;"><code>"\\b"</code></td>
+<td style="text-align: left;"><code>r"\b"</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">Digit</td>
+<td style="text-align: left;"><code>"\\d"</code></td>
+<td style="text-align: left;"><code>r"\d"</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">Literal backslash</td>
+<td style="text-align: left;"><code>"\\\\"</code></td>
+<td style="text-align: left;"><code>r"\\"</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">Newline match</td>
+<td style="text-align: left;"><code>"\\n"</code> or
+<code>"\n"</code></td>
+<td style="text-align: left;"><code>r"\n"</code></td>
+</tr>
+</tbody>
+</table>
+<p>By using raw strings, what you write in your source code corresponds
+1:1 with what the regex engine receives. This eliminates redundant
+escaping, prevents deprecation warnings from Python's string tokenizer,
+and ensures regular expressions remain readable and maintainable.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

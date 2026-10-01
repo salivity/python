@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DuckDB Zero-Copy SQL on Pandas and Polars - python</title>
+    <meta name="description" content="This article explores how DuckDB runs high-performance SQL queries directly on in-memory Pandas and Polars DataFrames without duplicating data in RAM. By leveraging standard memory layouts, pointer sharing, and the Apache Arrow format, DuckDB accesses ex">
+    <link rel="canonical" href="https://salivity.github.io/python/article/duck-db-zero-copy-sql-on-pandas-and-polars">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="DuckDB Zero-Copy SQL on Pandas and Polars - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/duck-db-zero-copy-sql-on-pandas-and-polars" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how DuckDB runs high-performance SQL queries directly on in-memory Pandas and Polars DataFrames without duplicating data in RAM. By leveraging standard memory layouts, pointer sharing, and the Apache Arrow format, DuckDB accesses ex" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="duckdb-zero-copy-sql-on-pandas-and-polars">DuckDB Zero-Copy SQL
+on Pandas and Polars</h1>
+<p>This article explores how DuckDB runs high-performance SQL queries
+directly on in-memory Pandas and Polars DataFrames without duplicating
+data in RAM. By leveraging standard memory layouts, pointer sharing, and
+the Apache Arrow format, DuckDB accesses existing memory buffers in
+place. Readers will learn the mechanics behind DuckDB's pointer-level
+scanning, its interaction with the Python buffer protocol and Arrow C
+Data Interface, and how this architecture eliminates serialization
+overhead during analytical query execution.</p>
+<h2 id="the-foundation-shared-memory-architecture">The Foundation:
+Shared Memory Architecture</h2>
+<p>Traditional analytical pipelines incur substantial overhead when
+moving data between Python libraries and external database engines.
+Standard processes involve serializing data to disk or streaming it over
+inter-process communication (IPC) channels, which doubles memory
+footprint and consumes CPU cycles.</p>
+<p>DuckDB overcomes this limitation by acting as an in-process columnar
+database. Because DuckDB executes within the exact same process and
+address space as the host Python environment, it can directly read
+memory addresses allocated by other Python libraries. To query a
+DataFrame without copying it, DuckDB relies on two mechanisms: the
+Python Buffer Protocol (for NumPy-backed data) and the Apache Arrow
+standard (for Arrow-backed data).</p>
+<h2 id="how-duckdb-queries-polars-dataframes">How DuckDB Queries Polars
+DataFrames</h2>
+<p>Polars organizes its data natively using the Apache Arrow memory
+specification. Because Apache Arrow standardizes columnar in-memory data
+representations, DuckDB and Polars inherently share the same logical
+layout for contiguous arrays, validity bitmaps, and nested types.</p>
+<p>When a SQL query targets a Polars DataFrame, DuckDB executes the
+following sequence:</p>
+<ol type="1">
+<li><strong>Scope Inspection and Pointer Handshake</strong>: When
+executing a query such as
+<code>duckdb.sql("SELECT * FROM polars_df")</code>, DuckDB looks up the
+variable <code>polars_df</code> within the local Python frame.</li>
+<li><strong>Arrow C Data Interface</strong>: DuckDB requests the Arrow
+export of the DataFrame. Polars implements the Arrow C Data Interface
+and the Arrow PyCapsule protocol (<code>__arrow_c_stream__</code>). This
+interface exports C-level pointers to the array structures (data
+buffers, null bitmaps, and type metadata) without cloning the data.</li>
+<li><strong>Internal Arrow Scan</strong>: DuckDB maps these shared
+pointers directly into its physical execution plan using an internal
+Arrow scanner operator.</li>
+<li><strong>Chunk-by-Chunk Vectorized Execution</strong>: DuckDB pulls
+vectors of data directly from Polars' memory chunks into its vectorized
+execution engine. DuckDB processes vectors (typically 2,048 tuples at a
+time) in CPU cache without writing intermediate data back to RAM.</li>
+</ol>
+<p>Because no memory allocation or deep copy takes place, query latency
+matches the raw speed of memory reads, and memory usage remains
+flat.</p>
+<h2 id="how-duckdb-queries-pandas-dataframes">How DuckDB Queries Pandas
+DataFrames</h2>
+<p>Pandas data structures are historically backed by contiguous NumPy
+arrays, though modern versions can also use PyArrow backends. DuckDB
+handles both variants using tailored zero-copy scanning strategies.</p>
+<h3 id="numpy-backed-pandas-dataframes">NumPy-Backed Pandas
+DataFrames</h3>
+<p>For standard Pandas DataFrames backed by NumPy:</p>
+<ul>
+<li><strong>Buffer Protocol Access</strong>: DuckDB inspects the
+underlying NumPy 1D arrays forming each column. Using Python's internal
+C-API and Buffer Protocol, DuckDB extracts raw memory pointers pointing
+to the array's data buffer.</li>
+<li><strong>Contiguity Checks</strong>: If the memory layout is
+contiguous (C-style) and the data type is a primitive numeric type
+(e.g., <code>int64</code>, <code>float64</code>), DuckDB maps the memory
+region directly to a DuckDB vector.</li>
+<li><strong>Exceptions Requiring Masking/Casting</strong>: If a column
+uses Pandas <code>object</code> types (e.g., Python strings) or
+non-contiguous data slices, a pure pointer-level read is not feasible.
+In these instances, DuckDB must construct native string vectors or
+resolve Python object pointers, which introduces minimal conversion
+overhead compared to primitive columns.</li>
+</ul>
+<h3 id="arrow-backed-pandas-dataframes">Arrow-Backed Pandas
+DataFrames</h3>
+<p>When Pandas utilizes the <code>ArrowDtype</code> engine (or when
+converted via PyArrow), DuckDB treats the DataFrame similarly to a
+Polars DataFrame. It consumes the underlying Arrow RecordBatch
+references via the Arrow C Data Interface, enabling complete zero-copy
+reads across all supported datatypes, including strings and nested
+structures.</p>
+<h2 id="filter-and-projection-pushdown">Filter and Projection
+Pushdown</h2>
+<p>DuckDB does not need to scan an entire DataFrame into its internal
+structures before evaluating SQL statements. Instead, its optimizer
+pushes query operations directly into the memory scanning phase:</p>
+<ul>
+<li><strong>Projection Pushdown</strong>: If a query requests only three
+columns out of a hundred (<code>SELECT a, b, c FROM df</code>), DuckDB
+retrieves pointers only for those three columns, leaving the remaining
+ninety-seven untouched in memory.</li>
+<li><strong>Filter Pushdown</strong>: DuckDB evaluates predicates
+(<code>WHERE x &gt; 100</code>) directly on the source memory buffers
+during the chunked scan. Rows that fail the condition are dropped
+immediately before entering subsequent pipeline stages like joins or
+aggregations.</li>
+</ul>
+<h2 id="summary-of-zero-copy-query-mechanics">Summary of Zero-Copy Query
+Mechanics</h2>
+<p>The zero-copy pipeline operates through a tightly coupled execution
+sequence:</p>
+<pre><code>[ Polars / Pandas (Arrow) ] ──(Arrow C Data Interface)──&gt; [ Memory Pointers ]
+                                                                   │
+                                                                   ▼
+[ DuckDB SQL Query ] ───────&gt; [ Vectorized Engine ] &lt;──── [ Direct In-Memory Read ]
+                                       │
+                                       ▼
+                              [ Result / Aggregation ]</code></pre>
+<p>By executing inside the Python process, leveraging standardized
+memory formats like Apache Arrow, and using C-level pointer references,
+DuckDB eliminates data duplication and serialization overhead, allowing
+instant, memory-efficient SQL analysis over active DataFrames.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Are Immortal Objects in Python? - python</title>
+    <meta name="description" content="Immortal objects are a core memory management feature introduced in Python 3.12 via PEP 683 that permanently bypass Python’s standard reference counting and garbage collection mechanisms. By design, an immortal object remains in memory throughout the e">
+    <link rel="canonical" href="https://salivity.github.io/python/article/what-are-immortal-objects-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="What Are Immortal Objects in Python? - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/what-are-immortal-objects-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Immortal objects are a core memory management feature introduced in Python 3.12 via PEP 683 that permanently bypass Python’s standard reference counting and garbage collection mechanisms. By design, an immortal object remains in memory throughout the e" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="what-are-immortal-objects-in-python">What Are Immortal Objects
+in Python?</h1>
+<p>Immortal objects are a core memory management feature introduced in
+Python 3.12 via PEP 683 that permanently bypass Python’s standard
+reference counting and garbage collection mechanisms. By design, an
+immortal object remains in memory throughout the entire lifecycle of the
+Python runtime, with a reference count that never changes regardless of
+how many times it is referenced or dereferenced. This article explains
+the fundamentals of immortal objects, the engineering problems they
+solve, and their crucial role in modernizing Python's multi-core
+performance.</p>
+<h3 id="how-python-memory-management-traditionally-works">How Python
+Memory Management Traditionally Works</h3>
+<p>Standard Python (CPython) primarily manages memory through reference
+counting. Every standard object in Python contains a header field called
+<code>ob_refcnt</code>. When an object is referenced, this counter
+increments; when a reference goes out of scope or is deleted, it
+decrements. When the counter reaches zero, Python deallocates the
+object's memory immediately.</p>
+<p>While this system is simple and deterministic, it creates a
+fundamental limitation: even purely read-only operations must modify the
+object's internal state to update the reference counter.</p>
+<h3 id="what-are-immortal-objects">What Are Immortal Objects?</h3>
+<p>Immortal objects are objects whose reference counts are treated as
+immutable by the runtime. CPython achieves this by setting a specific
+bit flag or assigning an extraordinarily large value to the object’s
+reference count field that signals to the runtime to skip incrementing
+or decrementing operations.</p>
+<p>Because their reference counts never change:</p>
+<ul>
+<li>They are never deallocated during runtime.</li>
+<li>They are excluded from cycle detection and garbage collection
+sweeps.</li>
+<li>Operations that use them behave as true read-only access.</li>
+</ul>
+<p>Examples of immortal objects in current versions of Python include
+global singletons like <code>None</code>, <code>True</code>,
+<code>False</code>, empty tuples, small integers, and internal interned
+strings.</p>
+<h3 id="why-immortal-objects-were-introduced">Why Immortal Objects Were
+Introduced</h3>
+<p>Immortal objects were introduced primarily to solve architectural
+bottlenecks related to scalability, performance, and concurrency.</p>
+<h4 id="1-enabling-true-shared-memory-across-runtimes">1. Enabling True
+Shared Memory Across Runtimes</h4>
+<p>Prior to immortal objects, sharing common objects (like
+<code>None</code> or small numbers) across multiple threads or isolated
+subinterpreters was unsafe. Because reading an object altered its
+reference count, two threads accessing the same object simultaneously
+would cause a data race on <code>ob_refcnt</code>, requiring locks or
+thread-specific copies. Immortal objects make singletons truly
+immutable, enabling multiple interpreters or threads to safely share the
+same memory without locks.</p>
+<h4 id="2-fixing-copy-on-write-cow-inefficiencies">2. Fixing
+Copy-on-Write (CoW) Inefficiencies</h4>
+<p>When Python uses Unix process forking (common in web servers like
+Gunicorn or Celery), child processes initially share the parent
+process's memory pages via Copy-on-Write. However, under traditional
+reference counting, merely reading global objects in a child process
+altered their reference counts. This caused the operating system to
+duplicate the entire memory page containing the object, leading to
+massive memory bloat. Immortal objects prevent reference count
+mutations, keeping memory pages clean and dramatically reducing the real
+memory footprint of forked applications.</p>
+<h4 id="3-maximizing-cpu-cache-efficiency">3. Maximizing CPU Cache
+Efficiency</h4>
+<p>Constantly writing to reference count fields invalidates CPU caches,
+even when an algorithm is only reading data. Immortal objects preserve
+CPU cache lines by eliminating unnecessary writes, leading to minor
+baseline execution speedups in cache-sensitive workloads.</p>
+<h4 id="4-paving-the-way-for-the-free-threaded-build-no-gil">4. Paving
+the Way for the Free-Threaded Build (No-GIL)</h4>
+<p>The introduction of immortal objects is a foundational prerequisite
+for PEP 703 (the removal of the Global Interpreter Lock). In a
+free-threaded Python environment, ubiquitous objects accessed by dozens
+of threads simultaneously would otherwise suffer severe lock contention
+or require atomic operations that degrade performance. Making universal
+objects immortal eliminates synchronization overhead entirely for those
+objects.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

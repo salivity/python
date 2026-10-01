@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pillow Image Filtering Conversion and Transformation - python</title>
+    <meta name="description" content="Pillow, the modern fork of the Python Imaging Library (PIL), provides an extensive suite of digital image processing tools. This guide covers Pillow's primary capabilities across three critical areas: applying built-in and custom image filters, handling">
+    <link rel="canonical" href="https://salivity.github.io/python/article/pillow-image-filtering-conversion-and-transformation">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pillow Image Filtering Conversion and Transformation - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/pillow-image-filtering-conversion-and-transformation" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Pillow, the modern fork of the Python Imaging Library (PIL), provides an extensive suite of digital image processing tools. This guide covers Pillow's primary capabilities across three critical areas: applying built-in and custom image filters, handling" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pillow-image-filtering-conversion-and-transformation">Pillow
+Image Filtering Conversion and Transformation</h1>
+<p>Pillow, the modern fork of the Python Imaging Library (PIL), provides
+an extensive suite of digital image processing tools. This guide covers
+Pillow's primary capabilities across three critical areas: applying
+built-in and custom image filters, handling color mode and file format
+conversions, and executing diverse geometric transformations ranging
+from basic rotations to advanced affine projections.</p>
+<h3 id="image-filtering-capabilities">Image Filtering Capabilities</h3>
+<p>Pillow provides pre-configured and customizable digital filters
+primarily through its <code>ImageFilter</code> module, applied to images
+using the <code>filter()</code> method.</p>
+<ul>
+<li><strong>Standard Convolution Filters:</strong> Pillow includes a
+wide selection of preset convolution kernels. Common options include
+<code>ImageFilter.BLUR</code>, <code>ImageFilter.CONTOUR</code>,
+<code>ImageFilter.DETAIL</code>, <code>ImageFilter.EDGE_ENHANCE</code>,
+<code>ImageFilter.EDGE_ENHANCE_MORE</code>,
+<code>ImageFilter.EMBOSS</code>, <code>ImageFilter.FIND_EDGES</code>,
+<code>ImageFilter.SHARPEN</code>, <code>ImageFilter.SMOOTH</code>, and
+<code>ImageFilter.SMOOTH_MORE</code>.</li>
+<li><strong>Configurable Blur Filters:</strong> Beyond standard blurs,
+Pillow provides parametric blur classes, such as
+<code>ImageFilter.GaussianBlur(radius)</code> and
+<code>ImageFilter.BoxBlur(radius)</code>, allowing precise control over
+blur magnitude.</li>
+<li><strong>Sharpening and Enhancement:</strong> Advanced contrast
+tuning can be achieved using
+<code>ImageFilter.UnsharpMask(radius, percent, threshold)</code>.</li>
+<li><strong>Rank Filters:</strong> Pillow supports non-linear rank
+filtering for noise reduction and morphological operations through
+<code>ImageFilter.MinFilter(size)</code>,
+<code>ImageFilter.MedianFilter(size)</code>, and
+<code>ImageFilter.MaxFilter(size)</code>.</li>
+<li><strong>Custom Kernels:</strong> Developers can build arbitrary
+spatial convolution filters by instantiating
+<code>ImageFilter.Kernel(size, kernel, scale, offset)</code>.</li>
+</ul>
+<h3 id="image-conversion-capabilities">Image Conversion
+Capabilities</h3>
+<p>Pillow handles pixel-level color transformations, file format
+transitions, and integration with external data structures.</p>
+<ul>
+<li><strong>File Format Conversion:</strong> Pillow reads and writes
+dozens of file formats (including JPEG, PNG, WEBP, TIFF, BMP, and GIF).
+Formats are converted simply by opening a file and passing a different
+file extension or explicit format parameter to the <code>save()</code>
+method.</li>
+<li><strong>Color Mode Conversion:</strong> The <code>convert()</code>
+method alters the internal pixel representation of an image. Pillow
+supports converting between standard modes:
+<ul>
+<li><code>L</code> (8-bit grayscale)</li>
+<li><code>RGB</code> (3x8-bit true color)</li>
+<li><code>RGBA</code> (4x8-bit true color with alpha/transparency
+channel)</li>
+<li><code>CMYK</code> (4x8-bit color separation for print)</li>
+<li><code>1</code> (1-bit pixels, black and white / binary thresholding
+with optional dithering)</li>
+<li><code>YCbCr</code>, <code>HSV</code>, <code>I</code> (32-bit signed
+integer pixels), and <code>F</code> (32-bit floating-point pixels).</li>
+</ul></li>
+<li><strong>Palette Quantization:</strong> True-color images can be
+converted to palette-based images (<code>P</code> mode) using algorithms
+like median cut or octree, with adjustable dithering options.</li>
+<li><strong>Array and Buffer Interoperability:</strong> Images can be
+converted directly to and from raw byte buffers (<code>tobytes()</code>
+/ <code>frombytes()</code>) and NumPy arrays (<code>numpy.array()</code>
+/ <code>Image.fromarray()</code>), enabling integration with computer
+vision libraries like OpenCV.</li>
+</ul>
+<h3 id="geometric-transformation-capabilities">Geometric Transformation
+Capabilities</h3>
+<p>Pillow offers comprehensive tools to manipulate image dimensions,
+orientation, and spatial orientation.</p>
+<ul>
+<li><strong>Resizing:</strong> The <code>resize((width, height))</code>
+method alters dimensions. Pillow supports high-quality resampling
+filters including <code>Resampling.NEAREST</code>,
+<code>Resampling.BOX</code>, <code>Resampling.BILINEAR</code>,
+<code>Resampling.HAMMING</code>, <code>Resampling.BICUBIC</code>, and
+<code>Resampling.LANCZOS</code>. For preserving aspect ratios, the
+<code>thumbnail()</code> method resizes images in-place.</li>
+<li><strong>Rotation:</strong> The <code>rotate(angle)</code> method
+rotates an image counter-clockwise around its center by any specified
+degree. The <code>expand=True</code> argument recalculates the output
+image size so that none of the rotated image is clipped.</li>
+<li><strong>Transposition:</strong> The <code>transpose()</code> method
+executes fast, 90-degree increments and axis reflections without
+resampling artifacts. Supported operations include
+<code>Transpose.FLIP_LEFT_RIGHT</code>,
+<code>Transpose.FLIP_TOP_BOTTOM</code>,
+<code>Transpose.ROTATE_90</code>, <code>Transpose.ROTATE_180</code>, and
+<code>Transpose.ROTATE_270</code>.</li>
+<li><strong>Cropping and Pasting:</strong> Spatial sub-regions are
+extracted using <code>crop((left, upper, right, lower))</code> and
+inserted into new canvases via
+<code>paste(image, coordinates, mask)</code>.</li>
+<li><strong>Affine and Perspective Transforms:</strong> The
+<code>transform()</code> method maps source pixels to target
+coordinates. It supports:
+<ul>
+<li><code>Transform.AFFINE</code> for 2D translation, scaling, shearing,
+and rotation using a 6-parameter tuple.</li>
+<li><code>Transform.PERSPECTIVE</code> for 3D planar projections using
+an 8-parameter mapping tuple.</li>
+<li><code>Transform.QUAD</code> for mapping an arbitrary convex
+quadrilateral to a rectangle.</li>
+<li><code>Transform.MESH</code> for mapping multiple quadrilaterals in a
+single operation.</li>
+</ul></li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python atexit Module Cleanup Handlers - python</title>
+    <meta name="description" content="The Python atexit module provides a simple interface to register functions that execute automatically when a program terminates under standard conditions. It is primarily used for cleanup tasks such as closing network connections, releasing hardware reso">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-atexit-module-cleanup-handlers">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python atexit Module Cleanup Handlers - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-atexit-module-cleanup-handlers" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Python atexit module provides a simple interface to register functions that execute automatically when a program terminates under standard conditions. It is primarily used for cleanup tasks such as closing network connections, releasing hardware reso" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-atexit-module-cleanup-handlers">Python atexit Module
+Cleanup Handlers</h1>
+<p>The Python <code>atexit</code> module provides a simple interface to
+register functions that execute automatically when a program terminates
+under standard conditions. It is primarily used for cleanup tasks such
+as closing network connections, releasing hardware resources, flushing
+file buffers, and removing temporary files. This article explains how
+<code>atexit</code> registers these functions, the sequence in which
+they execute, and the specific termination boundaries that govern their
+behavior.</p>
+<h3 id="how-atexit-registers-handlers">How <code>atexit</code> Registers
+Handlers</h3>
+<p>The <code>atexit</code> module maintains an internal list of callback
+functions. When you register a function using
+<code>atexit.register()</code>, Python adds the function and its
+supplied arguments to an internal registry. You can register functions
+either as standard calls or by using <code>atexit.register</code> as a
+decorator.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> atexit</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cleanup_resource(resource_name):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Cleaning up </span><span class="sc">{</span>resource_name<span class="sc">}</span><span class="ss">...&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Registering using a standard call with arguments</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>atexit.register(cleanup_resource, <span class="st">&quot;Database Connection&quot;</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Registering using a decorator</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="at">@atexit.register</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> close_files():</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Flushing and closing open files...&quot;</span>)</span></code></pre></div>
+<h3 id="execution-order-last-in-first-out-lifo">Execution Order:
+Last-In, First-Out (LIFO)</h3>
+<p>Cleanup handlers registered with <code>atexit</code> execute in the
+reverse order of their registration (LIFO). This design ensures that
+dependencies are unrolled safely; if Resource B relies on Resource A and
+is initialized after Resource A, Resource B will be cleaned up before
+Resource A is released.</p>
+<p>In the example above, <code>close_files()</code> runs first upon
+exit, followed by
+<code>cleanup_resource("Database Connection")</code>.</p>
+<h3 id="standard-termination-triggers">Standard Termination
+Triggers</h3>
+<p>The registered cleanup functions are executed during normal
+interpreter shutdown. The standard termination sequences that trigger
+<code>atexit</code> include:</p>
+<ul>
+<li>Reaching the end of the main script or execution flow.</li>
+<li>Raising the <code>SystemExit</code> exception explicitly via
+<code>sys.exit()</code>.</li>
+<li>Uncaught exceptions that bubble up and cause the interpreter to shut
+down.</li>
+</ul>
+<p>If a registered handler raises an exception during execution, Python
+prints the traceback to standard error but does not halt the remaining
+handlers. Instead, the interpreter continues executing the rest of the
+registered cleanup functions until the registry is empty.</p>
+<h3 id="when-handlers-do-not-run">When Handlers Do Not Run</h3>
+<p>Cleanup handlers registered with <code>atexit</code> do not run in
+non-standard or abrupt termination scenarios:</p>
+<ul>
+<li>Direct termination via <code>os._exit()</code>, which exits the
+process immediately at the OS level without triggering Python's cleanup
+sequence.</li>
+<li>Termination by fatal external signals, such as <code>SIGKILL</code>
+or <code>SIGTERM</code>, unless a custom signal handler intercepts them
+and invokes standard exit routines.</li>
+<li>Fatal internal Python interpreter errors (such as segmentation
+faults).</li>
+</ul>
+<h3 id="managing-and-unregistering-handlers">Managing and Unregistering
+Handlers</h3>
+<p>If a cleanup task becomes redundant during execution, it can be
+removed using <code>atexit.unregister(func)</code>. This removes all
+instances of the specified function from the exit registry, ensuring it
+will not be executed when the program terminates.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

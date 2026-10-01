@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python typing.overload Function Ordering Rules - python</title>
+    <meta name="description" content="In Python, the @typing.overload decorator allows developers to declare multiple function signatures to describe how return types depend on input argument types. Because static type checkers like Mypy and Pyright evaluate overloaded signatures sequentiall">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-typing-overload-function-ordering-rules">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python typing.overload Function Ordering Rules - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-typing-overload-function-ordering-rules" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, the @typing.overload decorator allows developers to declare multiple function signatures to describe how return types depend on input argument types. Because static type checkers like Mypy and Pyright evaluate overloaded signatures sequentiall" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-typingoverload-function-ordering-rules">Python
+typing.overload Function Ordering Rules</h1>
+<p>In Python, the <code>@typing.overload</code> decorator allows
+developers to declare multiple function signatures to describe how
+return types depend on input argument types. Because static type
+checkers like Mypy and Pyright evaluate overloaded signatures
+sequentially from top to bottom, the order of declaration is critical.
+This guide outlines the essential rules dictating the ordering of
+<code>@typing.overload</code> definitions, detailing how type checkers
+resolve signatures and how to prevent shadowed types.</p>
+<h3 id="1-top-to-bottom-sequential-evaluation">1. Top-to-Bottom
+Sequential Evaluation</h3>
+<p>Static type checkers process <code>@typing.overload</code> signatures
+in the exact order they are declared in the code. When a function call
+is analyzed, the checker tests the arguments against each signature
+starting from the first. The <strong>first</strong> signature that
+matches the call arguments is selected, and any subsequent signatures
+are ignored for that call.</p>
+<p>Because of this first-match behavior, ordering determines which
+return type is inferred whenever two or more signatures overlap.</p>
+<h3 id="2-specific-types-before-general-types">2. Specific Types Before
+General Types</h3>
+<p>The primary rule of overload ordering is to define narrower, more
+specific types before broader, more general types. If a general type is
+placed first, it will consume calls intended for the narrower type,
+effectively shadowing it.</p>
+<ul>
+<li><strong>Subclasses before Base Classes:</strong> A signature
+accepting a derived class must appear before one accepting its parent
+class. For example, since <code>bool</code> is a subclass of
+<code>int</code> in Python, a <code>bool</code> overload must precede an
+<code>int</code> overload.</li>
+<li><strong><code>Literal</code> Types before Primitive Types:</strong>
+Precise value matches (e.g., <code>Literal["json"]</code>,
+<code>Literal[True]</code>) must appear before generic primitive types
+(e.g., <code>str</code>, <code>bool</code>).</li>
+<li><strong>Concrete Types before <code>Any</code> or
+<code>object</code>:</strong> Any broad fallback type will match any
+argument, so it must be placed after specific types.</li>
+</ul>
+<h4 id="example">Example:</h4>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> Literal, overload</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Most specific: Literal match</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">@overload</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_data(<span class="bu">format</span>: Literal[<span class="st">&quot;json&quot;</span>]) <span class="op">-&gt;</span> <span class="bu">dict</span>: ...</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Less specific: general str</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="at">@overload</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_data(<span class="bu">format</span>: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Implementation</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_data(<span class="bu">format</span>: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">dict</span> <span class="op">|</span> <span class="bu">str</span>:</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">format</span> <span class="op">==</span> <span class="st">&quot;json&quot;</span>:</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> {<span class="st">&quot;status&quot;</span>: <span class="st">&quot;ok&quot;</span>}</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;raw data&quot;</span></span></code></pre></div>
+<p>If <code>format: str</code> were placed first, passing the literal
+<code>"json"</code> would match the general <code>str</code> signature
+first, returning <code>str</code> instead of <code>dict</code>.</p>
+<h3 id="3-mutually-exclusive-disjoint-types">3. Mutually Exclusive
+(Disjoint) Types</h3>
+<p>When argument types do not overlap, declaration order does not affect
+type inference. For example, if one overload accepts <code>int</code>
+and another accepts <code>str</code>, neither can match the other's
+inputs.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="at">@overload</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(value: <span class="bu">int</span>) <span class="op">-&gt;</span> <span class="bu">int</span>: ...</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">@overload</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(value: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span></code></pre></div>
+<p>In this scenario, switching the order has no functional impact on
+static analysis. However, keeping related overloads grouped consistently
+or placing the most common use cases higher improves code
+readability.</p>
+<h3 id="4-default-and-optional-arguments">4. Default and Optional
+Arguments</h3>
+<p>When functions use default parameter values or varying argument
+counts:</p>
+<ul>
+<li>Place overloads with fewer parameters or specific default signatures
+where they will not be preempted by broader signatures accepting
+<code>*args</code> or optional values.</li>
+<li>If an argument accepts <code>None</code> as a sentinel to trigger a
+specific return type, place the <code>None</code> overload before a
+broader <code>Optional[T]</code> or generic parameter overload.</li>
+</ul>
+<h3 id="5-implementation-must-be-last-and-undecorated">5. Implementation
+Must Be Last and Undecorated</h3>
+<p>The actual implementation of the function must appear immediately
+after all <code>@typing.overload</code> definitions.</p>
+<ul>
+<li>The implementation function itself must <strong>not</strong> have
+the <code>@overload</code> decorator.</li>
+<li>Its signature must be broad enough to accept all combinations
+covered by the overloads, typically using unions
+(<code>int | str</code>) or <code>Any</code>.</li>
+<li>Type checkers do not use the implementation signature when inferring
+types for callers; they only use the preceding <code>@overload</code>
+definitions.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

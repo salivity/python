@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Dataclasses vs Traditional Classes - python</title>
+    <meta name="description" content="Python dataclasses provide a streamlined way to create classes primarily intended to store data, removing the repetitive boilerplate code required by standard classes. Introduced in Python 3.7, the @dataclass decorator automatically generates essential s">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-dataclasses-vs-traditional-classes">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Dataclasses vs Traditional Classes - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-dataclasses-vs-traditional-classes" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python dataclasses provide a streamlined way to create classes primarily intended to store data, removing the repetitive boilerplate code required by standard classes. Introduced in Python 3.7, the @dataclass decorator automatically generates essential s" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-dataclasses-vs-traditional-classes">Python Dataclasses vs
+Traditional Classes</h1>
+<p>Python dataclasses provide a streamlined way to create classes
+primarily intended to store data, removing the repetitive boilerplate
+code required by standard classes. Introduced in Python 3.7, the
+<code>@dataclass</code> decorator automatically generates essential
+special methods such as <code>__init__()</code>,
+<code>__repr__()</code>, and <code>__eq__()</code> under the hood. By
+eliminating the manual chore of writing these standard methods,
+dataclasses drastically reduce code clutter, minimize human error, and
+make your code significantly easier to read and maintain.</p>
+<h3 id="elimination-of-boilerplate-__init__-methods">Elimination of
+Boilerplate <code>__init__</code> Methods</h3>
+<p>In a traditional Python class, initializing an object requires
+manually assigning every parameter to <code>self</code>. This leads to
+redundant typing, especially as the number of attributes grows:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> TraditionalUser:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, username: <span class="bu">str</span>, email: <span class="bu">str</span>, age: <span class="bu">int</span>):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.username <span class="op">=</span> username</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.email <span class="op">=</span> email</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.age <span class="op">=</span> age</span></code></pre></div>
+<p>With a dataclass, Python handles this initialization automatically
+based on type-annotated fields:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dataclasses <span class="im">import</span> dataclass</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> DataUser:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    username: <span class="bu">str</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    email: <span class="bu">str</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    age: <span class="bu">int</span></span></code></pre></div>
+<p>The dataclass version accomplishes the exact same task in half the
+lines of code.</p>
+<h3 id="readable-string-representations-by-default">Readable String
+Representations by Default</h3>
+<p>Printing a standard class instance returns a vague memory reference
+like <code>&lt;__main__.TraditionalUser object at 0x7f...&gt;</code>
+unless a custom <code>__repr__()</code> method is explicitly
+implemented.</p>
+<p>Dataclasses automatically generate a clean, human-readable string
+representation:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>user <span class="op">=</span> DataUser(<span class="st">&quot;alex&quot;</span>, <span class="st">&quot;alex@example.com&quot;</span>, <span class="dv">30</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(user)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: DataUser(username=&#39;alex&#39;, email=&#39;alex@example.com&#39;, age=30)</span></span></code></pre></div>
+<p>This built-in readability saves debugging time without requiring
+extra code.</p>
+<h3 id="built-in-equality-comparisons">Built-in Equality
+Comparisons</h3>
+<p>Comparing instances of standard classes checks for identity (whether
+both variables point to the exact same object in memory), not value
+equivalence. Two standard instances with identical data will evaluate to
+<code>False</code> when compared with <code>==</code> unless you
+manually implement the <code>__eq__()</code> method.</p>
+<p>Dataclasses automatically implement value-based equality. Two
+distinct instances containing identical attribute values will return
+<code>True</code> by default, making testing and data validation
+intuitive:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>user1 <span class="op">=</span> DataUser(<span class="st">&quot;alex&quot;</span>, <span class="st">&quot;alex@example.com&quot;</span>, <span class="dv">30</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>user2 <span class="op">=</span> DataUser(<span class="st">&quot;alex&quot;</span>, <span class="st">&quot;alex@example.com&quot;</span>, <span class="dv">30</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(user1 <span class="op">==</span> user2)  <span class="co"># Output: True</span></span></code></pre></div>
+<h3 id="effortless-immutability">Effortless Immutability</h3>
+<p>Creating a read-only or immutable data container with standard
+classes requires overriding <code>__setattr__()</code> or wrapping every
+attribute in <code>@property</code> decorators.</p>
+<p>Dataclasses make immutability as simple as passing a single flag:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span>(frozen<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ImmutablePoint:</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    x: <span class="bu">float</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    y: <span class="bu">float</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>point <span class="op">=</span> ImmutablePoint(<span class="fl">1.0</span>, <span class="fl">2.0</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># point.x = 3.0  # Raises dataclasses.FrozenInstanceError</span></span></code></pre></div>
+<p>A frozen dataclass also generates a <code>__hash__()</code> method,
+allowing instances to be used as dictionary keys or stored in sets.</p>
+<h3 id="automated-sorting-and-ordering">Automated Sorting and
+Ordering</h3>
+<p>Enabling sorting on standard classes means writing boilerplate for
+comparison methods like <code>__lt__()</code>, <code>__le__()</code>,
+<code>__gt__()</code>, and <code>__ge__()</code>.</p>
+<p>Adding <code>order=True</code> to the <code>@dataclass</code>
+decorator automatically generates these comparison operators, evaluating
+fields sequentially in the order they are defined:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span>(order<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Item:</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    priority: <span class="bu">int</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    name: <span class="bu">str</span></span></code></pre></div>
+<h3 id="native-type-annotations">Native Type Annotations</h3>
+<p>Dataclasses enforce the use of type hints for field definitions.
+While Python does not enforce types at runtime by default, the mandatory
+annotation syntax promotes self-documenting code, integrates seamlessly
+with static analysis tools like <code>mypy</code>, and improves
+auto-completion in modern IDEs.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

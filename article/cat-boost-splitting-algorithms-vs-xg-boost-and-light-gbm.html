@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CatBoost Splitting Algorithms vs XGBoost and LightGBM - python</title>
+    <meta name="description" content="While XGBoost and LightGBM rely on asymmetric depth-wise or leaf-wise splitting strategies, CatBoost introduces a fundamentally distinct architecture centered around symmetric oblivious trees and permutation-based categorical splits. This article explore">
+    <link rel="canonical" href="https://salivity.github.io/python/article/cat-boost-splitting-algorithms-vs-xg-boost-and-light-gbm">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="CatBoost Splitting Algorithms vs XGBoost and LightGBM - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/cat-boost-splitting-algorithms-vs-xg-boost-and-light-gbm" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="While XGBoost and LightGBM rely on asymmetric depth-wise or leaf-wise splitting strategies, CatBoost introduces a fundamentally distinct architecture centered around symmetric oblivious trees and permutation-based categorical splits. This article explore" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="catboost-splitting-algorithms-vs-xgboost-and-lightgbm">CatBoost
+Splitting Algorithms vs XGBoost and LightGBM</h1>
+<p>While XGBoost and LightGBM rely on asymmetric depth-wise or leaf-wise
+splitting strategies, CatBoost introduces a fundamentally distinct
+architecture centered around symmetric oblivious trees and
+permutation-based categorical splits. This article explores the unique
+splitting algorithms that set CatBoost apart in Python, focusing on
+oblivious tree growth, ordered target encoding, dynamic feature
+combinations, and how these mechanisms compare directly to the splitting
+paradigms of XGBoost and LightGBM.</p>
+<h2 id="oblivious-trees-symmetric-splitting">Oblivious Trees: Symmetric
+Splitting</h2>
+<p>The primary structural difference in CatBoost is its use of oblivious
+decision trees (also known as symmetric trees). In traditional gradient
+boosting frameworks, trees grow asymmetrically:</p>
+<ul>
+<li><strong>XGBoost</strong> traditionally uses a level-wise
+(depth-wise) approach, splitting nodes level by level, where different
+nodes at the same depth can evaluate completely different features and
+thresholds.</li>
+<li><strong>LightGBM</strong> uses a leaf-wise (best-first) approach,
+splitting the single node that yields the maximum loss reduction, which
+creates unbalanced, deeper trees rapidly.</li>
+</ul>
+<p>In contrast, CatBoost applies the <strong>same splitting
+criterion</strong> (the identical feature and split threshold) across
+all nodes at the given depth level.</p>
+<h3 id="key-characteristics-of-symmetric-splits">Key Characteristics of
+Symmetric Splits</h3>
+<ol type="1">
+<li><strong>Balanced Structure</strong>: A CatBoost tree of depth <span
+class="math inline">\(d\)</span> always has exactly <span
+class="math inline">\(2^d\)</span> leaves, maintaining strict structural
+symmetry.</li>
+<li><strong>Inference Speed</strong>: Evaluating a symmetric tree does
+not require pointer traversal down a graph. Instead, the tree evaluates
+<span class="math inline">\(d\)</span> binary conditions sequentially,
+constructs a binary index via bitwise operations, and accesses leaf
+values directly via table lookup.</li>
+<li><strong>Regularization</strong>: Because the same rule must apply
+across all branches of that depth, oblivious trees enforce strong
+structural regularization, significantly reducing the risk of
+overfitting on noisy tabular data.</li>
+</ol>
+<h2
+id="categorical-feature-splitting-with-ordered-target-statistics">Categorical
+Feature Splitting with Ordered Target Statistics</h2>
+<p>XGBoost historically relies on one-hot encoding or experimental
+partition methods for categorical variables, while LightGBM sorts
+categorical levels by their target histogram values to find optimal
+subsets (<span class="math inline">\(O(K \log K)\)</span> splits).</p>
+<p>CatBoost replaces these methods with <strong>Ordered Target
+Statistics (OTS)</strong>:</p>
+<ol type="1">
+<li><strong>Random Permutations</strong>: CatBoost randomly permutes the
+dataset to introduce an artificial time sequence.</li>
+<li><strong>Online Encoding</strong>: For each sample, the target
+statistic for a category is computed using only the samples that precede
+it in that permutation: <span class="math display">\[\hat{x}_{k} =
+\frac{\sum_{j &lt; k} [x_j = x_k] \cdot y_j + a \cdot P}{\sum_{j &lt; k}
+[x_j = x_k] + a}\]</span> <em>(where <span
+class="math inline">\(P\)</span> is a prior value and <span
+class="math inline">\(a\)</span> is a regularization
+parameter).</em></li>
+<li><strong>Target Leakage Prevention</strong>: Because a sample’s label
+is never used to compute its own feature value or the values of
+preceding samples, CatBoost eliminates target leakage (prediction shift)
+during tree node splitting.</li>
+</ol>
+<p>In Python, passing categorical indices via the
+<code>cat_features</code> argument in <code>CatBoostClassifier</code> or
+<code>CatBoostRegressor</code> triggers this ordered splitting procedure
+automatically without manual pre-encoding.</p>
+<h2 id="dynamic-feature-combinations-on-tree-splits">Dynamic Feature
+Combinations on Tree Splits</h2>
+<p>Standard gradient boosting libraries evaluate single-feature splits
+independently, leaving feature interactions to be captured across
+successive tree depths.</p>
+<p>CatBoost builds interaction splits dynamically:</p>
+<ul>
+<li>When considering a new split for an oblivious tree, CatBoost pairs
+the current candidate feature with categorical features already utilized
+in prior splits of that same tree.</li>
+<li>These combinations are generated on-the-fly during tree construction
+rather than in a preprocessing step, ensuring that only combinations
+that yield significant gain in the current tree context are
+evaluated.</li>
+</ul>
+<h2 id="ordered-boosting-unbiased-gradient-estimation">Ordered Boosting:
+Unbiased Gradient Estimation</h2>
+<p>Traditional gradient boosting evaluates split candidates using
+gradients calculated on the entire training set, introducing a
+statistical bias because the gradients depend on the target values of
+the same instances used to train the current model.</p>
+<p>CatBoost resolves this by maintaining several supporting models
+trained on distinct prefixes of the random permutations:</p>
+<ul>
+<li>The gradient step for a given instance is calculated using a model
+that has never observed that instance.</li>
+<li>Candidate splits are evaluated against unbiased gradient estimates,
+resulting in more accurate split selection than standard second-order
+Taylor approximations calculated globally.</li>
+</ul>
+<h2 id="summary-comparison">Summary Comparison</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Mechanism</th>
+<th style="text-align: left;">CatBoost</th>
+<th style="text-align: left;">XGBoost</th>
+<th style="text-align: left;">LightGBM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Tree Architecture</strong></td>
+<td style="text-align: left;">Symmetric (Oblivious)</td>
+<td style="text-align: left;">Asymmetric (Depth-wise)</td>
+<td style="text-align: left;">Asymmetric (Leaf-wise)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Split Execution</strong></td>
+<td style="text-align: left;">Identical feature/threshold across entire
+level</td>
+<td style="text-align: left;">Node-independent splits per level</td>
+<td style="text-align: left;">Highest-gain leaf split globally</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Categorical Handling</strong></td>
+<td style="text-align: left;">Ordered Target Encoding
+(Permutations)</td>
+<td style="text-align: left;">One-hot / Experimental partitioning</td>
+<td style="text-align: left;">Histogram sorting of categories</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Feature Interactions</strong></td>
+<td style="text-align: left;">On-the-fly greedy combinations during
+splitting</td>
+<td style="text-align: left;">Sequential tree depth</td>
+<td style="text-align: left;">Sequential tree depth</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Gradient Estimation</strong></td>
+<td style="text-align: left;">Ordered boosting (prefix models)</td>
+<td style="text-align: left;">Standard global gradients</td>
+<td style="text-align: left;">GOSS (sample downsampling)</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

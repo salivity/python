@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How abc.ABCMeta Enforces Abstract Methods in Python - python</title>
+    <meta name="description" content="In Python, the abc module provides the framework for defining Abstract Base Classes (ABCs), ensuring that derived classes implement required interfaces before they can be instantiated. This article explains the internal mechanics of abc.ABCMeta, detailin">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-abc-abc-meta-enforces-abstract-methods-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How abc.ABCMeta Enforces Abstract Methods in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-abc-abc-meta-enforces-abstract-methods-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, the abc module provides the framework for defining Abstract Base Classes (ABCs), ensuring that derived classes implement required interfaces before they can be instantiated. This article explains the internal mechanics of abc.ABCMeta, detailin" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-abcabcmeta-enforces-abstract-methods-in-python">How
+abc.ABCMeta Enforces Abstract Methods in Python</h1>
+<p>In Python, the <code>abc</code> module provides the framework for
+defining Abstract Base Classes (ABCs), ensuring that derived classes
+implement required interfaces before they can be instantiated. This
+article explains the internal mechanics of <code>abc.ABCMeta</code>,
+detailing how the <code>@abstractmethod</code> decorator flags
+functions, how <code>ABCMeta</code> collects these dependencies into the
+<code>__abstractmethods__</code> attribute during class creation, and
+how Python intercepts instantiation attempts to raise a
+<code>TypeError</code> if any abstract methods remain unimplemented.</p>
+<h2 id="marking-callables-with-abstractmethod">Marking Callables with
+<code>@abstractmethod</code></h2>
+<p>The enforcement process begins at the function level. When you
+decorate a method using <code>@abstractmethod</code>, Python attaches a
+boolean attribute named <code>__isabstractmethod__</code> to the
+function object and sets it to <code>True</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> abc <span class="im">import</span> abstractmethod</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Base:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">@abstractmethod</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> run(<span class="va">self</span>):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(Base.run.__isabstractmethod__)  <span class="co"># Outputs: True</span></span></code></pre></div>
+<p>The decorator does not prevent the method from being called or
+defined; its sole purpose is to serve as an identifiable metadata flag
+for the metaclass.</p>
+<h2 id="aggregating-methods-at-class-creation-time">Aggregating Methods
+at Class Creation Time</h2>
+<p><code>ABCMeta</code> is a metaclass derived from <code>type</code>.
+When any class using <code>ABCMeta</code> as its metaclass is defined,
+Python calls <code>ABCMeta.__new__</code> to construct the class
+object.</p>
+<p>During this step, <code>ABCMeta</code> evaluates the class being
+constructed and its inheritance hierarchy:</p>
+<ol type="1">
+<li><strong>Inheriting Parent Abstract Methods:</strong> It inspects all
+base classes and collects any methods present in their
+<code>__abstractmethods__</code> sets.</li>
+<li><strong>Checking Overrides:</strong> It checks the namespace of the
+newly defined class. If the subclass provides an implementation for an
+inherited abstract method—and that new implementation does not have
+<code>__isabstractmethod__ = True</code>—the method is removed from the
+collection of pending abstract methods.</li>
+<li><strong>Registering New Abstract Methods:</strong> It scans the
+current class namespace for any newly defined methods flagged with
+<code>__isabstractmethod__ = True</code> and adds them to the
+collection.</li>
+<li><strong>Setting <code>__abstractmethods__</code>:</strong> Finally,
+<code>ABCMeta</code> stores the resulting collection as a
+<code>frozenset</code> on the class attribute named
+<code>__abstractmethods__</code>.</li>
+</ol>
+<p>If a subclass provides implementations for all abstract methods
+inherited from its parent, its <code>__abstractmethods__</code>
+attribute is computed as an empty set. If any abstract methods remain
+unoverridden, they stay in this set.</p>
+<h2 id="intercepting-object-instantiation">Intercepting Object
+Instantiation</h2>
+<p>The actual enforcement—the error that prevents an incomplete class
+from being used—does not happen when the class is defined; it happens
+when the class is instantiated.</p>
+<p>When you attempt to instantiate a class by calling
+<code>MyClass()</code>, Python invokes <code>type.__call__</code>, which
+calls the class's <code>__new__</code> method (typically
+<code>object.__new__</code>).</p>
+<p>At the C-API level (within <code>typeobject.c</code> and Python's
+internal <code>_abc</code> implementation), <code>object.__new__</code>
+inspects the class's <code>__abstractmethods__</code> attribute:</p>
+<ul>
+<li><strong>If <code>__abstractmethods__</code> is empty:</strong>
+Instantiation proceeds normally, and a new instance is returned.</li>
+<li><strong>If <code>__abstractmethods__</code> contains any
+items:</strong> Python halts instantiation immediately and raises a
+<code>TypeError</code> specifying the names of the missing methods.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> abc <span class="im">import</span> ABCMeta, abstractmethod</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Action(metaclass<span class="op">=</span>ABCMeta):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">@abstractmethod</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> execute(<span class="va">self</span>):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> SubAction(Action):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">pass</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Class creation succeeds:</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(SubAction.__abstractmethods__)  <span class="co"># frozenset({&#39;execute&#39;})</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Instantiation fails:</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Raises: TypeError: Can&#39;t instantiate abstract class SubAction with abstract method execute</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>instance <span class="op">=</span> SubAction()</span></code></pre></div>
+<p>By decoupling method tagging (<code>@abstractmethod</code>),
+dependency calculation (class creation in <code>ABCMeta.__new__</code>),
+and enforcement (instantiation time in <code>object.__new__</code>),
+Python allows abstract classes to be subclassed across multiple
+inheritance layers while guaranteeing that incomplete subclasses can
+never produce concrete instances.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

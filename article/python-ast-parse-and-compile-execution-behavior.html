@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python ast.parse and compile Execution Behavior - python</title>
+    <meta name="description" content="This article explores the mechanics and runtime behavior of dynamically injected code using Python's ast.parse() and compile() functions. When dynamic code is introduced into an application via an Abstract Syntax Tree (AST) and subsequently compiled, it">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-ast-parse-and-compile-execution-behavior">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python ast.parse and compile Execution Behavior - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-ast-parse-and-compile-execution-behavior" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the mechanics and runtime behavior of dynamically injected code using Python's ast.parse() and compile() functions. When dynamic code is introduced into an application via an Abstract Syntax Tree (AST) and subsequently compiled, it" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-astparse-and-compile-execution-behavior">Python ast.parse
+and compile Execution Behavior</h1>
+<p>This article explores the mechanics and runtime behavior of
+dynamically injected code using Python's <code>ast.parse()</code> and
+<code>compile()</code> functions. When dynamic code is introduced into
+an application via an Abstract Syntax Tree (AST) and subsequently
+compiled, it moves through distinct parsing, mutation, bytecode
+translation, and evaluation phases. Understanding this execution model
+is critical for developers implementing metaprogramming, domain-specific
+languages, plugin engines, or static analysis tools where code execution
+must remain deterministic, observable, and secure.</p>
+<h3 id="the-parsing-and-compilation-lifecycle">The Parsing and
+Compilation Lifecycle</h3>
+<p>The lifecycle of dynamic execution via the AST involves three primary
+stages: parsing source text into a tree, compiling that tree into a code
+object, and evaluating the code object within an interpreter frame.</p>
+<ol type="1">
+<li><strong>AST Generation (<code>ast.parse</code>)</strong>: The
+<code>ast.parse(source, filename='&lt;unknown&gt;', mode='exec')</code>
+function converts raw string code into a tree of Python AST nodes
+without executing any instructions. It verifies grammatical syntax; if
+syntax errors exist, a <code>SyntaxError</code> is raised
+immediately.</li>
+<li><strong>Compilation to Bytecode (<code>compile</code>)</strong>: The
+standard built-in <code>compile()</code> function accepts an AST object
+(<code>ast.AST</code>) directly. It traverses the node hierarchy and
+generates a low-level Python code object (<code>types.CodeType</code>).
+During this step, Python performs symbol table analysis, assigns
+variable scopes (such as resolving local vs. global variables), and
+produces CPython bytecode instructions.</li>
+<li><strong>Execution (<code>exec</code> or <code>eval</code>)</strong>:
+The generated code object is fed into <code>exec()</code> or
+<code>eval()</code>. The Python Virtual Machine (PVM) creates an
+execution frame and processes the bytecode sequentially.</li>
+</ol>
+<h3 id="scope-resolution-and-namespace-binding">Scope Resolution and
+Namespace Binding</h3>
+<p>The execution behavior of a compiled AST is dictated heavily by the
+namespaces passed to <code>exec()</code> or <code>eval()</code>.</p>
+<ul>
+<li><strong>Implicit Namespaces</strong>: If
+<code>exec(code_object)</code> is called without passing explicit
+<code>globals</code> and <code>locals</code> dictionaries, the dynamic
+code executes within the caller's current scope. It can read, create, or
+overwrite variables directly inside the caller’s local and global
+environments.</li>
+<li><strong>Explicit Namespaces</strong>: Passing separate
+dictionaries—<code>exec(code_object, custom_globals, custom_locals)</code>—isolates
+the dynamic code's runtime storage. Any dynamic variable assignments are
+stored inside the provided dictionaries rather than polluting the host
+frame.</li>
+<li><strong>Built-in Access</strong>: Even when empty dictionaries are
+passed for namespaces, Python automatically attaches a reference to
+<code>__builtins__</code> inside the <code>globals</code> dictionary if
+not explicitly suppressed. Consequently, the injected code retains
+access to functions like <code>open()</code>, <code>import()</code>, and
+<code>eval()</code> unless
+<code>custom_globals['__builtins__'] = {}</code> or an alternative
+mapping is explicitly defined.</li>
+</ul>
+<h3 id="code-injection-via-ast-manipulation">Code Injection via AST
+Manipulation</h3>
+<p>Unlike plain string evaluation, <code>ast.parse()</code> allows
+programmatic modification of the syntax tree prior to compilation. When
+injecting logic into an existing AST:</p>
+<ul>
+<li><strong>Node Insertion</strong>: Developers can insert custom AST
+nodes (such as <code>ast.Call</code>, <code>ast.Assign</code>, or
+<code>ast.Expr</code>) into an existing tree using custom
+<code>ast.NodeTransformer</code> subclasses.</li>
+<li><strong>Location Metadata Requirement</strong>: The Python bytecode
+compiler requires source positioning metadata (<code>lineno</code>,
+<code>col_offset</code>, <code>end_lineno</code>, and
+<code>end_col_offset</code>) on executable nodes. Injected nodes lack
+this metadata by default. Calling
+<code>ast.fix_missing_locations(tree)</code> is required before
+compilation; failing to do so causes <code>compile()</code> to fail with
+a <code>TypeError</code> or <code>ValueError</code>.</li>
+<li><strong>Symbol Table Recalculation</strong>: The
+<code>compile()</code> step regenerates the symbol table from scratch
+based on the final shape of the AST. If an injected node references a
+variable that does not exist in the enclosing scope, it will be treated
+as a global variable, potentially throwing a <code>NameError</code> at
+runtime if undefined.</li>
+</ul>
+<h3 id="runtime-stack-and-traceback-mechanics">Runtime Stack and
+Traceback Mechanics</h3>
+<p>Code executed from an AST object behaves like standard Python code
+inside the call stack:</p>
+<ul>
+<li><strong>Frame Identification</strong>: The filename string passed to
+<code>compile(tree, filename="dynamic_code", mode="exec")</code> appears
+in tracebacks, debugging tools, and <code>sys._getframe()</code> calls.
+Specifying a meaningful string facilitates debugging.</li>
+<li><strong>Line Number Correlation</strong>: Tracebacks report errors
+based on the <code>lineno</code> attributes preserved or fixed on the
+AST nodes. If injected nodes copy line numbers from original nodes,
+stack traces point to the source text that originally triggered the
+injected behavior.</li>
+</ul>
+<h3 id="security-and-isolation-limits">Security and Isolation
+Limits</h3>
+<p>Using <code>ast.parse()</code> and <code>compile()</code> does not
+sandbox execution. A compiled AST produces standard bytecode that
+executes with the full privileges of the host Python process:</p>
+<ul>
+<li><strong>Memory and Resource Access</strong>: Bytecode instructions
+can allocate arbitrary amounts of memory, invoke system calls, and
+access external processes.</li>
+<li><strong>Introspection Vulnerabilities</strong>: Even if
+<code>__builtins__</code> is emptied in the global namespace, dynamic
+code can traverse the object hierarchy through inherited base classes
+(for example, via <code>object.__subclasses__()</code>) to recover
+access to modules like <code>os</code> or <code>sys</code>.</li>
+<li><strong>Static Verification</strong>: To safely execute dynamic code
+using <code>ast.parse()</code>, the AST must be analyzed or whitelisted
+before calling <code>compile()</code>, verifying that unauthorized node
+types (e.g., <code>ast.Import</code>, <code>ast.ImportFrom</code>, and
+dangerous attribute lookups) are strictly prohibited.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

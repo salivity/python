@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Does Python vars() Return Without Arguments? - python</title>
+    <meta name="description" content="In Python, calling the built-in vars() function without any arguments returns a dictionary representing the current local symbol table, behaving identically to the locals() function. This article explains the exact behavior of vars() when called with no">
+    <link rel="canonical" href="https://salivity.github.io/python/article/what-does-python-vars-return-without-arguments">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="What Does Python vars() Return Without Arguments? - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/what-does-python-vars-return-without-arguments" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Python, calling the built-in vars() function without any arguments returns a dictionary representing the current local symbol table, behaving identically to the locals() function. This article explains the exact behavior of vars() when called with no" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="what-does-python-vars-return-without-arguments">What Does Python
+vars() Return Without Arguments?</h1>
+<p>In Python, calling the built-in <code>vars()</code> function without
+any arguments returns a dictionary representing the current local symbol
+table, behaving identically to the <code>locals()</code> function. This
+article explains the exact behavior of <code>vars()</code> when called
+with no parameters, how its output depends on the context in which it is
+executed, and an important caveat regarding modifying its returned
+dictionary.</p>
+<h2 id="default-behavior-equivalent-to-locals">Default Behavior:
+Equivalent to <code>locals()</code></h2>
+<p>When you invoke <code>vars()</code> without passing an object,
+Python's runtime redirects the call to <code>locals()</code>. The
+official Python specification states:</p>
+<blockquote>
+<p>"Without an argument, <code>vars()</code> acts like
+<code>locals()</code>."</p>
+</blockquote>
+<p>The contents of this dictionary vary depending on whether the call
+takes place at the module level, inside a function, or within a class
+body.</p>
+<h2 id="at-the-module-level">At the Module Level</h2>
+<p>At the top level of a module or script, the local namespace is
+identical to the global namespace. Consequently, calling
+<code>vars()</code> without arguments in a module-level context returns
+the module's global dictionary, which matches the output of
+<code>globals()</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># module_example.py</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> <span class="st">&quot;hello&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># At the module level, vars() returns the global symbol table</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>module_vars <span class="op">=</span> <span class="bu">vars</span>()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(module_vars[<span class="st">&quot;x&quot;</span>])  <span class="co"># Output: 10</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(module_vars[<span class="st">&quot;y&quot;</span>])  <span class="co"># Output: hello</span></span></code></pre></div>
+<p>The returned dictionary includes standard module-level attributes
+such as <code>__name__</code>, <code>__doc__</code>,
+<code>__file__</code>, and any user-defined variables or imported
+modules.</p>
+<h2 id="inside-a-function">Inside a Function</h2>
+<p>When invoked inside a function or method, <code>vars()</code>
+captures only the local variables, parameters, and bindings defined in
+that function's current frame up to the point of the call.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calculate_area(length, width):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    area <span class="op">=</span> length <span class="op">*</span> width</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    current_scope <span class="op">=</span> <span class="bu">vars</span>()</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> current_scope</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> calculate_area(<span class="dv">5</span>, <span class="dv">10</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: {&#39;length&#39;: 5, &#39;width&#39;: 10, &#39;area&#39;: 50}</span></span></code></pre></div>
+<p>The resulting dictionary contains keys for each local identifier and
+values corresponding to the objects bound to them.</p>
+<h2 id="important-limitation-mutation-caveat">Important Limitation:
+Mutation Caveat</h2>
+<p>While <code>vars()</code> returns a dictionary, attempting to modify
+this dictionary inside a function does not guarantee changes to the
+actual local variables.</p>
+<p>Python optimizes local variable access at compile time using arrays
+of values (accessed via the <code>LOAD_FAST</code> bytecode instruction)
+rather than querying a dictionary dynamically. Therefore, updates made
+to the dictionary returned by <code>vars()</code> inside a function are
+typically ignored by the interpreter and will not update the local
+variable bindings. At the module level, however, modifying the
+dictionary directly alters the module's global namespace because module
+globals are stored in an actual dictionary.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

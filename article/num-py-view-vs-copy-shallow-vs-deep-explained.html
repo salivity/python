@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NumPy View vs Copy: Shallow vs Deep Explained - python</title>
+    <meta name="description" content="In NumPy, managing how data is stored and manipulated in memory is crucial for both performance and avoiding unintended side effects. The core difference between a shallow view and a deep copy is that a view shares the exact same memory buffer as the ori">
+    <link rel="canonical" href="https://salivity.github.io/python/article/num-py-view-vs-copy-shallow-vs-deep-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="NumPy View vs Copy: Shallow vs Deep Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/num-py-view-vs-copy-shallow-vs-deep-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In NumPy, managing how data is stored and manipulated in memory is crucial for both performance and avoiding unintended side effects. The core difference between a shallow view and a deep copy is that a view shares the exact same memory buffer as the ori" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="numpy-view-vs-copy-shallow-vs-deep-explained">NumPy View vs
+Copy: Shallow vs Deep Explained</h1>
+<p>In NumPy, managing how data is stored and manipulated in memory is
+crucial for both performance and avoiding unintended side effects. The
+core difference between a shallow view and a deep copy is that a view
+shares the exact same memory buffer as the original array, whereas a
+deep copy creates a completely new, independent array with its own
+allocated memory. Modifying the elements of a view will directly alter
+the original array, while modifying a deep copy leaves the original
+array untouched.</p>
+<h2 id="what-is-a-shallow-view">What Is a Shallow View?</h2>
+<p>A view (often referred to as a shallow copy) is a new
+<code>ndarray</code> object that references the data of an existing
+array. It does not allocate memory for the data itself; instead, it
+looks at the original buffer with a potentially different shape, stride,
+or offset.</p>
+<h3 id="characteristics-of-a-view">Characteristics of a View</h3>
+<ul>
+<li><strong>Shared Memory:</strong> Any changes made to the values
+inside a view immediately reflect in the original array, and vice
+versa.</li>
+<li><strong>Memory Efficient:</strong> Creating a view takes <span
+class="math inline">\(O(1)\)</span> time and virtually no extra RAM,
+making it extremely fast.</li>
+<li><strong>Creation Methods:</strong> Basic slicing (e.g.,
+<code>b = a[1:4]</code>) or calling the <code>.view()</code> method
+creates a view.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>original <span class="op">=</span> np.array([<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>])</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>view_arr <span class="op">=</span> original[<span class="dv">1</span>:<span class="dv">3</span>]</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>view_arr[<span class="dv">0</span>] <span class="op">=</span> <span class="dv">99</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(original)  <span class="co"># Output: [ 1, 99,  3,  4]</span></span></code></pre></div>
+<h2 id="what-is-a-deep-copy">What Is a Deep Copy?</h2>
+<p>A deep copy is a brand-new array containing an identical duplicate of
+the original data stored in a separate memory location.</p>
+<h3 id="characteristics-of-a-copy">Characteristics of a Copy</h3>
+<ul>
+<li><strong>Independent Memory:</strong> Modifying the copy has no
+effect on the original array.</li>
+<li><strong>Resource Intensive:</strong> Creating a copy requires
+allocating new memory and copying over every byte (<span
+class="math inline">\(O(n)\)</span> time and space).</li>
+<li><strong>Creation Methods:</strong> Created using the
+<code>.copy()</code> method or triggered implicitly by advanced indexing
+(such as integer array indexing or boolean masks).</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>original <span class="op">=</span> np.array([<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>])</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>copy_arr <span class="op">=</span> original.copy()</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>copy_arr[<span class="dv">0</span>] <span class="op">=</span> <span class="dv">99</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(original)  <span class="co"># Output: [1, 2, 3, 4]</span></span></code></pre></div>
+<h2 id="how-to-check-if-an-array-owns-its-data">How to Check If an Array
+Owns Its Data</h2>
+<p>You can check whether an array is a view or a copy by inspecting its
+<code>base</code> attribute:</p>
+<ul>
+<li>If <code>arr.base</code> is <code>None</code>, the array owns its
+memory (it is an original or a deep copy).</li>
+<li>If <code>arr.base</code> references another array, it is a
+view.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> np.array([<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>])</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> a[<span class="dv">0</span>:<span class="dv">2</span>]</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>c <span class="op">=</span> a.copy()</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(b.base <span class="kw">is</span> a)     <span class="co"># True  -&gt; b is a view of a</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(c.base <span class="kw">is</span> <span class="va">None</span>)  <span class="co"># True  -&gt; c owns its memory</span></span></code></pre></div>
+<h2 id="comparison-summary">Comparison Summary</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Shallow View</th>
+<th style="text-align: left;">Deep Copy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Memory Allocation</strong></td>
+<td style="text-align: left;">Shared with original</td>
+<td style="text-align: left;">Separate block of memory</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Mutation Effects</strong></td>
+<td style="text-align: left;">Modifying view mutates original</td>
+<td style="text-align: left;">Isolated from original</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Creation Method</strong></td>
+<td style="text-align: left;">Basic slicing,
+<code>arr.view()</code></td>
+<td style="text-align: left;"><code>arr.copy()</code>, advanced
+indexing</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Performance</strong></td>
+<td style="text-align: left;">Extremely fast (<span
+class="math inline">\(O(1)\)</span>)</td>
+<td style="text-align: left;">Slower (<span
+class="math inline">\(O(n)\)</span> memory and time)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>arr.base</code>
+Value</strong></td>
+<td style="text-align: left;">Points to original array</td>
+<td style="text-align: left;"><code>None</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="when-to-use-each">When to Use Each</h2>
+<ul>
+<li><strong>Use a View</strong> when processing large datasets where
+memory usage and speed are critical, and when modifications are either
+intended to update the source data or no modifications will take
+place.</li>
+<li><strong>Use a Copy</strong> when you need to transform, clean, or
+experiment with a subset of data without risking the integrity of the
+original dataset.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Function Overloading in Python with singledispatch - python</title>
+    <meta name="description" content="Python does not natively support traditional compile-time function overloading where multiple functions share the same name with different parameter signatures. To solve this design challenge, Python's standard library provides the singledispatch decorat">
+    <link rel="canonical" href="https://salivity.github.io/python/article/function-overloading-in-python-with-singledispatch">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Function Overloading in Python with singledispatch - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/function-overloading-in-python-with-singledispatch" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python does not natively support traditional compile-time function overloading where multiple functions share the same name with different parameter signatures. To solve this design challenge, Python's standard library provides the singledispatch decorat" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="function-overloading-in-python-with-singledispatch">Function
+Overloading in Python with singledispatch</h1>
+<p>Python does not natively support traditional compile-time function
+overloading where multiple functions share the same name with different
+parameter signatures. To solve this design challenge, Python's standard
+library provides the <code>singledispatch</code> decorator within the
+<code>functools</code> module. This tool enables generic function
+dispatching, allowing a single function to execute different
+implementations based on the runtime type of its first argument.</p>
+<h2 id="the-problem-with-native-overloading-in-python">The Problem with
+Native Overloading in Python</h2>
+<p>In dynamically typed languages like Python, defining multiple
+functions with the same name causes the interpreter to overwrite
+previous declarations with the most recent one:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(data: <span class="bu">int</span>):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data <span class="op">*</span> <span class="dv">2</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(data: <span class="bu">str</span>):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data.upper()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Calling process(10) will raise an AttributeError because </span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># the int version was overwritten by the str version.</span></span></code></pre></div>
+<p>Historically, developers addressed this by writing monolithic
+functions filled with chained <code>isinstance()</code> checks. This
+approach creates tightly coupled code, violates the Open/Closed
+Principle, and makes extending the function with new types
+difficult.</p>
+<h2 id="how-singledispatch-works">How singledispatch Works</h2>
+<p>The <code>@functools.singledispatch</code> decorator converts a base
+function into a generic entry point. It serves as both the default
+implementation (fallback) and a registry for type-specific variants.</p>
+<p>When the generic function is called, <code>singledispatch</code>
+inspects the type of the first positional argument
+(<code>args[0]</code>) and routes execution to the corresponding
+registered handler.</p>
+<h3 id="basic-implementation">Basic Implementation</h3>
+<p>To implement generic dispatching, define the base fallback function
+decorated with <code>@singledispatch</code>, then register specialized
+handlers using the base function's <code>.register</code> attribute:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functools <span class="im">import</span> singledispatch</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="at">@singledispatch</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process(data):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;Fallback handler for unsupported types.&quot;&quot;&quot;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> <span class="pp">NotImplementedError</span>(<span class="ss">f&quot;Unsupported type: </span><span class="sc">{</span><span class="bu">type</span>(data)<span class="sc">.</span><span class="va">__name__</span><span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="at">@process.register</span>(<span class="bu">int</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _(data):</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data <span class="op">*</span> <span class="dv">2</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="at">@process.register</span>(<span class="bu">str</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _(data):</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data.upper()</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="at">@process.register</span>(<span class="bu">list</span>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _(data):</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> [process(item) <span class="cf">for</span> item <span class="kw">in</span> data]</span></code></pre></div>
+<p>Executing <code>process(5)</code> yields <code>10</code>,
+<code>process("hello")</code> yields <code>"HELLO"</code>, and
+<code>process(True)</code> delegates through Python's class hierarchy to
+the <code>int</code> handler because <code>bool</code> is a subclass of
+<code>int</code>.</p>
+<h3 id="type-annotation-syntax">Type Annotation Syntax</h3>
+<p>Starting in Python 3.7, <code>singledispatch</code> supports type
+annotations directly. If the type is declared in the registered
+function's parameter signature, the type argument can be omitted from
+<code>@register</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="at">@process.register</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _(data: <span class="bu">dict</span>):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {k: process(v) <span class="cf">for</span> k, v <span class="kw">in</span> data.items()}</span></code></pre></div>
+<h2 id="key-architectural-behaviors">Key Architectural Behaviors</h2>
+<h3 id="1-inheritance-and-method-resolution-order-mro">1. Inheritance
+and Method Resolution Order (MRO)</h3>
+<p>If a handler is not explicitly registered for an exact type,
+<code>singledispatch</code> searches the type's Method Resolution Order
+(MRO) to find the closest registered parent class. If no ancestor is
+registered, it calls the original fallback function.</p>
+<h3 id="2-single-argument-limitation">2. Single-Argument Limitation</h3>
+<p>Dispatching occurs strictly on the type of the first positional
+argument. If polymorphism based on multiple arguments or keyword
+arguments is required, third-party libraries providing multiple dispatch
+(such as <code>multipledispatch</code>) must be used instead.</p>
+<h3 id="3-handling-methods-with-singledispatchmethod">3. Handling
+Methods with <code>singledispatchmethod</code></h3>
+<p>Because standard instance methods take <code>self</code> as the first
+argument, applying <code>@singledispatch</code> directly to a method
+inspects the class instance rather than the target parameter. Python 3.8
+introduced <code>@functools.singledispatchmethod</code> to resolve this
+by ignoring <code>self</code> or <code>cls</code> and dispatching based
+on the first actual method parameter.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

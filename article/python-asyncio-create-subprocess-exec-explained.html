@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python asyncio.create_subprocess_exec Explained - python</title>
+    <meta name="description" content="This article provides an overview of how Python's asyncio.createsubprocessexec() launches and manages asynchronous child processes. It explores how the function interacts with the underlying operating system to create processes, how the asyncio event loo">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-asyncio-create-subprocess-exec-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python asyncio.create_subprocess_exec Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-asyncio-create-subprocess-exec-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of how Python's asyncio.createsubprocessexec() launches and manages asynchronous child processes. It explores how the function interacts with the underlying operating system to create processes, how the asyncio event loo" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-asynciocreate_subprocess_exec-explained">Python
+asyncio.create_subprocess_exec Explained</h1>
+<p>This article provides an overview of how Python's
+<code>asyncio.create_subprocess_exec()</code> launches and manages
+asynchronous child processes. It explores how the function interacts
+with the underlying operating system to create processes, how the
+<code>asyncio</code> event loop monitors standard input/output streams
+without blocking execution, and how process lifecycles are tracked until
+termination.</p>
+<h3 id="process-spawning-at-the-os-level">Process Spawning at the OS
+Level</h3>
+<p>When you call <code>asyncio.create_subprocess_exec()</code>, Python
+delegates process creation to the underlying operating system rather
+than handling it within the Python runtime. On POSIX systems (Linux,
+macOS), it uses low-level system calls such as <code>fork()</code> (or
+<code>posix_spawn()</code>) followed by <code>execve()</code>. On
+Windows, it calls the Win32 <code>CreateProcess()</code> API.</p>
+<p>Unlike standard synchronous process creation (such as
+<code>subprocess.Popen</code>),
+<code>asyncio.create_subprocess_exec()</code> immediately configures the
+process's standard streams (<code>stdin</code>, <code>stdout</code>,
+<code>stderr</code>) as non-blocking file descriptors or handles.</p>
+<h3 id="event-loop-integration-and-non-blocking-io">Event Loop
+Integration and Non-Blocking I/O</h3>
+<p>The core advantage of <code>asyncio.create_subprocess_exec()</code>
+is its integration with the <code>asyncio</code> event loop. Once the
+process is spawned, the file descriptors for the child's pipes are
+registered with the event loop's underlying selector mechanism:</p>
+<ul>
+<li><strong>POSIX Systems:</strong> The event loop typically utilizes
+<code>epoll</code> (Linux) or <code>kqueue</code> (macOS/BSD) to monitor
+standard output and standard error pipes.</li>
+<li><strong>Windows Systems:</strong> The <code>ProactorEventLoop</code>
+uses I/O Completion Ports (IOCP) to perform asynchronous read and write
+operations.</li>
+</ul>
+<p>Because the pipes are non-blocking, reading from <code>stdout</code>
+or writing to <code>stdin</code> does not halt the Python thread.
+Instead, Python creates <code>asyncio.StreamReader</code> and
+<code>asyncio.StreamWriter</code> instances. When a coroutine calls
+<code>await process.stdout.read()</code>, the event loop yields control
+to other tasks until the operating system signals that data is ready to
+be read from the pipe.</p>
+<h3 id="child-process-monitoring-and-termination">Child Process
+Monitoring and Termination</h3>
+<p>Monitoring when a child process exits also relies on asynchronous OS
+notifications:</p>
+<ol type="1">
+<li><strong>POSIX:</strong> The event loop installs a signal handler for
+<code>SIGCHLD</code> or uses file-descriptor-based process monitoring
+(such as Linux's <code>pidfd</code>). When the child process terminates,
+the kernel raises <code>SIGCHLD</code>, notifying the event loop to
+collect the exit status using <code>waitpid()</code>.</li>
+<li><strong>Windows:</strong> The event loop registers the process
+handle with the operating system using asynchronous wait functions that
+trigger a callback upon termination.</li>
+</ol>
+<p>When the process exits, the associated
+<code>asyncio.subprocess.Process</code> object updates its
+<code>returncode</code> attribute and resolves any pending coroutines
+awaiting <code>process.wait()</code> or
+<code>process.communicate()</code>.</p>
+<h3 id="code-example">Code Example</h3>
+<p>The following example demonstrates running a system command,
+asynchronously reading its output, and retrieving its exit status:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> run_command():</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Spawn the child process asynchronously</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    process <span class="op">=</span> <span class="cf">await</span> asyncio.create_subprocess_exec(</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;echo&quot;</span>, <span class="st">&quot;Hello, Async World!&quot;</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        stdout<span class="op">=</span>asyncio.subprocess.PIPE,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        stderr<span class="op">=</span>asyncio.subprocess.PIPE</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Read output asynchronously without blocking the event loop</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    stdout, stderr <span class="op">=</span> <span class="cf">await</span> process.communicate()</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Output: </span><span class="sc">{</span>stdout<span class="sc">.</span>decode()<span class="sc">.</span>strip()<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Exit Code: </span><span class="sc">{</span>process<span class="sc">.</span>returncode<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>asyncio.run(run_command())</span></code></pre></div>
+<p>In this flow, <code>asyncio.create_subprocess_exec()</code> spawns
+the executable, wraps the output pipes into asynchronous streams, and
+yields control until the OS completes the execution, allowing other
+asynchronous tasks to run concurrently.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

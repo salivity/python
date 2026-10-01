@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synchronous Blocking in Python Async Event Loop - python</title>
+    <meta name="description" content="Executing a synchronous blocking call inside a Python asynchronous event loop halts the execution of the entire thread, completely freezing all concurrent tasks. Because Python’s asyncio framework relies on cooperative multitasking on a single thread,">
+    <link rel="canonical" href="https://salivity.github.io/python/article/synchronous-blocking-in-python-async-event-loop">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Synchronous Blocking in Python Async Event Loop - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/synchronous-blocking-in-python-async-event-loop" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Executing a synchronous blocking call inside a Python asynchronous event loop halts the execution of the entire thread, completely freezing all concurrent tasks. Because Python’s asyncio framework relies on cooperative multitasking on a single thread," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="synchronous-blocking-in-python-async-event-loop">Synchronous
+Blocking in Python Async Event Loop</h1>
+<p>Executing a synchronous blocking call inside a Python asynchronous
+event loop halts the execution of the entire thread, completely freezing
+all concurrent tasks. Because Python’s <code>asyncio</code> framework
+relies on cooperative multitasking on a single thread, blocking
+operations prevent the loop from scheduling other ready coroutines,
+degrading application throughput and causing request latency, timeouts,
+and dropped connections. This article explains the technical
+consequences of introducing blocking code into an async loop, common
+sources of this mistake, and how to detect and resolve the issue.</p>
+<h2 id="how-the-async-event-loop-operates">How the Async Event Loop
+Operates</h2>
+<p>Python’s <code>asyncio</code> runs on a single-threaded cooperative
+multitasking model. The event loop acts as a central coordinator:</p>
+<ol type="1">
+<li>A coroutine runs until it encounters an <code>await</code>
+expression backed by a non-blocking I/O operation.</li>
+<li>At the <code>await</code> boundary, the coroutine yields control
+back to the event loop.</li>
+<li>The event loop switches execution to another coroutine that is ready
+to run.</li>
+</ol>
+<p>This architecture achieves high concurrency because waiting for
+network or disk operations does not consume CPU cycles.</p>
+<h2 id="what-happens-when-you-introduce-a-blocking-call">What Happens
+When You Introduce a Blocking Call</h2>
+<p>When synchronous code—such as <code>time.sleep()</code>, standard
+file I/O, or a synchronous HTTP request via <code>requests</code>—is
+executed directly inside a coroutine, the cooperative contract
+breaks:</p>
+<h3 id="1-the-entire-thread-freezes">1. The Entire Thread Freezes</h3>
+<p>Because the blocking call does not yield control via
+<code>await</code>, the event loop cannot pause the current task. The
+underlying OS thread stops processing instructions while waiting for the
+blocking call to return.</p>
+<h3 id="2-task-starvation">2. Task Starvation</h3>
+<p>All other coroutines scheduled in the event loop are starved of
+execution time. If you have 5,000 active WebSocket connections, none of
+them will send heartbeats, receive incoming frames, or respond to ping
+events until the blocking operation finishes.</p>
+<h3 id="3-cascading-timeouts-and-failures">3. Cascading Timeouts and
+Failures</h3>
+<p>External clients or servers interacting with your application will
+experience latency spikes. Upstream proxies (such as Nginx or AWS ALB)
+may terminate connections with 504 Gateway Timeout errors, and internal
+async operations may raise <code>asyncio.TimeoutError</code>.</p>
+<h3 id="4-concurrency-collapses-to-serial-execution">4. Concurrency
+Collapses to Serial Execution</h3>
+<p>If every request handler inadvertently triggers a 200ms synchronous
+database or API query, your async application loses its concurrent
+advantages. Throughput drops to that of a purely synchronous,
+single-threaded script—handling only five requests per second instead of
+thousands.</p>
+<h2 id="common-blocking-culprits-in-async-code">Common Blocking Culprits
+in Async Code</h2>
+<ul>
+<li><strong>Blocking Sleep:</strong> Using <code>time.sleep(n)</code>
+instead of <code>await asyncio.sleep(n)</code>.</li>
+<li><strong>Synchronous HTTP Clients:</strong> Using
+<code>requests.get()</code> or <code>urllib</code> instead of
+<code>httpx</code> or <code>aiohttp</code>.</li>
+<li><strong>Synchronous Database Drivers:</strong> Using standard
+drivers like <code>psycopg2</code> or <code>sqlite3</code> without an
+async driver (like <code>asyncpg</code> or <code>aiosqlite</code>).</li>
+<li><strong>Standard File Operations:</strong> Calling
+<code>open()</code> and <code>file.read()</code> directly in
+coroutines.</li>
+<li><strong>CPU-Bound Operations:</strong> Performing heavy
+calculations, encryption, or image manipulation directly on the loop
+thread.</li>
+</ul>
+<h2 id="detecting-blocking-calls">Detecting Blocking Calls</h2>
+<p>Python provides built-in mechanisms to catch blocking code during
+development.</p>
+<p>Enable the asyncio debug mode:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable debug mode directly</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>asyncio.run(main(), debug<span class="op">=</span><span class="va">True</span>)</span></code></pre></div>
+<p>Alternatively, set the environment variable:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">PYTHONASYNCIODEBUG</span><span class="op">=</span>1</span></code></pre></div>
+<p>You can configure the threshold for what constitutes a slow operation
+using the event loop:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>loop <span class="op">=</span> asyncio.get_running_loop()</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>loop.slow_callback_duration <span class="op">=</span> <span class="fl">0.1</span>  <span class="co"># Log warnings for calls taking longer than 100ms</span></span></code></pre></div>
+<p>When a blocking call exceeds this threshold, the event loop logs a
+warning with the file name, line number, and execution duration.</p>
+<h2 id="how-to-fix-blocking-code">How to Fix Blocking Code</h2>
+<h3 id="1-use-asynchronous-libraries">1. Use Asynchronous Libraries</h3>
+<p>Whenever possible, replace blocking libraries with their asynchronous
+equivalents:</p>
+<ul>
+<li>Replace <code>requests</code> with <code>httpx</code> or
+<code>aiohttp</code>.</li>
+<li>Replace standard file operations with <code>aiofiles</code>.</li>
+<li>Replace blocking database drivers with async alternatives.</li>
+</ul>
+<h3 id="2-offload-blocking-io-to-a-thread-pool">2. Offload Blocking I/O
+to a Thread Pool</h3>
+<p>If an async driver is unavailable, offload the blocking call to a
+separate worker thread using <code>asyncio.to_thread()</code> (Python
+3.9+):</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> blocking_io():</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    time.sleep(<span class="dv">1</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;completed&quot;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> main():</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Runs the blocking function in a separate thread without halting the event loop</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> <span class="cf">await</span> asyncio.to_thread(blocking_io)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(result)</span></code></pre></div>
+<p>For Python versions prior to 3.9, use
+<code>loop.run_in_executor()</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>loop <span class="op">=</span> asyncio.get_running_loop()</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> <span class="cf">await</span> loop.run_in_executor(<span class="va">None</span>, blocking_io)</span></code></pre></div>
+<h3 id="3-offload-cpu-bound-tasks-to-a-process-pool">3. Offload
+CPU-Bound Tasks to a Process Pool</h3>
+<p>Thread offloading is insufficient for heavy computational work due to
+Python's Global Interpreter Lock (GIL). For CPU-intensive operations,
+use a <code>ProcessPoolExecutor</code> with
+<code>loop.run_in_executor()</code> to distribute the work across
+separate CPU cores.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

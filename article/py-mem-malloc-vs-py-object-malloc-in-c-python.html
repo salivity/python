@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyMem_Malloc vs PyObject_Malloc in CPython - python</title>
+    <meta name="description" content="CPython employs a multi-tiered memory architecture designed to optimize allocation speed and reduce memory fragmentation for dynamic workloads. Within this hierarchy, PyMemMalloc and PyObjectMalloc serve distinct roles: PyMemMalloc acts as the memory all">
+    <link rel="canonical" href="https://salivity.github.io/python/article/py-mem-malloc-vs-py-object-malloc-in-c-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PyMem_Malloc vs PyObject_Malloc in CPython - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/py-mem-malloc-vs-py-object-malloc-in-c-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="CPython employs a multi-tiered memory architecture designed to optimize allocation speed and reduce memory fragmentation for dynamic workloads. Within this hierarchy, PyMemMalloc and PyObjectMalloc serve distinct roles: PyMemMalloc acts as the memory all" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pymem_malloc-vs-pyobject_malloc-in-cpython">PyMem_Malloc vs
+PyObject_Malloc in CPython</h1>
+<p>CPython employs a multi-tiered memory architecture designed to
+optimize allocation speed and reduce memory fragmentation for dynamic
+workloads. Within this hierarchy, <code>PyMem_Malloc</code> and
+<code>PyObject_Malloc</code> serve distinct roles:
+<code>PyMem_Malloc</code> acts as the memory allocator for
+general-purpose C-level data buffers and structures, while
+<code>PyObject_Malloc</code> is the specialized allocator optimized for
+Python object lifecycles through the <code>pymalloc</code> allocator.
+Understanding the boundaries between these allocators is critical for
+writing correct, performant C extensions and avoiding memory
+corruption.</p>
+<h3 id="the-cpython-memory-hierarchy">The CPython Memory Hierarchy</h3>
+<p>CPython structures its memory management into four primary layers,
+moving from low-level system calls to high-level Python
+abstractions:</p>
+<ol type="1">
+<li><strong>Layer 0 (System Allocator):</strong> Standard C library
+allocators (<code>malloc</code>, <code>calloc</code>,
+<code>realloc</code>, <code>free</code>).</li>
+<li><strong>Layer 1 (Raw Memory / <code>PyMem_Raw*</code>):</strong> A
+wrapper around the OS allocator suitable for memory allocation when the
+Global Interpreter Lock (GIL) is not held, or for low-level internal
+runtime needs.</li>
+<li><strong>Layer 2 (Python Memory / <code>PyMem_*</code>):</strong>
+Designed for intermediate internal buffers, strings, and C extensions
+that do not represent full Python objects.</li>
+<li><strong>Layer 3 (Object Allocator /
+<code>PyObject_*</code>):</strong> Tailored specifically for managing
+<code>PyObject</code> instances and small memory blocks.</li>
+</ol>
+<h3 id="pymem_malloc-buffer-and-intermediate-memory">PyMem_Malloc:
+Buffer and Intermediate Memory</h3>
+<p><code>PyMem_Malloc</code> provides memory management for internal
+C-level buffers used by the interpreter and external extension modules.
+Its primary characteristics include:</p>
+<ul>
+<li><strong>Scope:</strong> It is intended for raw data buffers,
+temporary work areas, arrays of C types, or struct instances that are
+not exposed directly as Python objects.</li>
+<li><strong>GIL Requirement:</strong> The calling thread must hold the
+Python Global Interpreter Lock (GIL).</li>
+<li><strong>Customizability:</strong> It delegates to the Python memory
+domain (<code>PYMEM_DOMAIN_MEM</code>), which can be hooked or
+redirected via custom allocators using Python's runtime memory tracing
+hooks (such as <code>tracemalloc</code>).</li>
+</ul>
+<h3 id="pyobject_malloc-the-small-object-allocator">PyObject_Malloc: The
+Small Object Allocator</h3>
+<p><code>PyObject_Malloc</code> operates at the highest tier of the
+C-level hierarchy and is heavily optimized for Python’s runtime object
+allocation patterns:</p>
+<ul>
+<li><strong>Scope:</strong> It is designed specifically for allocating
+Python objects (<code>PyObject</code> and its subtypes).</li>
+<li><strong>The <code>pymalloc</code> Mechanism:</strong> For requests
+of 512 bytes or fewer, <code>PyObject_Malloc</code> uses CPython’s
+custom small-object allocator (<code>pymalloc</code>).
+<code>pymalloc</code> obtains 256 KB chunks from the operating system
+called "arenas," divides them into 4 KB "pools," and subdivides pools
+into fixed-size "blocks." This prevents heap fragmentation and
+drastically speeds up allocation for short-lived Python objects.</li>
+<li><strong>Fallback Behavior:</strong> If an allocation request exceeds
+512 bytes, <code>PyObject_Malloc</code> automatically falls back to the
+underlying general-purpose memory allocator.</li>
+<li><strong>GIL Requirement:</strong> Because <code>pymalloc</code>
+pools and free lists are not inherently thread-safe across threads,
+<code>PyObject_Malloc</code> strictly requires the GIL to be held.</li>
+</ul>
+<h3 id="key-differences-between-the-two">Key Differences Between the
+Two</h3>
+<ul>
+<li><strong>Semantic Purpose:</strong> <code>PyMem_Malloc</code> is for
+arbitrary non-object memory associated with Python logic, whereas
+<code>PyObject_Malloc</code> is semantically reserved for Python objects
+managed by the runtime and garbage collector.</li>
+<li><strong>Convergence in Modern CPython:</strong> Since Python 3.6,
+the default allocator for <code>PyMem_Malloc</code> has been unified
+with <code>pymalloc</code> to improve performance for byte buffers.
+Despite sharing the underlying engine by default, they remain logically
+separate domains (<code>PYMEM_DOMAIN_MEM</code> vs.
+<code>PYMEM_DOMAIN_OBJ</code>), meaning hooks, debug wrappers, and
+tracking tools differentiate between the two.</li>
+<li><strong>Pairing and Safety:</strong> Memory allocated with a
+specific function must be released using its corresponding deallocator.
+Memory allocated via <code>PyMem_Malloc</code> must be freed with
+<code>PyMem_Free</code>, while memory from <code>PyObject_Malloc</code>
+must be released via <code>PyObject_Free</code>. Mixing these allocators
+creates undefined behavior, heap corruption, and crashes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

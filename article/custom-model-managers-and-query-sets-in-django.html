@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Model Managers and QuerySets in Django - python</title>
+    <meta name="description" content="This article explains how to build custom model managers and chainable QuerySets in Django using Python. By extending Django’s default ORM behavior, you can encapsulate complex database queries into reusable, clean, and chainable methods directly acces">
+    <link rel="canonical" href="https://salivity.github.io/python/article/custom-model-managers-and-query-sets-in-django">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Custom Model Managers and QuerySets in Django - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/custom-model-managers-and-query-sets-in-django" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to build custom model managers and chainable QuerySets in Django using Python. By extending Django’s default ORM behavior, you can encapsulate complex database queries into reusable, clean, and chainable methods directly acces" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="custom-model-managers-and-querysets-in-django">Custom Model
+Managers and QuerySets in Django</h1>
+<p>This article explains how to build custom model managers and
+chainable QuerySets in Django using Python. By extending Django’s
+default ORM behavior, you can encapsulate complex database queries into
+reusable, clean, and chainable methods directly accessible through your
+model interfaces.</p>
+<hr />
+<h2 id="1-create-a-custom-queryset">1. Create a Custom QuerySet</h2>
+<p>To make queries chainable, define a class that inherits from
+<code>django.db.models.QuerySet</code>. Each custom method within this
+class must return a <code>QuerySet</code> instance (typically using
+<code>self.filter()</code>, <code>self.exclude()</code>, or
+<code>self.annotate()</code>), allowing multiple filters to be called
+sequentially.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.db <span class="im">import</span> models</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> django.utils <span class="im">import</span> timezone</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ArticleQuerySet(models.QuerySet):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> published(<span class="va">self</span>):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.<span class="bu">filter</span>(status<span class="op">=</span><span class="st">&#39;published&#39;</span>, published_at__lte<span class="op">=</span>timezone.now())</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> featured(<span class="va">self</span>):</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.<span class="bu">filter</span>(is_featured<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> recent(<span class="va">self</span>, days<span class="op">=</span><span class="dv">7</span>):</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        cutoff <span class="op">=</span> timezone.now() <span class="op">-</span> timezone.timedelta(days<span class="op">=</span>days)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.<span class="bu">filter</span>(published_at__gte<span class="op">=</span>cutoff)</span></code></pre></div>
+<h2 id="2-attach-the-queryset-to-a-manager">2. Attach the QuerySet to a
+Manager</h2>
+<p>There are two primary methods to make these QuerySet methods
+available on the model’s manager (e.g.,
+<code>Article.objects</code>).</p>
+<h3 id="method-a-using-as_manager-recommended">Method A: Using
+<code>as_manager()</code> (Recommended)</h3>
+<p>The simplest approach is calling <code>.as_manager()</code> on your
+custom <code>QuerySet</code> class. This automatically generates a
+manager with all the QuerySet's custom methods available at the root
+level.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Article(models.Model):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    title <span class="op">=</span> models.CharField(max_length<span class="op">=</span><span class="dv">255</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    status <span class="op">=</span> models.CharField(max_length<span class="op">=</span><span class="dv">20</span>, default<span class="op">=</span><span class="st">&#39;draft&#39;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    is_featured <span class="op">=</span> models.BooleanField(default<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    published_at <span class="op">=</span> models.DateTimeField(null<span class="op">=</span><span class="va">True</span>, blank<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Attach custom manager</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    objects <span class="op">=</span> ArticleQuerySet.as_manager()</span></code></pre></div>
+<h3 id="method-b-creating-a-custom-manager-with-from_queryset">Method B:
+Creating a Custom Manager with <code>from_queryset()</code></h3>
+<p>If you need custom manager logic that does not return a QuerySet
+(such as table-level helper methods), define a
+<code>models.Manager</code> subclass alongside your QuerySet using
+<code>models.Manager.from_queryset()</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ArticleManager(models.Manager.from_queryset(ArticleQuerySet)):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> create_draft(<span class="va">self</span>, title, <span class="op">**</span>extra_fields):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.create(title<span class="op">=</span>title, status<span class="op">=</span><span class="st">&#39;draft&#39;</span>, <span class="op">**</span>extra_fields)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Article(models.Model):</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    title <span class="op">=</span> models.CharField(max_length<span class="op">=</span><span class="dv">255</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    status <span class="op">=</span> models.CharField(max_length<span class="op">=</span><span class="dv">20</span>, default<span class="op">=</span><span class="st">&#39;draft&#39;</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    is_featured <span class="op">=</span> models.BooleanField(default<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    published_at <span class="op">=</span> models.DateTimeField(null<span class="op">=</span><span class="va">True</span>, blank<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    objects <span class="op">=</span> ArticleManager()</span></code></pre></div>
+<h2 id="3-executing-chainable-queries">3. Executing Chainable
+Queries</h2>
+<p>Once the setup is complete, you can chain the custom methods in any
+order directly from the model manager, just like native Django ORM
+methods.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Call individual custom methods</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>published_articles <span class="op">=</span> Article.objects.published()</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Chain multiple custom QuerySet methods together</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>featured_recent <span class="op">=</span> Article.objects.published().featured().recent(days<span class="op">=</span><span class="dv">14</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine custom QuerySet methods with standard Django filters</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>specific_author_featured <span class="op">=</span> (</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    Article.objects</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    .published()</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    .featured()</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    .<span class="bu">filter</span>(author__username<span class="op">=</span><span class="st">&#39;johndoe&#39;</span>)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    .order_by(<span class="st">&#39;-published_at&#39;</span>)</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>This pattern keeps business query logic inside the data layer rather
+than scattering database filtering throughout your views, serializers,
+or services.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

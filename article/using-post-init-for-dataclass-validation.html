@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using __post_init__ for Dataclass Validation - python</title>
+    <meta name="description" content="Python dataclasses streamline object-oriented programming by automatically generating standard boilerplate methods like init and repr, but they do not enforce runtime data validation out of the box. This article explains the role of the postinit method i">
+    <link rel="canonical" href="https://salivity.github.io/python/article/using-post-init-for-dataclass-validation">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using __post_init__ for Dataclass Validation - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/using-post-init-for-dataclass-validation" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python dataclasses streamline object-oriented programming by automatically generating standard boilerplate methods like init and repr, but they do not enforce runtime data validation out of the box. This article explains the role of the postinit method i" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-post_init-for-dataclass-validation">Using
+<strong>post_init</strong> for Dataclass Validation</h1>
+<p>Python dataclasses streamline object-oriented programming by
+automatically generating standard boilerplate methods like
+<code>__init__</code> and <code>__repr__</code>, but they do not enforce
+runtime data validation out of the box. This article explains the role
+of the <code>__post_init__</code> method in executing validation logic,
+detailing how it bridges the gap between automatic field assignment and
+data integrity, complete with practical code examples and best
+practices.</p>
+<h2 id="why-dataclasses-need-validation">Why Dataclasses Need
+Validation</h2>
+<p>By default, Python dataclasses rely on type annotations to define
+fields. However, these annotations are metadata and are not enforced at
+runtime. If a field expects a positive integer, a dataclass will still
+accept negative values or even strings without raising an error:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dataclasses <span class="im">import</span> dataclass</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> User:</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    username: <span class="bu">str</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    age: <span class="bu">int</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># This succeeds without validation, despite invalid business logic</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>invalid_user <span class="op">=</span> User(username<span class="op">=</span><span class="st">&quot;&quot;</span>, age<span class="op">=-</span><span class="dv">5</span>)</span></code></pre></div>
+<p>To prevent invalid state, developers must introduce validation logic
+during object instantiation.</p>
+<h2 id="the-role-of-__post_init__">The Role of
+<code>__post_init__</code></h2>
+<p>When a dataclass is compiled, Python automatically generates the
+<code>__init__</code> method. The last step of this generated
+<code>__init__</code> is a call to <code>self.__post_init__()</code>,
+provided the method is defined on the class.</p>
+<p>Because <code>__post_init__</code> executes immediately after all
+declared fields have been bound to <code>self</code>, it serves as the
+primary hook for:</p>
+<ol type="1">
+<li>Validating individual field values.</li>
+<li>Validating cross-field dependencies.</li>
+<li>Enforcing runtime type checking.</li>
+<li>Setting derived or calculated attributes based on input
+parameters.</li>
+</ol>
+<h2 id="implementing-validation-logic">Implementing Validation
+Logic</h2>
+<p>To execute validation logic, define <code>__post_init__(self)</code>
+inside your dataclass and raise standard exceptions such as
+<code>ValueError</code> or <code>TypeError</code> when constraints
+fail.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dataclasses <span class="im">import</span> dataclass</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> User:</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    username: <span class="bu">str</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    age: <span class="bu">int</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> __post_init__(<span class="va">self</span>):</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> <span class="va">self</span>.username.strip():</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">&quot;Username cannot be empty.&quot;</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(<span class="va">self</span>.age, <span class="bu">int</span>):</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">TypeError</span>(</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>                <span class="ss">f&quot;Age must be an integer, got </span><span class="sc">{</span><span class="bu">type</span>(<span class="va">self</span>.age)<span class="sc">.</span><span class="va">__name__</span><span class="sc">}</span><span class="ss">.&quot;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>            )</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="va">self</span>.age <span class="op">&lt;</span> <span class="dv">0</span>:</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">&quot;Age cannot be negative.&quot;</span>)</span></code></pre></div>
+<p>If an invalid argument is supplied, instantiation fails
+immediately:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Raises ValueError: Age cannot be negative.</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>user <span class="op">=</span> User(username<span class="op">=</span><span class="st">&quot;alice&quot;</span>, age<span class="op">=-</span><span class="dv">1</span>)</span></code></pre></div>
+<h2 id="cross-field-validation">Cross-Field Validation</h2>
+<p><code>__post_init__</code> is particularly effective for validating
+relationships between multiple fields, ensuring the entire state of the
+object is coherent.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dataclasses <span class="im">import</span> dataclass</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> datetime <span class="im">import</span> date</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Event:</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    name: <span class="bu">str</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    start_date: date</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    end_date: date</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> __post_init__(<span class="va">self</span>):</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="va">self</span>.end_date <span class="op">&lt;</span> <span class="va">self</span>.start_date:</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">&quot;end_date cannot occur before start_date.&quot;</span>)</span></code></pre></div>
+<h2 id="validation-in-inherited-dataclasses">Validation in Inherited
+Dataclasses</h2>
+<p>When using dataclass inheritance, derived classes must ensure parent
+validation rules continue to run. If both parent and child classes
+define <code>__post_init__</code>, the child class must explicitly
+invoke the parent's implementation using <code>super()</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> PremiumUser(User):</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    membership_level: <span class="bu">str</span> <span class="op">=</span> <span class="st">&quot;Gold&quot;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> __post_init__(<span class="va">self</span>):</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().__post_init__()</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        allowed_levels <span class="op">=</span> {<span class="st">&quot;Silver&quot;</span>, <span class="st">&quot;Gold&quot;</span>, <span class="st">&quot;Platinum&quot;</span>}</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="va">self</span>.membership_level <span class="kw">not</span> <span class="kw">in</span> allowed_levels:</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">ValueError</span>(</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>                <span class="ss">f&quot;Invalid membership level: </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>membership_level<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>            )</span></code></pre></div>
+<p>By leveraging <code>__post_init__</code>, Python dataclasses retain
+the convenience of automated boilerplate while guaranteeing that all
+instantiated objects satisfy required business and domain
+constraints.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

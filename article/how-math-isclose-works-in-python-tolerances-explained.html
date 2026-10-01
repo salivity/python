@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How math.isclose Works in Python: Tolerances Explained - python</title>
+    <meta name="description" content="Due to the way computers store floating-point numbers in binary format, direct equality checks (a == b) often fail due to rounding errors. Python's math.isclose() function resolves this by evaluating whether two values are close enough to be considered e">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-math-isclose-works-in-python-tolerances-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How math.isclose Works in Python: Tolerances Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-math-isclose-works-in-python-tolerances-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Due to the way computers store floating-point numbers in binary format, direct equality checks (a == b) often fail due to rounding errors. Python's math.isclose() function resolves this by evaluating whether two values are close enough to be considered e" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-mathisclose-works-in-python-tolerances-explained">How
+math.isclose Works in Python: Tolerances Explained</h1>
+<p>Due to the way computers store floating-point numbers in binary
+format, direct equality checks (<code>a == b</code>) often fail due to
+rounding errors. Python's <code>math.isclose()</code> function resolves
+this by evaluating whether two values are close enough to be considered
+equal based on specified tolerance thresholds. This article breaks down
+the mathematical formula used by <code>math.isclose()</code> and details
+how it applies relative tolerance (<code>rel_tol</code>) and absolute
+tolerance (<code>abs_tol</code>) to make this determination.</p>
+<h2 id="the-underlying-evaluation-formula">The Underlying Evaluation
+Formula</h2>
+<p>The <code>math.isclose()</code> function determines equivalence by
+checking if the absolute difference between two numbers is less than or
+equal to the greater of two tolerance thresholds. The exact mathematical
+criterion evaluated is:</p>
+<pre class="text"><code>abs(a - b) &lt;= max(rel_tol * max(abs(a), abs(b)), abs_tol)</code></pre>
+<p>If the condition evaluates to <code>True</code>, the function returns
+<code>True</code>; otherwise, it returns <code>False</code>.</p>
+<h2 id="relative-tolerance-rel_tol">Relative Tolerance
+(<code>rel_tol</code>)</h2>
+<p>Relative tolerance measures the allowable difference relative to the
+magnitude of the values being compared.</p>
+<ul>
+<li><strong>Default value:</strong> <code>1e-09</code> (meaning the
+values must agree within roughly nine decimal places).</li>
+<li><strong>Calculation:</strong> Python multiplies <code>rel_tol</code>
+by the larger absolute value of the two inputs:
+<code>rel_tol * max(abs(a), abs(b))</code>.</li>
+<li><strong>Purpose:</strong> It automatically scales with the size of
+the numbers. A difference of 10 is insignificant when comparing numbers
+in the billions, but massive when comparing numbers smaller than 1.
+Relative tolerance accommodates this scaling behavior.</li>
+</ul>
+<h2 id="absolute-tolerance-abs_tol">Absolute Tolerance
+(<code>abs_tol</code>)</h2>
+<p>Absolute tolerance is a fixed, unchanging minimum threshold for the
+allowable difference between two numbers.</p>
+<ul>
+<li><strong>Default value:</strong> <code>0.0</code>.</li>
+<li><strong>Calculation:</strong> It is not scaled by the input values;
+it is used directly as specified.</li>
+<li><strong>Purpose:</strong> It is essential for comparisons near zero.
+Because the relative tolerance scales with
+<code>max(abs(a), abs(b))</code>, comparing any small number to zero
+causes the relative threshold to approach zero, resulting in
+<code>False</code> even for negligible differences. Setting
+<code>abs_tol</code> provides a fallback threshold when numbers are near
+zero.</li>
+</ul>
+<h2 id="how-the-criteria-interact">How the Criteria Interact</h2>
+<p>By using the <code>max()</code> function between the relative and
+absolute thresholds, <code>math.isclose()</code> ensures that:</p>
+<ol type="1">
+<li><strong>For large numbers:</strong> The relative tolerance term
+(<code>rel_tol * max(abs(a), abs(b))</code>) is typically larger than
+<code>abs_tol</code>, meaning the function automatically scales the
+acceptable margin of error to the size of the inputs.</li>
+<li><strong>For numbers near zero:</strong> The relative term shrinks
+toward zero. If defined, <code>abs_tol</code> takes precedence as the
+larger value, preventing comparisons against zero from failing due to
+minor floating-point imprecision.</li>
+</ol>
+<h2 id="special-values-and-constraints">Special Values and
+Constraints</h2>
+<ul>
+<li><strong>Non-negative tolerances:</strong> Both <code>rel_tol</code>
+and <code>abs_tol</code> must be greater than or equal to
+<code>0.0</code>. Passing negative values will raise a
+<code>ValueError</code>.</li>
+<li><strong>Infinities (<code>inf</code>, <code>-inf</code>):</strong>
+Comparing two infinities of the same sign returns <code>True</code>.
+Comparing an infinity to any finite number returns
+<code>False</code>.</li>
+<li><strong>Not a Number (<code>NaN</code>):</strong> If either
+<code>a</code> or <code>b</code> is <code>NaN</code>,
+<code>math.isclose()</code> always returns <code>False</code>, as
+<code>NaN</code> is not considered close to any value, including
+itself.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

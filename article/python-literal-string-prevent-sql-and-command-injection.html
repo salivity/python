@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python LiteralString: Prevent SQL and Command Injection - python</title>
+    <meta name="description" content="Python's typing.LiteralString, introduced in PEP 675 and Python 3.11, provides a compile-time mechanism to eliminate injection vulnerabilities like SQL injection and command injection. By distinguishing between hardcoded, developer-controlled string lite">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-literal-string-prevent-sql-and-command-injection">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python LiteralString: Prevent SQL and Command Injection - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-literal-string-prevent-sql-and-command-injection" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's typing.LiteralString, introduced in PEP 675 and Python 3.11, provides a compile-time mechanism to eliminate injection vulnerabilities like SQL injection and command injection. By distinguishing between hardcoded, developer-controlled string lite" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-literalstring-prevent-sql-and-command-injection">Python
+LiteralString: Prevent SQL and Command Injection</h1>
+<p>Python's <code>typing.LiteralString</code>, introduced in PEP 675 and
+Python 3.11, provides a compile-time mechanism to eliminate injection
+vulnerabilities like SQL injection and command injection. By
+distinguishing between hardcoded, developer-controlled string literals
+and arbitrary user-controlled strings, static type checkers can flag
+unsafe string interpolations before code ever runs in production. This
+article explains how <code>LiteralString</code> works, how type checkers
+enforce its constraints, and how to apply it to secure database queries
+and system command execution.</p>
+<h2 id="the-injection-problem-with-standard-type-hints">The Injection
+Problem with Standard Type Hints</h2>
+<p>Static type checkers like Mypy and Pyright have long accepted
+<code>str</code> as a universal type for textual data. However,
+<code>str</code> does not distinguish between trusted text written
+directly in source code and untrusted input received over the network or
+from a user interface:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> execute_query(query: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    ...</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Safe: Developer-authored literal</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>execute_query(<span class="st">&quot;SELECT * FROM users WHERE active = 1&quot;</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Unsafe: SQL Injection vulnerability, but valid under `str`</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>user_input <span class="op">=</span> <span class="st">&quot;1; DROP TABLE users; --&quot;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>execute_query(<span class="ss">f&quot;SELECT * FROM users WHERE id = </span><span class="sc">{</span>user_input<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>Because both expressions evaluate to <code>str</code>, the type
+checker sees no difference, allowing dangerous string concatenation and
+f-strings to pass static analysis without warning.</p>
+<h2 id="how-typingliteralstring-works">How
+<code>typing.LiteralString</code> Works</h2>
+<p><code>typing.LiteralString</code> solves this problem by defining a
+type that represents any string composed exclusively of source-code
+literals. Unlike <code>typing.Literal["exact_string"]</code>, which
+requires an exact, pre-declared value, <code>LiteralString</code>
+matches <em>any</em> string literal, as well as any expression built
+exclusively from other <code>LiteralString</code> instances.</p>
+<p>A type checker will infer <code>LiteralString</code> for:</p>
+<ul>
+<li>Literal string values: <code>"SELECT * FROM users"</code></li>
+<li>Concatenations of literals:
+<code>"SELECT " + "* FROM users"</code></li>
+<li>F-strings containing only other literal strings:
+<code>f"{'SELECT'} {'*'}"</code></li>
+</ul>
+<p>Crucially, if a dynamic variable of type <code>str</code> is
+concatenated or formatted into the string, the resulting type is widened
+to standard <code>str</code>, losing its <code>LiteralString</code>
+status.</p>
+<h2 id="securing-sql-queries">Securing SQL Queries</h2>
+<p>To prevent SQL injection, database client libraries can type their
+query parameter as <code>LiteralString</code> while requiring dynamic
+arguments to be passed separately as query parameters.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> Any, LiteralString</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_query(query: LiteralString, params: <span class="bu">tuple</span>[Any, ...] <span class="op">=</span> ()) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Database execution logic using parameterized queries</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    ...</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>user_id <span class="op">=</span> <span class="st">&quot;123&quot;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># PASSES TYPE CHECKING:</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># The query template is a LiteralString; the variable is parameterized.</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>run_query(<span class="st">&quot;SELECT * FROM users WHERE id = </span><span class="sc">%s</span><span class="st">&quot;</span>, (user_id,))</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co"># FAILS TYPE CHECKING:</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Argument 1 to &quot;run_query&quot; has incompatible type &quot;str&quot;; expected &quot;LiteralString&quot;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>run_query(<span class="ss">f&quot;SELECT * FROM users WHERE id = </span><span class="sc">{</span>user_id<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>When developers run static analysis, the type checker detects that
+the f-string contains a standard <code>str</code>
+(<code>user_id</code>), invalidating <code>LiteralString</code>
+compatibility and immediately halting the build.</p>
+<h2 id="securing-command-execution">Securing Command Execution</h2>
+<p>The same principle applies to system shells and external command
+wrappers. Command injection typically occurs when dynamic parameters are
+concatenated directly into a shell command line.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> LiteralString</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> execute_command(command_template: LiteralString, <span class="op">*</span>args: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Enforces separation between executable path/flags and runtime values</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    subprocess.run([command_template, <span class="op">*</span>args], check<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&quot;report.txt; rm -rf /&quot;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"># PASSES TYPE CHECKING:</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co"># &quot;ls&quot; is a LiteralString; filename is passed as an isolated argument.</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>execute_command(<span class="st">&quot;ls&quot;</span>, filename)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co"># FAILS TYPE CHECKING:</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Dynamic formatting produces `str`, which violates the LiteralString signature.</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>execute_command(<span class="ss">f&quot;ls </span><span class="sc">{</span>filename<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>By enforcing <code>LiteralString</code> on the executable or command
+base, APIs compel developers to structure invocations using parameter
+lists rather than arbitrary shell strings.</p>
+<h2 id="composing-safe-dynamic-queries">Composing Safe Dynamic
+Queries</h2>
+<p>Applications often need to build queries dynamically based on logic,
+such as conditionally appending <code>ORDER BY</code> or
+<code>LIMIT</code> clauses. <code>LiteralString</code> allows
+composition as long as all constituent fragments are also literals:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> build_query(sort_descending: <span class="bu">bool</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    query: LiteralString <span class="op">=</span> <span class="st">&quot;SELECT * FROM products&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> sort_descending:</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Valid: Appending a literal retains LiteralString type</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        query <span class="op">+=</span> <span class="st">&quot; ORDER BY price DESC&quot;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        query <span class="op">+=</span> <span class="st">&quot; ORDER BY price ASC&quot;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    run_query(query)</span></code></pre></div>
+<p>Because both appended segments are hardcoded literals, the composite
+query remains a valid <code>LiteralString</code>.</p>
+<h2 id="key-takeaways">Key Takeaways</h2>
+<ol type="1">
+<li><strong>Shift-Left Security:</strong> <code>LiteralString</code>
+detects injection risks during development or CI/CD static type checks,
+long before code reaches a staging or production environment.</li>
+<li><strong>Zero Runtime Overhead:</strong> Like all Python type
+annotations, <code>LiteralString</code> has no runtime performance cost
+and is completely ignored by the Python interpreter during
+execution.</li>
+<li><strong>API Design Standard:</strong> Library authors and internal
+framework designers can use <code>LiteralString</code> to make unsafe
+string interpolations syntactically invalid across an entire
+codebase.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

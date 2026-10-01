@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyZMQ Pub-Sub and Request-Reply in Python - python</title>
+    <meta name="description" content="This article provides a practical guide to implementing two foundational messaging architectures—Publish-Subscribe (Pub-Sub) and Request-Reply—using pyzmq, the Python bindings for ZeroMQ. You will learn the mechanics behind each pattern, the specific">
+    <link rel="canonical" href="https://salivity.github.io/python/article/py-zmq-pub-sub-and-request-reply-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PyZMQ Pub-Sub and Request-Reply in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/py-zmq-pub-sub-and-request-reply-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a practical guide to implementing two foundational messaging architectures—Publish-Subscribe (Pub-Sub) and Request-Reply—using pyzmq, the Python bindings for ZeroMQ. You will learn the mechanics behind each pattern, the specific" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="pyzmq-pub-sub-and-request-reply-in-python">PyZMQ Pub-Sub and
+Request-Reply in Python</h1>
+<p>This article provides a practical guide to implementing two
+foundational messaging architectures—Publish-Subscribe (Pub-Sub) and
+Request-Reply—using <code>pyzmq</code>, the Python bindings for ZeroMQ.
+You will learn the mechanics behind each pattern, the specific socket
+types involved, and how to implement working clients and servers for
+distributed messaging without needing a centralized message broker.</p>
+<h2 id="understanding-zeromq-and-pyzmq">Understanding ZeroMQ and
+pyzmq</h2>
+<p>ZeroMQ is a high-performance asynchronous messaging library that
+provides message-oriented sockets across various transports (such as
+TCP, IPC, and in-process). Unlike traditional broker-based systems like
+RabbitMQ or Kafka, <code>pyzmq</code> applications are typically
+brokerless; sockets connect directly to one another, drastically
+lowering latency and complexity.</p>
+<h2 id="the-request-reply-pattern">The Request-Reply Pattern</h2>
+<p>The Request-Reply pattern is used for synchronous remote procedure
+calls (RPC) and client-server communication. It enforces a strict
+alternating lockstep: a client must send a request before receiving a
+response, and a server must receive a request before sending a
+reply.</p>
+<h3 id="socket-types">Socket Types</h3>
+<ul>
+<li><strong><code>zmq.REQ</code></strong>: Used by the client to send
+requests and receive responses.</li>
+<li><strong><code>zmq.REP</code></strong>: Used by the server to receive
+requests and send responses.</li>
+</ul>
+<h3 id="implementation">Implementation</h3>
+<p><strong>Server (<code>rep_server.py</code>):</strong></p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> zmq</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>context <span class="op">=</span> zmq.Context()</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>socket <span class="op">=</span> context.socket(zmq.REP)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>socket.bind(<span class="st">&quot;tcp://*:5555&quot;</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="va">True</span>:</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    message <span class="op">=</span> socket.recv_string()</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Received request: </span><span class="sc">{</span>message<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    socket.send_string(<span class="ss">f&quot;Echo: </span><span class="sc">{</span>message<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p><strong>Client (<code>req_client.py</code>):</strong></p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> zmq</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>context <span class="op">=</span> zmq.Context()</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>socket <span class="op">=</span> context.socket(zmq.REQ)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>socket.<span class="ex">connect</span>(<span class="st">&quot;tcp://localhost:5555&quot;</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>socket.send_string(<span class="st">&quot;Hello&quot;</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> socket.recv_string()</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Received reply: </span><span class="sc">{</span>response<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>If the alternating send-receive order is violated (for instance,
+calling <code>send_string()</code> twice consecutively on a
+<code>REQ</code> socket), <code>pyzmq</code> raises a
+<code>zmq.ZMQError</code>.</p>
+<h2 id="the-publish-subscribe-pattern">The Publish-Subscribe
+Pattern</h2>
+<p>The Publish-Subscribe pattern facilitates one-to-many asynchronous
+data distribution. Publishers emit messages without knowing who the
+receivers are, and subscribers receive only the messages they have
+explicitly registered interest in via topic filtering.</p>
+<h3 id="socket-types-1">Socket Types</h3>
+<ul>
+<li><strong><code>zmq.PUB</code></strong>: Used by the publisher to
+distribute messages.</li>
+<li><strong><code>zmq.SUB</code></strong>: Used by subscribers to listen
+for messages matching specific prefixes.</li>
+</ul>
+<h3 id="topic-filtering">Topic Filtering</h3>
+<p>In <code>pyzmq</code>, filtering occurs on the subscriber side. By
+default, a newly created <code>zmq.SUB</code> socket ignores all
+incoming messages. A subscriber must subscribe to a topic prefix using
+<code>setsockopt_string(zmq.SUBSCRIBE, ...)</code>. An empty string
+(<code>""</code>) subscribes to all incoming messages.</p>
+<h3 id="implementation-1">Implementation</h3>
+<p><strong>Publisher (<code>pub_server.py</code>):</strong></p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> zmq</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>context <span class="op">=</span> zmq.Context()</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>socket <span class="op">=</span> context.socket(zmq.PUB)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>socket.bind(<span class="st">&quot;tcp://*:5556&quot;</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Brief pause to allow subscribers to connect</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>time.sleep(<span class="dv">1</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>topics <span class="op">=</span> [<span class="st">&quot;SPORTS&quot;</span>, <span class="st">&quot;WEATHER&quot;</span>, <span class="st">&quot;TECH&quot;</span>]</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">10</span>):</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    topic <span class="op">=</span> topics[i <span class="op">%</span> <span class="bu">len</span>(topics)]</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    payload <span class="op">=</span> <span class="ss">f&quot;Update </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    socket.send_string(<span class="ss">f&quot;</span><span class="sc">{</span>topic<span class="sc">}</span><span class="ss"> </span><span class="sc">{</span>payload<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    time.sleep(<span class="fl">0.5</span>)</span></code></pre></div>
+<p><strong>Subscriber (<code>sub_client.py</code>):</strong></p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> zmq</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>context <span class="op">=</span> zmq.Context()</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>socket <span class="op">=</span> context.socket(zmq.SUB)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>socket.<span class="ex">connect</span>(<span class="st">&quot;tcp://localhost:5556&quot;</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Subscribe specifically to the &quot;TECH&quot; topic</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>socket.setsockopt_string(zmq.SUBSCRIBE, <span class="st">&quot;TECH&quot;</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="va">True</span>:</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    message <span class="op">=</span> socket.recv_string()</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Subscriber received: </span><span class="sc">{</span>message<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<h2 id="key-differences-and-considerations">Key Differences and
+Considerations</h2>
+<ul>
+<li><strong>State Enforcement</strong>:
+<code>REQ</code>/<code>REP</code> sockets operate as state machines
+enforcing sequential request-response cycles.
+<code>PUB</code>/<code>SUB</code> sockets are unidirectional;
+<code>PUB</code> sockets can only send, while <code>SUB</code> sockets
+can only receive.</li>
+<li><strong>Late Joiner Problem</strong>: In Pub-Sub, subscribers that
+connect after a publisher has begun transmitting will miss messages sent
+prior to connection establishment.</li>
+<li><strong>Scalability</strong>: Both patterns support multiple
+endpoints. A single <code>REP</code> socket can handle requests from
+thousands of <code>REQ</code> clients, and a single <code>PUB</code>
+socket can fan out messages to thousands of <code>SUB</code> sockets
+without architectural changes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

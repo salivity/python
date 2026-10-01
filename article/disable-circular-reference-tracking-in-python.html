@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disable Circular Reference Tracking in Python - python</title>
+    <meta name="description" content="Python relies on two mechanisms for memory management: reference counting for immediate reclamation and a cyclic garbage collector (GC) that periodically tracks and resolves circular references. By calling the gc.disable() function, you turn off the auto">
+    <link rel="canonical" href="https://salivity.github.io/python/article/disable-circular-reference-tracking-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Disable Circular Reference Tracking in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/disable-circular-reference-tracking-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python relies on two mechanisms for memory management: reference counting for immediate reclamation and a cyclic garbage collector (GC) that periodically tracks and resolves circular references. By calling the gc.disable() function, you turn off the auto" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="disable-circular-reference-tracking-in-python">Disable Circular
+Reference Tracking in Python</h1>
+<p>Python relies on two mechanisms for memory management: reference
+counting for immediate reclamation and a cyclic garbage collector (GC)
+that periodically tracks and resolves circular references. By calling
+the <code>gc.disable()</code> function, you turn off the automatic
+cyclic garbage collector, effectively suspending the automated detection
+and cleanup of reference cycles. This article covers how
+<code>gc.disable()</code> operates, how it affects circular reference
+management, and how to configure or run manual collection when automatic
+tracking is deactivated.</p>
+<h2
+id="understanding-reference-counting-vs-cyclic-garbage-collection">Understanding
+Reference Counting vs. Cyclic Garbage Collection</h2>
+<p>Standard reference counting handles objects whose reference counts
+drop to zero immediately. However, when two or more objects reference
+each other (e.g., <code>a.b = b</code> and <code>b.a = a</code>), their
+reference counts never reach zero, even if they become inaccessible to
+the rest of the program.</p>
+<p>The built-in <code>gc</code> module provides a generational cyclic
+garbage collector designed specifically to discover these isolated
+cycles and free their memory.</p>
+<h2 id="how-gcdisable-affects-circular-references">How
+<code>gc.disable()</code> Affects Circular References</h2>
+<p>Executing <code>gc.disable()</code> stops the periodic, automatic
+execution of the cyclic garbage collector.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gc</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Disable automatic cyclic garbage collection</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>gc.disable()</span></code></pre></div>
+<p>When <code>gc.disable()</code> is active:</p>
+<ul>
+<li><strong>Reference counting still functions:</strong> Objects without
+circular dependencies are still deallocated immediately once their
+reference counts drop to zero.</li>
+<li><strong>Cycles are not automatically resolved:</strong> Any isolated
+circular references remain allocated in memory indefinitely until
+explicitly handled.</li>
+<li><strong>Execution pauses are eliminated:</strong> The primary
+benefit of disabling the collector is avoiding unpredictable GC
+collection pauses in latency-sensitive or high-throughput sections of
+code.</li>
+</ul>
+<h2 id="checking-gc-status-and-re-enabling">Checking GC Status and
+Re-enabling</h2>
+<p>To verify whether cyclic tracking is active, query the state using
+<code>gc.isenabled()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gc</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>gc.disable()</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(gc.isenabled())  <span class="co"># Outputs: False</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>gc.enable()</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(gc.isenabled())  <span class="co"># Outputs: True</span></span></code></pre></div>
+<h2 id="manually-collecting-circular-references">Manually Collecting
+Circular References</h2>
+<p>If automatic tracking is disabled to optimize critical execution
+paths, you can trigger collection manually during idle periods using
+<code>gc.collect()</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gc</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>gc.disable()</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Run performance-sensitive workloads here</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># ...</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Explicitly trigger cyclic reference resolution</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>unreachable_objects <span class="op">=</span> gc.collect()</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Collected </span><span class="sc">{</span>unreachable_objects<span class="sc">}</span><span class="ss"> cyclic objects.&quot;</span>)</span></code></pre></div>
+<p><code>gc.collect()</code> runs a full sweep across all generations
+(generations 0, 1, and 2 by default), resolving circular references that
+accumulated while automatic tracking was paused. You can also specify an
+individual generation to collect by passing an integer
+(<code>gc.collect(0)</code> collects only the youngest generation).</p>
+<h2
+id="alternative-tuning-collection-frequency-with-gcset_threshold">Alternative:
+Tuning Collection Frequency with <code>gc.set_threshold()</code></h2>
+<p>Instead of turning off cyclic tracking completely with
+<code>gc.disable()</code>, you can reconfigure the frequency of
+automatic runs using <code>gc.set_threshold()</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gc</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Retrieve default thresholds, typically (700, 10, 10)</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(gc.get_threshold())</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Increase thresholds to run cyclic sweeps less frequently</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>gc.set_threshold(<span class="dv">50000</span>, <span class="dv">50</span>, <span class="dv">50</span>)</span></code></pre></div>
+<p>Setting higher thresholds reduces collection frequency while
+preserving automatic safety nets against memory leaks caused by circular
+references.</p>
+<h2 id="best-practices-when-disabling-gc">Best Practices When Disabling
+GC</h2>
+<ol type="1">
+<li><strong>Avoid Circular Structures:</strong> When GC is disabled,
+design data models using weak references (<code>weakref</code> module)
+where possible to avoid creating cycles.</li>
+<li><strong>Schedule Explicit Sweeps:</strong> Run
+<code>gc.collect()</code> deterministically at safe intervals, such as
+between batch jobs or request cycles.</li>
+<li><strong>Use Scoped Disabling:</strong> Disable the GC only for the
+duration of a performance-critical routine, and re-enable it immediately
+after using a <code>try...finally</code> block:</li>
+</ol>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gc</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>gc.disable()</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Run latency-critical operation</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    process_realtime_data()</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="cf">finally</span>:</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    gc.enable()</span></code></pre></div></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

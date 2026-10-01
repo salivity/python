@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python enum.auto Generates Values - python</title>
+    <meta name="description" content="This article explores the internal mechanics of Python's enum.auto(), detailing how the standard enum module assigns automatic sequential values to enumerated constants. It breaks down the interaction between the auto instance, the enumeration metaclass,">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-enum-auto-generates-values">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python enum.auto Generates Values - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-enum-auto-generates-values" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the internal mechanics of Python's enum.auto(), detailing how the standard enum module assigns automatic sequential values to enumerated constants. It breaks down the interaction between the auto instance, the enumeration metaclass," />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-enumauto-generates-values">How Python enum.auto
+Generates Values</h1>
+<p>This article explores the internal mechanics of Python's
+<code>enum.auto()</code>, detailing how the standard <code>enum</code>
+module assigns automatic sequential values to enumerated constants. It
+breaks down the interaction between the <code>auto</code> instance, the
+enumeration metaclass, and the underlying
+<code>_generate_next_value_</code> method that calculates values, while
+also demonstrating how to customize this behavior.</p>
+<h3 id="the-role-of-the-auto-instance">The Role of the <code>auto</code>
+Instance</h3>
+<p>When you assign <code>auto()</code> to an enum member, you are not
+directly assigning a final number. Instead, <code>auto()</code>
+instantiates an <code>auto</code> class object. This object acts as a
+temporary marker or sentinel inside the class definition, signaling to
+Python that the value for this specific attribute must be determined
+programmatically during class creation rather than taken as a
+literal.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> enum <span class="im">import</span> Enum, auto</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Color(Enum):</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    RED <span class="op">=</span> auto()</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    GREEN <span class="op">=</span> auto()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    BLUE <span class="op">=</span> auto()</span></code></pre></div>
+<h3 id="metaclass-processing">Metaclass Processing</h3>
+<p>Python enums are constructed using a specialized metaclass:
+<code>EnumType</code> (named <code>EnumMeta</code> prior to Python
+3.11). When defining an <code>Enum</code> subclass, Python evaluates the
+class body inside a custom mapping called <code>_EnumDict</code>.</p>
+<p>During class construction, the metaclass iterates through the
+namespace attributes. When it encounters an attribute whose assigned
+value is an instance of <code>auto</code>, it intercepts it. Rather than
+setting the attribute value to the <code>auto</code> instance itself,
+the metaclass invokes the class's <code>_generate_next_value_</code>
+method to compute the actual value.</p>
+<h3 id="the-_generate_next_value_-hook">The
+<code>_generate_next_value_</code> Hook</h3>
+<p>The core calculation logic resides in a static or class method named
+<code>_generate_next_value_</code>. Defined on the base
+<code>Enum</code> class, this method has the following general
+signature:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>_generate_next_value_(name, start, count, last_values)</span></code></pre></div>
+<ul>
+<li><strong><code>name</code></strong>: The name of the member being
+defined (e.g., <code>"RED"</code>).</li>
+<li><strong><code>start</code></strong>: The starting integer for the
+sequence (defaults to <code>1</code>).</li>
+<li><strong><code>count</code></strong>: The number of members defined
+so far.</li>
+<li><strong><code>last_values</code></strong>: A list containing all
+previously assigned member values.</li>
+</ul>
+<p>By default, standard <code>Enum</code> implementations compute the
+next integer sequentially. If <code>last_values</code> is empty, it
+assigns <code>1</code> (or the configured <code>start</code>). If
+<code>last_values</code> contains prior values, it takes the highest
+numerical value found or adds <code>1</code> to the previous count,
+ensuring every subsequent call yields an incremented integer
+(<code>1, 2, 3, ...</code>). Once the value is computed, the metaclass
+replaces the placeholder <code>auto</code> instance with the generated
+integer and finalizes the member.</p>
+<h3 id="customizing-automatic-values">Customizing Automatic Values</h3>
+<p>Because <code>_generate_next_value_</code> is an internal hook, it
+can be overridden to change how sequential values are produced. The
+override must be defined before any enum members are declared.</p>
+<p>For example, to make <code>auto()</code> return the lowercase name of
+each member as a string instead of an integer:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> State(Enum):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> _generate_next_value_(name, start, count, last_values):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> name.lower()</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    PENDING <span class="op">=</span> auto()   <span class="co"># Value becomes &quot;pending&quot;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    RUNNING <span class="op">=</span> auto()   <span class="co"># Value becomes &quot;running&quot;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    COMPLETED <span class="op">=</span> auto() <span class="co"># Value becomes &quot;completed&quot;</span></span></code></pre></div>
+<p>Through this metaclass-driven design, Python cleanly separates the
+declaration marker (<code>auto()</code>) from the value assignment
+algorithm (<code>_generate_next_value_</code>), allowing for
+predictable, collision-free sequential values by default.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

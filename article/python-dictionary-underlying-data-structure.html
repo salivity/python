@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Dictionary Underlying Data Structure - python</title>
+    <meta name="description" content="Python dictionaries are implemented using an optimized, dynamic hash table. While conceptually a standard hash map that maps hashable keys to values using a hashing algorithm, modern Python (introduced in CPython 3.6 and standardized in Python 3.7) utili">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-dictionary-underlying-data-structure">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python Dictionary Underlying Data Structure - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-dictionary-underlying-data-structure" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python dictionaries are implemented using an optimized, dynamic hash table. While conceptually a standard hash map that maps hashable keys to values using a hashing algorithm, modern Python (introduced in CPython 3.6 and standardized in Python 3.7) utili" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-dictionary-underlying-data-structure">Python Dictionary
+Underlying Data Structure</h1>
+<p>Python dictionaries are implemented using an optimized, dynamic hash
+table. While conceptually a standard hash map that maps hashable keys to
+values using a hashing algorithm, modern Python (introduced in CPython
+3.6 and standardized in Python 3.7) utilizes a compact, array-based
+layout. This architecture significantly reduces memory overhead,
+provides <span class="math inline">\(O(1)\)</span> average-time
+complexity for lookups, insertions, and deletions, and inherently
+preserves the insertion order of elements.</p>
+<h3 id="the-compact-hash-table-layout">The Compact Hash Table
+Layout</h3>
+<p>In classic implementations, a Python dictionary relied on a single
+sparse table where each entry contained the key hash, key pointer, and
+value pointer. Because the table had to remain mostly empty to avoid
+collisions, substantial memory was wasted on empty slots.</p>
+<p>Modern CPython separates the storage into two distinct arrays:</p>
+<ol type="1">
+<li><strong>Indices Array (Sparse):</strong> A sparse array containing
+integer indices. The size of this array is always a power of two (e.g.,
+8, 16, 32). The hashed key determines the index into this array.</li>
+<li><strong>Entries Array (Dense):</strong> A compact array of
+<code>PyDictKeyEntry</code> structures that grows sequentially. Each
+entry contains:
+<ul>
+<li><code>me_hash</code>: The cached 64-bit hash of the key.</li>
+<li><code>me_key</code>: A pointer to the key object.</li>
+<li><code>me_value</code>: A pointer to the value object.</li>
+</ul></li>
+</ol>
+<p>When a new key-value pair is inserted, it is appended to the next
+available position in the dense entries array. The sparse indices array
+is then updated to store the index of that newly added entry.</p>
+<h3 id="lookup-and-collision-resolution">Lookup and Collision
+Resolution</h3>
+<p>Python handles hash collisions using an <strong>open
+addressing</strong> strategy with a custom pseudo-random probing
+mechanism, rather than separate chaining (linked lists).</p>
+<p>The lookup process operates as follows:</p>
+<ol type="1">
+<li><strong>Hashing:</strong> Python computes the key's hash using
+<code>hash(key)</code>.</li>
+<li><strong>Indexing:</strong> The hash is masked against the size of
+the sparse indices array (<code>hash &amp; (size - 1)</code>) to
+determine the starting bucket.</li>
+<li><strong>Collision Probing:</strong> If the bucket contains an index,
+Python inspects the corresponding entry in the dense table:
+<ul>
+<li>If both the hash and identity/equality
+(<code>key is entry_key or key == entry_key</code>) match, the value is
+returned.</li>
+<li>If the bucket is occupied by a different key, a collision has
+occurred. Python computes the next index using the recurrence relation:
+<code>perturb &gt;&gt;= 5; j = (5 * j + 1 + perturb) &amp; mask</code></li>
+<li>This recurrence guarantees that all slots in the table are
+eventually visited while pseudo-randomly distributing the probe sequence
+to prevent clustering.</li>
+</ul></li>
+<li><strong>Empty Slot:</strong> If the bucket contains an empty marker,
+the key does not exist in the dictionary.</li>
+</ol>
+<h3 id="dynamic-resizing-and-memory-management">Dynamic Resizing and
+Memory Management</h3>
+<p>To maintain average <span class="math inline">\(O(1)\)</span>
+performance, the dictionary must prevent the hash table from becoming
+too crowded:</p>
+<ul>
+<li><strong>Load Factor:</strong> The table resizes when it becomes
+roughly two-thirds full (a load factor of approximately 66%).</li>
+<li><strong>Growth Strategy:</strong> When resizing occurs, the size of
+the indices array typically doubles (or quadruples for smaller
+dictionaries). A new sparse indices array is allocated, and the indices
+are recomputed.</li>
+<li><strong>Deletions:</strong> When an item is deleted, the entry
+cannot simply be removed because doing so would break the probe sequence
+for colliding keys. Instead, the slot in the indices array is replaced
+with a dummy (tombstone) value. When the dictionary eventually resizes,
+dummy entries are purged and the dense array is compacted.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

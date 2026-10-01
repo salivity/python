@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building Standalone Python Binaries with PyOxidizer - python</title>
+    <meta name="description" content="PyOxidizer is an open-source utility designed to overcome Python's traditional deployment hurdles by packaging an entire application, its dependencies, and a customized Python interpreter into a single, redistributable binary. This article explores the a">
+    <link rel="canonical" href="https://salivity.github.io/python/article/building-standalone-python-binaries-with-py-oxidizer">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Building Standalone Python Binaries with PyOxidizer - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/building-standalone-python-binaries-with-py-oxidizer" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="PyOxidizer is an open-source utility designed to overcome Python's traditional deployment hurdles by packaging an entire application, its dependencies, and a customized Python interpreter into a single, redistributable binary. This article explores the a" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="building-standalone-python-binaries-with-pyoxidizer">Building
+Standalone Python Binaries with PyOxidizer</h1>
+<p>PyOxidizer is an open-source utility designed to overcome Python's
+traditional deployment hurdles by packaging an entire application, its
+dependencies, and a customized Python interpreter into a single,
+redistributable binary. This article explores the architecture behind
+PyOxidizer, how it leverages Rust to embed CPython, and why its
+in-memory module loading strategy provides a faster, more robust
+alternative to conventional Python packaging tools.</p>
+<h3 id="the-deployment-problem-in-python">The Deployment Problem in
+Python</h3>
+<p>Standard Python applications depend on an external environment: a
+pre-installed Python interpreter, standard libraries, and external
+packages usually managed via tools like <code>pip</code> and virtual
+environments. While tools like PyInstaller and cx_Freeze address this by
+bundling these assets, they typically operate as self-extracting
+archives. At runtime, these traditional tools unpack the interpreter and
+dependencies into a temporary directory on the host file system before
+execution, introducing startup latency, potential file system permission
+issues, and disk overhead.</p>
+<h3 id="how-pyoxidizer-compiles-standalone-binaries">How PyOxidizer
+Compiles Standalone Binaries</h3>
+<p>PyOxidizer fundamentally changes this process by taking advantage of
+Rust's low-level compilation capabilities to create a truly standalone
+executable.</p>
+<ol type="1">
+<li><p><strong>Embedded CPython Interpreter:</strong> Instead of
+referencing an existing system Python installation, PyOxidizer compiles
+a statically or dynamically linked CPython distribution directly into
+the final binary. This eliminates the requirement for the target machine
+to have Python pre-installed.</p></li>
+<li><p><strong>In-Memory Module Importing:</strong> The standout feature
+of PyOxidizer is its custom Rust-based Python module importer. Standard
+Python imports rely on reading <code>.py</code> or <code>.pyc</code>
+files from the disk via <code>sys.path</code>. PyOxidizer serializes
+standard library modules, third-party packages, and application code
+directly into the executable's data segment. When the application runs,
+the embedded importer loads bytecode directly from memory, completely
+bypassing disk I/O.</p></li>
+<li><p><strong>Rust Build Integration:</strong> PyOxidizer utilizes a
+Starlark-based configuration file (<code>pyoxidizer.bzl</code>) to
+define build targets, dependencies, and packaging behavior. It invokes
+Rust's build system, <code>cargo</code>, to handle the final compilation
+and linking phases, producing a native binary compatible with the target
+operating system.</p></li>
+</ol>
+<h3 id="key-advantages-of-the-pyoxidizer-approach">Key Advantages of the
+PyOxidizer Approach</h3>
+<ul>
+<li><strong>Blazing Fast Startup Times:</strong> By reading bytecode
+directly from system memory rather than unpacking dozens or hundreds of
+files to a temporary disk location, application startup overhead is
+drastically reduced.</li>
+<li><strong>True Portability:</strong> Binaries produced by PyOxidizer
+can run on systems with zero pre-existing software dependencies. On
+Linux, it can link against <code>musl</code> libc to produce fully
+static executables that run across various distributions without library
+mismatch errors.</li>
+<li><strong>Tamper Resistance and Intellectual Property
+Protection:</strong> Because code is compiled and embedded as raw data
+directly inside the binary, inspecting or modifying source files is
+significantly more difficult compared to standard Python scripts or
+self-extracting archives.</li>
+<li><strong>Unified Tooling:</strong> PyOxidizer provides fine-grained
+control over how C extensions, native libraries, and resources (like
+images or data files) are packaged, enabling developers to build
+command-line tools or desktop applications from a single configuration
+file.</li>
+</ul>
+<p>Through this combination of Rust-based linking and in-memory
+execution, PyOxidizer acts as a compiler-like distribution tool that
+transforms Python from an interpreted, environment-dependent scripting
+language into a provider of self-contained, high-performance native
+executables.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

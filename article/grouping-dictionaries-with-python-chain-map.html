@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grouping Dictionaries with Python ChainMap - python</title>
+    <meta name="description" content="Python's collections.ChainMap is a specialized data structure designed to group multiple dictionaries or other mappings into a single, updateable view. Instead of physically merging dictionaries and duplicating their contents in memory, ChainMap maintain">
+    <link rel="canonical" href="https://salivity.github.io/python/article/grouping-dictionaries-with-python-chain-map">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Grouping Dictionaries with Python ChainMap - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/grouping-dictionaries-with-python-chain-map" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's collections.ChainMap is a specialized data structure designed to group multiple dictionaries or other mappings into a single, updateable view. Instead of physically merging dictionaries and duplicating their contents in memory, ChainMap maintain" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="grouping-dictionaries-with-python-chainmap">Grouping
+Dictionaries with Python ChainMap</h1>
+<p>Python's <code>collections.ChainMap</code> is a specialized data
+structure designed to group multiple dictionaries or other mappings into
+a single, updateable view. Instead of physically merging dictionaries
+and duplicating their contents in memory, <code>ChainMap</code>
+maintains an underlying list of references to the original mappings.
+This article explains how <code>ChainMap</code> works, how it resolves
+key lookups and mutations, and the practical scenarios where it
+outperforms standard dictionary merging techniques.</p>
+<h2 id="how-chainmap-works-under-the-hood">How ChainMap Works Under the
+Hood</h2>
+<p>When you pass multiple dictionaries to
+<code>collections.ChainMap(*maps)</code>, it stores them sequentially in
+an internal list attribute called <code>maps</code>. It does not create
+a new dictionary containing merged key-value pairs; it simply acts as an
+abstraction layer over the provided dictionaries.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> collections <span class="im">import</span> ChainMap</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>defaults <span class="op">=</span> {<span class="st">&#39;theme&#39;</span>: <span class="st">&#39;light&#39;</span>, <span class="st">&#39;show_sidebar&#39;</span>: <span class="va">True</span>, <span class="st">&#39;font&#39;</span>: <span class="st">&#39;Helvetica&#39;</span>}</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>user_settings <span class="op">=</span> {<span class="st">&#39;theme&#39;</span>: <span class="st">&#39;dark&#39;</span>, <span class="st">&#39;font_size&#39;</span>: <span class="dv">14</span>}</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>settings <span class="op">=</span> ChainMap(user_settings, defaults)</span></code></pre></div>
+<p>Because <code>ChainMap</code> only stores references, initializing it
+is an <span class="math inline">\(O(1)\)</span> constant-time operation,
+regardless of the size or number of dictionaries provided.</p>
+<h2 id="lookup-precedence">Lookup Precedence</h2>
+<p>When looking up a key, <code>ChainMap</code> searches through its
+list of dictionaries sequentially from left to right. It returns the
+value from the first dictionary that contains the requested key.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># &#39;theme&#39; exists in both user_settings and defaults</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(settings[<span class="st">&#39;theme&#39;</span>])        <span class="co"># Output: &#39;dark&#39; (from user_settings)</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># &#39;show_sidebar&#39; only exists in defaults</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(settings[<span class="st">&#39;show_sidebar&#39;</span>]) <span class="co"># Output: True (from defaults)</span></span></code></pre></div>
+<p>If the key is not present in any of the chained dictionaries, a
+standard <code>KeyError</code> is raised.</p>
+<h2 id="mutating-operations">Mutating Operations</h2>
+<p>Writing, updating, and deleting operations on a <code>ChainMap</code>
+affect only the <strong>first</strong> dictionary in the chain.</p>
+<ul>
+<li><strong>Setting a key:</strong> Adds or updates the key in the first
+mapping (<code>maps[0]</code>).</li>
+<li><strong>Deleting a key:</strong> Removes the key from the first
+mapping. If the key only exists in subsequent mappings, a
+<code>KeyError</code> is raised.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Adding a new setting</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>settings[<span class="st">&#39;notifications&#39;</span>] <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(user_settings)  <span class="co"># Output: {&#39;theme&#39;: &#39;dark&#39;, &#39;font_size&#39;: 14, &#39;notifications&#39;: False}</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Attempting to delete a key that exists only in &#39;defaults&#39;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span> settings[<span class="st">&#39;show_sidebar&#39;</span>]  <span class="co"># Raises KeyError</span></span></code></pre></div>
+<p>Because of this behavior, modifications never alter fallback or
+default dictionaries positioned further down the chain.</p>
+<h2 id="core-methods-and-attributes">Core Methods and Attributes</h2>
+<p><code>ChainMap</code> provides specific tools to manage nested
+scopes:</p>
+<ul>
+<li><strong><code>.maps</code></strong>: A list of all grouped mappings
+in order of search priority. Modifying this list alters the search chain
+directly.</li>
+<li><strong><code>.new_child(m=None)</code></strong>: Returns a new
+<code>ChainMap</code> containing an empty dictionary (or the provided
+mapping <code>m</code>) prepended to the front, followed by all existing
+mappings.</li>
+<li><strong><code>.parents</code></strong>: Returns a new
+<code>ChainMap</code> containing all mappings except the first one,
+functioning as the inverse of <code>new_child()</code>.</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Adding a temporary local scope</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>local_settings <span class="op">=</span> settings.new_child({<span class="st">&#39;theme&#39;</span>: <span class="st">&#39;high-contrast&#39;</span>})</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(local_settings[<span class="st">&#39;theme&#39;</span>])   <span class="co"># Output: &#39;high-contrast&#39;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(local_settings.parents[<span class="st">&#39;theme&#39;</span>]) <span class="co"># Output: &#39;dark&#39;</span></span></code></pre></div>
+<h2 id="common-use-cases">Common Use Cases</h2>
+<ol type="1">
+<li><strong>Layered Configuration:</strong> Managing configuration
+settings by layering command-line arguments over environment variables,
+which in turn override a base configuration file.</li>
+<li><strong>Variable Scopes:</strong> Simulating programming language
+scopes (local, enclosing, global, built-in) in interpreters or template
+engines.</li>
+<li><strong>Performance Optimization:</strong> Handling frequent merges
+of large dictionaries where copying data with <code>dict.update()</code>
+or <code>{**a, **b}</code> would introduce excessive memory
+overhead.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

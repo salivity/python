@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding socket.setblocking(False) in Python - python</title>
+    <meta name="description" content="Calling socket.setblocking(False) in Python switches a network socket from blocking mode to non-blocking mode, fundamentally changing how it handles network I/O operations. Instead of pausing execution until an operation like reading, writing, or connect">
+    <link rel="canonical" href="https://salivity.github.io/python/article/understanding-socket-setblocking-false-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding socket.setblocking(False) in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/understanding-socket-setblocking-false-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Calling socket.setblocking(False) in Python switches a network socket from blocking mode to non-blocking mode, fundamentally changing how it handles network I/O operations. Instead of pausing execution until an operation like reading, writing, or connect" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-socketsetblockingfalse-in-python">Understanding
+socket.setblocking(False) in Python</h1>
+<p>Calling <code>socket.setblocking(False)</code> in Python switches a
+network socket from blocking mode to non-blocking mode, fundamentally
+changing how it handles network I/O operations. Instead of pausing
+execution until an operation like reading, writing, or connecting
+finishes, the socket executes immediately. If the requested operation
+cannot proceed without delay, the socket immediately raises an
+exception—typically <code>BlockingIOError</code>—allowing the program to
+continue executing other tasks rather than hanging indefinitely.</p>
+<h3 id="default-blocking-behavior-vs-non-blocking-behavior">Default
+Blocking Behavior vs. Non-Blocking Behavior</h3>
+<p>By default, Python sockets are blocking. When you invoke operations
+such as <code>recv()</code>, <code>send()</code>, <code>accept()</code>,
+or <code>connect()</code>, the operating system suspends the calling
+thread until the network operation completes:</p>
+<ul>
+<li><strong><code>recv()</code></strong> waits until at least one byte
+of data arrives from the remote host.</li>
+<li><strong><code>send()</code></strong> waits until the operating
+system's transport buffer has enough space to hold the outgoing
+data.</li>
+<li><strong><code>accept()</code></strong> waits until an incoming
+connection is received on a listening socket.</li>
+<li><strong><code>connect()</code></strong> waits until the three-way
+TCP handshake finishes.</li>
+</ul>
+<p>Calling <code>socket.setblocking(False)</code> is shorthand for
+setting the socket timeout to zero seconds
+(<code>socket.settimeout(0.0)</code>). In this mode, none of the above
+calls wait for network events.</p>
+<h3 id="how-specific-socket-operations-change">How Specific Socket
+Operations Change</h3>
+<p>When non-blocking mode is active, each standard socket call behaves
+differently when data or connections are not immediately available:</p>
+<ul>
+<li><strong><code>recv(bufsize)</code></strong>: If data is waiting in
+the kernel receive buffer, it returns the available bytes immediately.
+If the buffer is empty, it raises <code>BlockingIOError</code> (with
+error codes <code>EAGAIN</code> or <code>EWOULDBLOCK</code> on POSIX
+systems).</li>
+<li><strong><code>send(bytes)</code></strong>: Transmits as many bytes
+as the kernel transmit buffer can immediately accommodate and returns
+the number of bytes sent. If the buffer is completely full, it raises
+<code>BlockingIOError</code>. Because it may send fewer bytes than
+requested, partial writes are common.</li>
+<li><strong><code>accept()</code></strong>: If a client connection is
+already queued in the connection backlog, it returns the
+<code>(conn, address)</code> tuple. If no incoming connections exist, it
+immediately raises <code>BlockingIOError</code>.</li>
+<li><strong><code>connect(address)</code></strong>: Initiates the TCP
+connection handshake and returns immediately. Because establishing a
+connection takes network round trips, it almost always raises a
+<code>BlockingIOError</code> (with <code>EINPROGRESS</code> on POSIX or
+<code>WSAEWOULDBLOCK</code> on Windows). The connection process
+continues asynchronously in the background.</li>
+</ul>
+<h3 id="managing-non-blocking-sockets">Managing Non-Blocking
+Sockets</h3>
+<p>Because non-blocking operations fail immediately when resources are
+unavailable, running them in a tight <code>try...except</code> loop
+wastes CPU cycles (busy waiting). Instead, non-blocking sockets are
+typically managed using I/O multiplexing mechanisms:</p>
+<ul>
+<li><strong>I/O Multiplexers</strong>: Modules such as
+<code>selectors</code> (or lower-level interfaces like
+<code>select</code>, <code>poll</code>, <code>epoll</code>, or
+<code>kqueue</code>) monitor multiple non-blocking sockets
+simultaneously. The operating system notifies the application only when
+a socket is genuinely ready to read or write.</li>
+<li><strong>Connection Completion</strong>: To verify when an
+asynchronous <code>connect()</code> finishes, the socket is registered
+with a multiplexer for write readiness. Once marked writable, calling
+<code>socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)</code>
+reveals whether the connection succeeded (<code>0</code>) or
+failed.</li>
+</ul>
+<p>By decoupling I/O wait times from thread execution,
+<code>socket.setblocking(False)</code> serves as the foundational
+mechanism behind high-concurrency, event-driven networking frameworks in
+Python, including <code>asyncio</code> and <code>Tornado</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

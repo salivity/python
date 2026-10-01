@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Handles the SIGTERM Signal - python</title>
+    <meta name="description" content="When an operating system sends a SIGTERM (Signal Terminate) to an active Python script, the behavior depends on whether the script has registered a custom handler or relies on the interpreter's default settings. This article covers how the operating syst">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-handles-the-sigterm-signal">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Handles the SIGTERM Signal - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-handles-the-sigterm-signal" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When an operating system sends a SIGTERM (Signal Terminate) to an active Python script, the behavior depends on whether the script has registered a custom handler or relies on the interpreter's default settings. This article covers how the operating syst" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-handles-the-sigterm-signal">How Python Handles the
+SIGTERM Signal</h1>
+<p>When an operating system sends a <code>SIGTERM</code> (Signal
+Terminate) to an active Python script, the behavior depends on whether
+the script has registered a custom handler or relies on the
+interpreter's default settings. This article covers how the operating
+system kernel communicates with the Python virtual machine, why default
+termination skips Python cleanup code, and the step-by-step mechanism
+the interpreter uses to execute signal handlers safely on the main
+thread.</p>
+<h3 id="the-default-behavior-immediate-termination">The Default
+Behavior: Immediate Termination</h3>
+<p>By default, Python inherits the standard operating system disposition
+for <code>SIGTERM</code>, which is <code>SIG_DFL</code> (default action:
+terminate the process).</p>
+<p>When the OS sends <code>SIGTERM</code> to an unconfigured Python
+process:</p>
+<ul>
+<li>The kernel halts the process immediately.</li>
+<li>The operating system reclaims allocated memory, open file
+descriptors, and network sockets.</li>
+<li>Python-level cleanup routines do <strong>not</strong> run. Any
+active <code>try...finally</code> blocks, context managers
+(<code>with</code> statements), and callbacks registered with the
+<code>atexit</code> module are bypassed completely.</li>
+</ul>
+<h3 id="the-signal-delivery-mechanism">The Signal Delivery
+Mechanism</h3>
+<p>Operating system signals are asynchronous, but Python code execution
+requires a coherent runtime state. To prevent state corruption, Python
+handles signals using a two-stage mechanism:</p>
+<ol type="1">
+<li><strong>The C-Level Handler:</strong> When the signal arrives, the
+kernel interrupts the process and executes Python’s low-level C runtime
+signal handler. This C handler does not execute your Python code
+directly. Instead, it marks a flag in the interpreter state indicating
+that a signal has arrived, then immediately returns control to the
+operating system.</li>
+<li><strong>Bytecode Check (The Evaluation Loop):</strong> The Python
+virtual machine checks this signal flag at regular
+intervals—specifically, between bytecode instructions.</li>
+<li><strong>Execution on the Main Thread:</strong> Once the interpreter
+detects the set flag, it calls the corresponding Python signal handler.
+Signal handlers in Python always execute synchronously on the main
+thread, regardless of which thread originally received the OS-level
+signal.</li>
+</ol>
+<h3 id="handling-sigterm-gracefully">Handling SIGTERM Gracefully</h3>
+<p>To prevent sudden shutdown and allow graceful resource cleanup, a
+script must intercept <code>SIGTERM</code> explicitly using the built-in
+<code>signal</code> module:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> signal</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> handle_sigterm(signum, frame):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Raising SystemExit allows Python to run cleanup routines</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    sys.exit(<span class="dv">0</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>signal.signal(signal.SIGTERM, handle_sigterm)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="va">True</span>:</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        time.sleep(<span class="dv">1</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="cf">finally</span>:</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Cleanup logic executed successfully.&quot;</span>)</span></code></pre></div>
+<p>When a custom handler catches <code>SIGTERM</code>:</p>
+<ul>
+<li>The main thread stops executing normal bytecode and invokes the
+handler function.</li>
+<li>If the handler raises <code>SystemExit</code> (via
+<code>sys.exit()</code>), Python initiates standard exception
+unwinding.</li>
+<li><code>try...finally</code> blocks execute, context managers invoke
+their <code>__exit__</code> methods, and <code>atexit</code> handlers
+run before the process exits.</li>
+</ul>
+<h3 id="edge-cases-and-complications">Edge Cases and Complications</h3>
+<p>Two primary conditions affect how quickly a Python script responds to
+a <code>SIGTERM</code>:</p>
+<ul>
+<li><strong>Blocking C Extensions:</strong> If Python is waiting inside
+an external C library or a non-interruptible system call, the
+interpreter cannot inspect its internal signal flags. The custom signal
+handler will not run until the external call returns control to the
+Python evaluation loop.</li>
+<li><strong>Multithreading:</strong> Because signal handlers only
+execute on the main thread, the main thread must remain unblocked and
+capable of processing interpreter events. If the main thread is
+deadlocked or permanently blocked on a thread join, it will never
+process the pending <code>SIGTERM</code> flag.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

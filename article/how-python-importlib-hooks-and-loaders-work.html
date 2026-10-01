@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python importlib Hooks and Loaders Work - python</title>
+    <meta name="description" content="Python’s import mechanism relies on a decoupled, extensible pipeline managed by importlib that locates and executes code when you call import. This article provides a direct overview of how import hooks and loaders operate under importlib. It covers th">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-importlib-hooks-and-loaders-work">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python importlib Hooks and Loaders Work - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-importlib-hooks-and-loaders-work" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python’s import mechanism relies on a decoupled, extensible pipeline managed by importlib that locates and executes code when you call import. This article provides a direct overview of how import hooks and loaders operate under importlib. It covers th" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-importlib-hooks-and-loaders-work">How Python
+importlib Hooks and Loaders Work</h1>
+<p>Python’s import mechanism relies on a decoupled, extensible pipeline
+managed by <code>importlib</code> that locates and executes code when
+you call <code>import</code>. This article provides a direct overview of
+how import hooks and loaders operate under <code>importlib</code>. It
+covers the step-by-step lifecycle of an import statement, the division
+of labor between finders and loaders, how the <code>ModuleSpec</code>
+object ties them together, and how to implement a custom import
+hook.</p>
+<h2 id="the-import-pipeline-overview">The Import Pipeline Overview</h2>
+<p>When Python executes an import statement (such as
+<code>import my_module</code>), it does not immediately read a file from
+disk. Instead, the runtime performs the following sequence:</p>
+<ol type="1">
+<li><strong>Check Cache:</strong> Python inspects
+<code>sys.modules</code> to see if the module has already been imported.
+If found, it returns the cached module object.</li>
+<li><strong>Find:</strong> If not cached, Python searches for a handler
+by iterating through finders listed in <code>sys.meta_path</code>.</li>
+<li><strong>Load:</strong> The finder produces a specification
+containing a loader. The loader then allocates and populates the
+module.</li>
+<li><strong>Cache and Bind:</strong> The newly created module is
+inserted into <code>sys.modules</code> and bound to the local
+namespace.</li>
+</ol>
+<h2 id="finders-and-loaders-defined">Finders and Loaders Defined</h2>
+<p>The import process is divided into two distinct responsibilities:
+discovering the module and executing the module.</p>
+<h3 id="meta-path-finders">Meta Path Finders</h3>
+<p>Finders inspect locations (such as the file system, network
+locations, or archives) to determine whether they can handle the
+requested module. All global import hooks are registered in
+<code>sys.meta_path</code>.</p>
+<p>A modern finder inherits from
+<code>importlib.abc.MetaPathFinder</code> and implements the
+<code>find_spec(fullname, path, target=None)</code> method. This method
+returns an <code>importlib.machinery.ModuleSpec</code> object if the
+finder can handle the module, or <code>None</code> if it cannot,
+allowing Python to move to the next finder in
+<code>sys.meta_path</code>.</p>
+<h3 id="loaders">Loaders</h3>
+<p>Loaders are responsible for creating the module object and executing
+its content. A loader implements the <code>importlib.abc.Loader</code>
+interface, which primarily requires two methods:</p>
+<ul>
+<li><code>create_module(spec)</code>: (Optional) Allocates and returns a
+new module object. If this returns <code>None</code>, Python creates a
+standard <code>types.ModuleType</code> instance.</li>
+<li><code>exec_module(module)</code>: Executes the module's code in the
+context of <code>module.__dict__</code>.</li>
+</ul>
+<h2 id="the-role-of-modulespec">The Role of ModuleSpec</h2>
+<p>Introduced in PEP 451, <code>importlib.machinery.ModuleSpec</code>
+acts as the contract between finders and loaders. It encapsulates all
+import-related metadata for a module, including:</p>
+<ul>
+<li><code>name</code>: The fully qualified name of the module.</li>
+<li><code>loader</code>: The loader instance responsible for executing
+the module.</li>
+<li><code>origin</code>: A string describing where the module originated
+(e.g., a file path or URL).</li>
+<li><code>submodule_search_locations</code>: A list of strings defining
+search paths if the module is a package.</li>
+</ul>
+<p>By passing a <code>ModuleSpec</code>, Python decouples the search
+phase from the execution phase, ensuring that module metadata is fully
+resolved before execution begins.</p>
+<h2 id="the-execution-flow-under-importlib">The Execution Flow Under
+importlib</h2>
+<p>When <code>find_spec</code> returns a valid <code>ModuleSpec</code>,
+Python executes the following operations:</p>
+<ol type="1">
+<li><strong>Module Creation:</strong> Python checks if
+<code>spec.loader</code> implements <code>create_module</code>. If so,
+it invokes <code>spec.loader.create_module(spec)</code>. If it returns
+<code>None</code>, a default module object is instantiated.</li>
+<li><strong>Boilerplate Attributes:</strong> Python sets foundational
+attributes on the module object using the spec, including
+<code>__name__</code>, <code>__loader__</code>,
+<code>__package__</code>, <code>__spec__</code>, and
+<code>__file__</code> (if applicable).</li>
+<li><strong>Pre-Caching:</strong> The module object is added to
+<code>sys.modules</code> before code execution. This prevents infinite
+recursion in cyclic imports.</li>
+<li><strong>Code Execution:</strong> Python invokes
+<code>spec.loader.exec_module(module)</code>. The loader executes the
+source, bytecode, or synthetic code within the module's dictionary. If
+execution raises an exception, the module is removed from
+<code>sys.modules</code>.</li>
+</ol>
+<h2 id="implementing-a-custom-import-hook">Implementing a Custom Import
+Hook</h2>
+<p>To customize module resolution, you implement a custom
+<code>MetaPathFinder</code> and <code>Loader</code>, then append or
+prepend the finder to <code>sys.meta_path</code>.</p>
+<p>The following example demonstrates an in-memory virtual module
+loader:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> importlib.abc <span class="im">import</span> Loader, MetaPathFinder</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> importlib.machinery <span class="im">import</span> ModuleSpec</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> StringModuleLoader(Loader):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, code):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.code <span class="op">=</span> code</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> create_module(<span class="va">self</span>, spec):</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Returning None instructs Python to create a standard module object</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> exec_module(<span class="va">self</span>, module):</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Execute the stored code within the module&#39;s namespace</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">exec</span>(<span class="va">self</span>.code, module.__dict__)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> VirtualModuleFinder(MetaPathFinder):</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, registry):</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Maps module names to raw source code strings</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.registry <span class="op">=</span> registry</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> find_spec(<span class="va">self</span>, fullname, path, target<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> fullname <span class="kw">in</span> <span class="va">self</span>.registry:</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>            loader <span class="op">=</span> StringModuleLoader(<span class="va">self</span>.registry[fullname])</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> ModuleSpec(fullname, loader, origin<span class="op">=</span><span class="st">&quot;virtual&quot;</span>)</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Installation</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>virtual_code <span class="op">=</span> <span class="st">&quot;MESSAGE = &#39;Loaded dynamically via importlib hook!&#39;&quot;</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>custom_registry <span class="op">=</span> {<span class="st">&quot;virtual_module&quot;</span>: virtual_code}</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Insert at the beginning of sys.meta_path to take precedence</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>sys.meta_path.insert(<span class="dv">0</span>, VirtualModuleFinder(custom_registry))</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Usage</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> virtual_module</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(virtual_module.MESSAGE)</span></code></pre></div>
+<p>In this implementation, when <code>import virtual_module</code> is
+called, the default file-based finders are bypassed. The
+<code>VirtualModuleFinder</code> intercepts the request, generates a
+<code>ModuleSpec</code> backed by <code>StringModuleLoader</code>, and
+executes the provided string directly into the module namespace.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

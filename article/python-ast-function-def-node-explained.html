@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python AST FunctionDef Node Explained - python</title>
+    <meta name="description" content="Python's built-in ast module represents Python source code as an Abstract Syntax Tree, providing programmatic insight into code structure without executing it. When parsing standard function definitions, the parser constructs an ast.FunctionDef node. Thi">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-ast-function-def-node-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python AST FunctionDef Node Explained - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-ast-function-def-node-explained" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's built-in ast module represents Python source code as an Abstract Syntax Tree, providing programmatic insight into code structure without executing it. When parsing standard function definitions, the parser constructs an ast.FunctionDef node. Thi" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-ast-functiondef-node-explained">Python AST FunctionDef
+Node Explained</h1>
+<p>Python's built-in <code>ast</code> module represents Python source
+code as an Abstract Syntax Tree, providing programmatic insight into
+code structure without executing it. When parsing standard function
+definitions, the parser constructs an <code>ast.FunctionDef</code> node.
+This article explores the anatomy of the <code>ast.FunctionDef</code>
+node, breaking down its primary attributes—such as function names,
+argument signatures, execution bodies, decorators, and return
+annotations—and demonstrates how to inspect and work with these nodes in
+Python.</p>
+<h2 id="the-structure-of-astfunctiondef">The Structure of
+<code>ast.FunctionDef</code></h2>
+<p>An <code>ast.FunctionDef</code> node is created whenever the AST
+parser encounters a standard <code>def</code> statement (asynchronous
+functions defined with <code>async def</code> use
+<code>ast.AsyncFunctionDef</code> instead). The node encapsulates all
+syntactic elements of the function declaration.</p>
+<p>The primary attributes of an <code>ast.FunctionDef</code> instance
+are:</p>
+<ul>
+<li><strong><code>name</code></strong>: A string containing the name of
+the function.</li>
+<li><strong><code>args</code></strong>: An <code>ast.arguments</code>
+node that models all parameters, including positional, keyword-only,
+default values, <code>*args</code>, and <code>**kwargs</code>.</li>
+<li><strong><code>body</code></strong>: A list of AST statement nodes
+(such as <code>ast.Assign</code>, <code>ast.Expr</code>,
+<code>ast.Return</code>) representing the code executed inside the
+function.</li>
+<li><strong><code>decorator_list</code></strong>: A list of AST
+expression nodes representing decorators applied to the function, listed
+in the order they appear from top to bottom.</li>
+<li><strong><code>returns</code></strong>: An AST node representing the
+return type annotation (such as <code>ast.Name</code> or
+<code>ast.Constant</code>), or <code>None</code> if no return type is
+specified.</li>
+<li><strong><code>type_comment</code></strong>: An optional string
+containing a PEP 484 type comment, if present.</li>
+<li><strong>Positional attributes</strong>: Integers including
+<code>lineno</code>, <code>col_offset</code>, <code>end_lineno</code>,
+and <code>end_col_offset</code>, which track the exact location of the
+function definition in the source file.</li>
+</ul>
+<h2 id="parsing-a-function-into-an-ast-node">Parsing a Function into an
+AST Node</h2>
+<p>To observe how Python generates an <code>ast.FunctionDef</code>, pass
+source code as a string to <code>ast.parse()</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ast</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>code <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="st">@timer</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="st">def calculate_total(price: float, tax: float = 0.05) -&gt; float:</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="st">    result = price * (1 + tax)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="st">    return result</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>tree <span class="op">=</span> ast.parse(code)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>func_node <span class="op">=</span> tree.body[<span class="dv">0</span>]</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">type</span>(func_node))</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: &lt;class &#39;ast.FunctionDef&#39;&gt;</span></span></code></pre></div>
+<p>In this example, the root of the parsed AST is an
+<code>ast.Module</code> whose <code>body</code> list contains a single
+<code>ast.FunctionDef</code> node.</p>
+<h2 id="examining-functiondef-attributes">Examining
+<code>FunctionDef</code> Attributes</h2>
+<h3 id="1-function-name-and-decorators">1. Function Name and
+Decorators</h3>
+<p>The <code>name</code> attribute is stored directly as a string, while
+<code>decorator_list</code> holds expression nodes:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(func_node.name)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: calculate_total</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>([dec.<span class="bu">id</span> <span class="cf">for</span> dec <span class="kw">in</span> func_node.decorator_list <span class="cf">if</span> <span class="bu">isinstance</span>(dec, ast.Name)])</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: [&#39;timer&#39;]</span></span></code></pre></div>
+<h3 id="2-parameters-args">2. Parameters (<code>args</code>)</h3>
+<p>The <code>args</code> attribute does not hold plain strings; it
+references an <code>ast.arguments</code> node containing several
+sub-lists:</p>
+<ul>
+<li><code>posonlyargs</code>: Positional-only parameters.</li>
+<li><code>args</code>: Standard positional or keyword parameters, stored
+as <code>ast.arg</code> objects.</li>
+<li><code>vararg</code>: The <code>*args</code> parameter (as an
+<code>ast.arg</code> object), or <code>None</code>.</li>
+<li><code>kwonlyargs</code>: Keyword-only parameters.</li>
+<li><code>kw_defaults</code>: Default values for keyword-only
+arguments.</li>
+<li><code>kwarg</code>: The <code>**kwargs</code> parameter (as an
+<code>ast.arg</code> object), or <code>None</code>.</li>
+<li><code>defaults</code>: Expressions representing default argument
+values, mapped from right to left to the parameters in
+<code>args</code>.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> arg <span class="kw">in</span> func_node.args.args:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    annotation <span class="op">=</span> arg.annotation.<span class="bu">id</span> <span class="cf">if</span> <span class="bu">isinstance</span>(arg.annotation, ast.Name) <span class="cf">else</span> <span class="va">None</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Arg: </span><span class="sc">{</span>arg<span class="sc">.</span>arg<span class="sc">}</span><span class="ss">, Type: </span><span class="sc">{</span>annotation<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Output:</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Arg: price, Type: float</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Arg: tax, Type: float</span></span></code></pre></div>
+<h3 id="3-return-annotations-returns">3. Return Annotations
+(<code>returns</code>)</h3>
+<p>If a return annotation exists, <code>func_node.returns</code> holds
+the corresponding expression node:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">isinstance</span>(func_node.returns, ast.Name):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Returns: </span><span class="sc">{</span>func_node<span class="sc">.</span>returns<span class="sc">.</span><span class="bu">id</span><span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: Returns: float</span></span></code></pre></div>
+<h3 id="4-function-body">4. Function Body</h3>
+<p>The <code>body</code> attribute contains a list of statements that
+constitute the function's internal execution block:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> stmt <span class="kw">in</span> func_node.body:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="bu">type</span>(stmt).<span class="va">__name__</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Output:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Assign</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Return</span></span></code></pre></div>
+<h2 id="traversing-astfunctiondef-with-a-nodevisitor">Traversing
+<code>ast.FunctionDef</code> with a NodeVisitor</h2>
+<p>To analyze or transform functions across larger codebases, subclass
+<code>ast.NodeVisitor</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ast</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> FunctionInspector(ast.NodeVisitor):</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> visit_FunctionDef(<span class="va">self</span>, node):</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Found function: </span><span class="sc">{</span>node<span class="sc">.</span>name<span class="sc">}</span><span class="ss"> on line </span><span class="sc">{</span>node<span class="sc">.</span>lineno<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;  Arguments: </span><span class="sc">{</span>[a.arg <span class="cf">for</span> a <span class="kw">in</span> node.args.args]<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;  Decorators: </span><span class="sc">{</span><span class="bu">len</span>(node.decorator_list)<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.generic_visit(node)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>codebase <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="st">def add(a, b):</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="st">    return a + b</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="st">def greet(name=&#39;World&#39;):</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="st">    print(&#39;Hello, &#39; + name)</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>inspector <span class="op">=</span> FunctionInspector()</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>inspector.visit(ast.parse(codebase))</span></code></pre></div>
+<p>Using <code>ast.FunctionDef</code>, static analysis tools, linters,
+docstring generators, and refactoring frameworks can read, validate, and
+manipulate Python function declarations programmatically without
+executing the underlying source code.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

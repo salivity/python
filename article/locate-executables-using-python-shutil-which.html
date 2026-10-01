@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Locate Executables Using Python shutil.which - python</title>
+    <meta name="description" content="The shutil.which() function in Python identifies the absolute file system path of a specified executable by scanning the directories listed in the system's PATH environment variable. Introduced in Python 3.3, it provides a native, cross-platform implemen">
+    <link rel="canonical" href="https://salivity.github.io/python/article/locate-executables-using-python-shutil-which">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Locate Executables Using Python shutil.which - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/locate-executables-using-python-shutil-which" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The shutil.which() function in Python identifies the absolute file system path of a specified executable by scanning the directories listed in the system's PATH environment variable. Introduced in Python 3.3, it provides a native, cross-platform implemen" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="locate-executables-using-python-shutilwhich">Locate Executables
+Using Python shutil.which</h1>
+<p>The <code>shutil.which()</code> function in Python identifies the
+absolute file system path of a specified executable by scanning the
+directories listed in the system's <code>PATH</code> environment
+variable. Introduced in Python 3.3, it provides a native, cross-platform
+implementation of the standard Unix <code>which</code> command, allowing
+developers to programmatically verify whether an external tool is
+installed and accessible before attempting to invoke it.</p>
+<h3 id="core-functionality">Core Functionality</h3>
+<p>When working with external commands or child processes, relying on
+hardcoded paths can cause cross-platform compatibility failures.
+<code>shutil.which()</code> solves this by querying the environment
+dynamically.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> shutil</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Locate an executable</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>path <span class="op">=</span> shutil.which(<span class="st">&quot;git&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(path)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Output on Linux/macOS: /usr/bin/git</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Output on Windows: C:\Program Files\Git\cmd\git.EXE</span></span></code></pre></div>
+<p>If the command is found, <code>shutil.which()</code> returns a string
+containing the complete path to the binary. If the command does not
+exist in any searched directory or lacks execution permissions, it
+returns <code>None</code>.</p>
+<h3 id="how-it-operates">How It Operates</h3>
+<p>The function accepts three arguments: <code>cmd</code>,
+<code>mode</code>, and <code>path</code>.</p>
+<ul>
+<li><strong><code>cmd</code></strong>: The name of the binary to locate
+(e.g., <code>"python"</code>, <code>"ffmpeg"</code>,
+<code>"curl"</code>).</li>
+<li><strong><code>mode</code></strong>: The permission flags passed to
+<code>os.access()</code>. By default, this is
+<code>os.F_OK | os.X_OK</code>, meaning the function checks for both the
+file's existence and its executable permission.</li>
+<li><strong><code>path</code></strong>: The lookup path to search. By
+default, it reads the current environment's <code>PATH</code> string via
+<code>os.environ.get("PATH")</code>. A custom path string can be
+supplied if a search outside the default system path is needed.</li>
+</ul>
+<h3 id="cross-platform-handling-and-windows-pathext">Cross-Platform
+Handling and Windows PATHEXT</h3>
+<p>On POSIX-compliant systems (Linux and macOS),
+<code>shutil.which()</code> evaluates exact file names matching
+executable permissions.</p>
+<p>On Windows, the function automatically handles extension resolution.
+Windows executables often rely on extensions like <code>.exe</code>,
+<code>.bat</code>, or <code>.cmd</code>. <code>shutil.which()</code>
+consults the <code>PATHEXT</code> environment variable, ensuring that
+querying <code>shutil.which("python")</code> matches
+<code>python.exe</code> without requiring explicit extension
+definitions. Additionally, the current working directory is
+automatically checked on Windows before the rest of <code>PATH</code>,
+mirroring standard operating system behavior.</p>
+<h3 id="practical-application-safe-subprocess-execution">Practical
+Application: Safe Subprocess Execution</h3>
+<p>The most common use case for <code>shutil.which()</code> is defensive
+programming prior to calling <code>subprocess.run()</code> or
+<code>subprocess.Popen()</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> shutil</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>tool_name <span class="op">=</span> <span class="st">&quot;ffmpeg&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>executable_path <span class="op">=</span> shutil.which(tool_name)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> executable_path <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> <span class="pp">FileNotFoundError</span>(<span class="ss">f&quot;Required binary &#39;</span><span class="sc">{</span>tool_name<span class="sc">}</span><span class="ss">&#39; is not installed or not on PATH.&quot;</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Safe to proceed with execution</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>subprocess.run([executable_path, <span class="st">&quot;-version&quot;</span>], check<span class="op">=</span><span class="va">True</span>)</span></code></pre></div>
+<p>By confirming the binary's presence beforehand, applications avoid
+uncaught <code>FileNotFoundError</code> exceptions and can provide
+informative error messages or fallback behaviors when dependencies are
+missing.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

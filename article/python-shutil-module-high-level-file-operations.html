@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python shutil Module: High-Level File Operations - python</title>
+    <meta name="description" content="Python's built-in shutil module provides a powerful suite of high-level utilities for managing files, directories, and file systems. While lower-level modules like os handle primitive operating system calls, shutil abstracts complex tasks into simple, re">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-shutil-module-high-level-file-operations">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python shutil Module: High-Level File Operations - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-shutil-module-high-level-file-operations" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's built-in shutil module provides a powerful suite of high-level utilities for managing files, directories, and file systems. While lower-level modules like os handle primitive operating system calls, shutil abstracts complex tasks into simple, re" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-shutil-module-high-level-file-operations">Python shutil
+Module: High-Level File Operations</h1>
+<p>Python's built-in <code>shutil</code> module provides a powerful
+suite of high-level utilities for managing files, directories, and file
+systems. While lower-level modules like <code>os</code> handle primitive
+operating system calls, <code>shutil</code> abstracts complex tasks into
+simple, readable functions. This guide explores the core utilities of
+<code>shutil</code>, covering file copying, recursive directory
+management, data archiving, and system inspection.</p>
+<h3 id="copying-files-and-directories">Copying Files and
+Directories</h3>
+<p>The <code>shutil</code> module offers several specialized functions
+for copying data, depending on whether file metadata needs to be
+preserved:</p>
+<ul>
+<li><strong><code>shutil.copy(src, dst)</code></strong>: Copies the
+content and permission bits of a file from source to destination.</li>
+<li><strong><code>shutil.copy2(src, dst)</code></strong>: Similar to
+<code>copy()</code>, but preserves additional metadata, such as creation
+and modification timestamps.</li>
+<li><strong><code>shutil.copytree(src, dst)</code></strong>: Recursively
+copies an entire directory tree. By default, the destination directory
+must not already exist, though modern Python versions support the
+<code>dirs_exist_ok=True</code> parameter to allow merging into existing
+directories.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> shutil</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Copy a single file preserving metadata</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>shutil.copy2(<span class="st">&#39;source.txt&#39;</span>, <span class="st">&#39;backup.txt&#39;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Recursively copy an entire directory</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>shutil.copytree(<span class="st">&#39;source_folder&#39;</span>, <span class="st">&#39;destination_folder&#39;</span>, dirs_exist_ok<span class="op">=</span><span class="va">True</span>)</span></code></pre></div>
+<h3 id="moving-and-renaming-files">Moving and Renaming Files</h3>
+<p>The <code>shutil.move(src, dst)</code> function handles moving files
+and directories across different paths or storage devices. If the
+destination is on the same filesystem, it acts as an atomic rename. If
+the destination resides on a different drive or partition,
+<code>shutil</code> automatically handles copying the data and deleting
+the original file, eliminating the need for manual fallback logic.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Move a file or directory</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>shutil.move(<span class="st">&#39;data/records.csv&#39;</span>, <span class="st">&#39;archive/records_2023.csv&#39;</span>)</span></code></pre></div>
+<h3 id="removing-directory-trees">Removing Directory Trees</h3>
+<p>While <code>os.rmdir()</code> only removes empty directories,
+<code>shutil.rmtree(path)</code> deletes an entire directory tree
+recursively, removing all contained files and subfolders. This function
+is essential for cleanup scripts and automated build processes.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Permanently delete a non-empty directory tree</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>shutil.rmtree(<span class="st">&#39;temp_cache&#39;</span>)</span></code></pre></div>
+<h3 id="creating-and-extracting-archives">Creating and Extracting
+Archives</h3>
+<p>The <code>shutil</code> module natively supports compressed archive
+formats, including ZIP, TAR, GZ, and BZ2, without requiring direct use
+of the <code>zipfile</code> or <code>tarfile</code> modules:</p>
+<ul>
+<li><strong><code>shutil.make_archive(base_name, format, root_dir)</code></strong>:
+Packages a directory into an archive file.</li>
+<li><strong><code>shutil.unpack_archive(filename, extract_dir)</code></strong>:
+Extracts the contents of an archive directly into the specified
+directory.</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a zip archive of a directory</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>shutil.make_archive(<span class="st">&#39;project_backup&#39;</span>, <span class="st">&#39;zip&#39;</span>, <span class="st">&#39;project_folder&#39;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Unpack a zip or tar archive</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>shutil.unpack_archive(<span class="st">&#39;project_backup.zip&#39;</span>, <span class="st">&#39;extracted_folder&#39;</span>)</span></code></pre></div>
+<h3 id="system-and-disk-utilities">System and Disk Utilities</h3>
+<p>Beyond file manipulation, <code>shutil</code> includes functions to
+query system environments and disk storage:</p>
+<ul>
+<li><strong><code>shutil.disk_usage(path)</code></strong>: Returns
+total, used, and free space on the drive containing the specified
+path.</li>
+<li><strong><code>shutil.which(cmd)</code></strong>: Locates the
+executable path of a command in the system <code>PATH</code>, mimicking
+the Unix <code>which</code> command.</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check disk space (in gigabytes)</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>total, used, free <span class="op">=</span> shutil.disk_usage(<span class="st">&quot;/&quot;</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Free space: </span><span class="sc">{</span>free <span class="op">//</span> (<span class="dv">2</span><span class="op">**</span><span class="dv">30</span>)<span class="sc">}</span><span class="ss"> GB&quot;</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Check if an executable exists</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>git_path <span class="op">=</span> shutil.which(<span class="st">&#39;git&#39;</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Git executable: </span><span class="sc">{</span>git_path<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<h3 id="shutil-vs-os"><code>shutil</code> vs. <code>os</code></h3>
+<p>The primary utility of <code>shutil</code> is abstraction. Where the
+<code>os</code> module requires developers to manually write recursive
+loops to copy or delete directory trees, <code>shutil</code> provides
+single-line solutions that handle operating system differences,
+permissions, and cross-device boundaries automatically.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

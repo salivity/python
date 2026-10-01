@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using typing.ClassVar in Python Dataclasses - python</title>
+    <meta name="description" content="Python's dataclasses module inspects type annotations on a class to automatically generate special methods like init, repr, and eq. By default, any annotated variable is treated as an instance attribute. This article explains how typing.ClassVar acts as">
+    <link rel="canonical" href="https://salivity.github.io/python/article/using-typing-class-var-in-python-dataclasses">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using typing.ClassVar in Python Dataclasses - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/using-typing-class-var-in-python-dataclasses" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's dataclasses module inspects type annotations on a class to automatically generate special methods like init, repr, and eq. By default, any annotated variable is treated as an instance attribute. This article explains how typing.ClassVar acts as" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-typingclassvar-in-python-dataclasses">Using
+typing.ClassVar in Python Dataclasses</h1>
+<p>Python's <code>dataclasses</code> module inspects type annotations on
+a class to automatically generate special methods like
+<code>__init__</code>, <code>__repr__</code>, and <code>__eq__</code>.
+By default, any annotated variable is treated as an instance attribute.
+This article explains how <code>typing.ClassVar</code> acts as a special
+marker that instructs the dataclass code generator to exclude a variable
+from instance-level processing and retain it purely as a shared,
+class-level attribute.</p>
+<h2 id="the-default-dataclass-behavior">The Default Dataclass
+Behavior</h2>
+<p>When you decorate a class with <code>@dataclass</code>, Python looks
+at the class's <code>__annotations__</code> dictionary. Every annotated
+variable is registered as a dataclass field.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dataclasses <span class="im">import</span> dataclass</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Product:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    name: <span class="bu">str</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    price: <span class="bu">float</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    tax_rate: <span class="bu">float</span> <span class="op">=</span> <span class="fl">0.05</span></span></code></pre></div>
+<p>In the example above, <code>tax_rate</code> is considered an instance
+attribute with a default value of <code>0.05</code>. Because of this, it
+is included as a parameter in the auto-generated <code>__init__</code>
+method:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>item <span class="op">=</span> Product(name<span class="op">=</span><span class="st">&quot;Book&quot;</span>, price<span class="op">=</span><span class="fl">10.0</span>, tax_rate<span class="op">=</span><span class="fl">0.08</span>)</span></code></pre></div>
+<p>Even though you may have intended <code>tax_rate</code> to be shared
+globally across all <code>Product</code> instances, the dataclass treats
+it as an instance attribute because it has a standard type
+annotation.</p>
+<h2 id="how-typingclassvar-changes-field-detection">How
+<code>typing.ClassVar</code> Changes Field Detection</h2>
+<p>To declare an attribute that belongs to the class itself rather than
+individual instances, Python provides <code>typing.ClassVar</code>.</p>
+<p>When the <code>@dataclass</code> decorator inspects annotations, it
+checks whether an annotation is wrapped in <code>ClassVar</code>. If it
+detects <code>ClassVar</code>, the decorator skips that attribute when
+building the dataclass fields.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dataclasses <span class="im">import</span> dataclass</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> ClassVar</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="at">@dataclass</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Product:</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    name: <span class="bu">str</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    price: <span class="bu">float</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    tax_rate: ClassVar[<span class="bu">float</span>] <span class="op">=</span> <span class="fl">0.05</span></span></code></pre></div>
+<p>Because <code>tax_rate</code> is wrapped in
+<code>ClassVar[float]</code>:</p>
+<ol type="1">
+<li><strong>Excluded from <code>__init__</code>:</strong> It is not
+added to the parameters of the generated <code>__init__</code> method.
+Calling <code>Product("Book", 10.0, 0.08)</code> will raise a
+<code>TypeError</code>.</li>
+<li><strong>Excluded from Comparison and Representation:</strong>
+Methods like <code>__repr__</code>, <code>__eq__</code>, and
+<code>__hash__</code> will ignore <code>tax_rate</code>. Printing
+<code>Product("Book", 10.0)</code> outputs
+<code>Product(name='Book', price=10.0)</code>.</li>
+<li><strong>Excluded from Helper Functions:</strong> Functions like
+<code>dataclasses.fields()</code> and <code>dataclasses.asdict()</code>
+completely ignore <code>ClassVar</code> fields.</li>
+</ol>
+<h2 id="access-and-mutation">Access and Mutation</h2>
+<p>A <code>ClassVar</code> behaves like any standard class variable in
+standard Python object-oriented programming:</p>
+<ul>
+<li><strong>Access:</strong> You can access it via the class
+(<code>Product.tax_rate</code>) or through an instance
+(<code>item.tax_rate</code>).</li>
+<li><strong>Class Modification:</strong> Changing it via the class
+(<code>Product.tax_rate = 0.10</code>) updates the value for all
+instances that have not overridden it.</li>
+<li><strong>Instance Modification:</strong> Assigning a value via an
+instance (<code>item.tax_rate = 0.10</code>) creates an instance
+attribute on <code>item</code> that shadows the class-level variable,
+leaving <code>Product.tax_rate</code> unchanged for other
+instances.</li>
+</ul>
+<p>By using <code>typing.ClassVar</code>, you maintain clear static
+typing while explicitly preventing dataclass machinery from treating
+shared class attributes as instance-level fields.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

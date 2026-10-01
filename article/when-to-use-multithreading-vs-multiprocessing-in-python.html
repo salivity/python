@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>When to Use Multithreading vs Multiprocessing in Python - python</title>
+    <meta name="description" content="While Python's Global Interpreter Lock (GIL) often makes multiprocessing the default choice for CPU-heavy tasks, multithreading remains the superior architecture for several critical use cases. Choosing multithreading over multiprocessing primarily depen">
+    <link rel="canonical" href="https://salivity.github.io/python/article/when-to-use-multithreading-vs-multiprocessing-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="When to Use Multithreading vs Multiprocessing in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/when-to-use-multithreading-vs-multiprocessing-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="While Python's Global Interpreter Lock (GIL) often makes multiprocessing the default choice for CPU-heavy tasks, multithreading remains the superior architecture for several critical use cases. Choosing multithreading over multiprocessing primarily depen" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="when-to-use-multithreading-vs-multiprocessing-in-python">When to
+Use Multithreading vs Multiprocessing in Python</h1>
+<p>While Python's Global Interpreter Lock (GIL) often makes
+multiprocessing the default choice for CPU-heavy tasks, multithreading
+remains the superior architecture for several critical use cases.
+Choosing multithreading over multiprocessing primarily depends on the
+nature of the workload, resource limitations, and data-sharing
+requirements. This article covers the specific scenarios where
+multithreading provides better performance, simpler architecture, and
+lower resource overhead than multiprocessing.</p>
+<h3 id="1-high-volume-io-bound-operations">1. High-Volume I/O-Bound
+Operations</h3>
+<p>The most common scenario where multithreading excels is in I/O-bound
+applications. When a Python thread performs input/output operations—such
+as making HTTP requests, querying a database, or reading and writing to
+disk—it releases the GIL while waiting for the external resource to
+respond.</p>
+<p>Because the CPU sits idle during I/O wait times, multiple threads can
+run concurrently without interference from the GIL. Spawning threads for
+these tasks avoids the heavy operating system overhead associated with
+managing separate processes, making libraries like
+<code>concurrent.futures.ThreadPoolExecutor</code> ideal for web
+scraping, network monitoring, and API consumption.</p>
+<h3 id="2-low-overhead-shared-state-and-data-access">2. Low-Overhead
+Shared State and Data Access</h3>
+<p>Threads live within the same memory space, allowing them to access
+the exact same Python objects natively. In contrast, multiprocessing
+creates entirely separate memory spaces for each worker.</p>
+<p>When using multiprocessing, passing data between processes requires
+serializing (pickling) the objects, transferring them through pipes or
+queues, and deserializing them on the other side. If your program
+frequently reads or updates shared data structures, the serialization
+overhead of multiprocessing can easily negate any performance benefits.
+Multithreading eliminates this serialization cost, requiring only basic
+synchronization primitives (such as <code>threading.Lock</code>) to
+manage concurrent access.</p>
+<h3 id="3-strict-memory-constraints">3. Strict Memory Constraints</h3>
+<p>Every new process in Python duplicates significant memory overhead
+because it spawns an entire new instance of the Python interpreter,
+standard libraries, and loaded modules. In memory-constrained
+environments—such as small virtual private servers (VPS), embedded
+systems, or micro-containers—spawning dozens of processes can quickly
+lead to Out-Of-Memory (OOM) crashes.</p>
+<p>Threads are significantly lighter, consuming only minimal memory for
+their own call stack. You can run hundreds or thousands of threads
+within a single Python process where running a comparable number of
+processes would be impossible.</p>
+<h3 id="4-fast-task-spawning-and-low-startup-latency">4. Fast Task
+Spawning and Low Startup Latency</h3>
+<p>Creating a new thread is substantially faster than creating a new
+process. Spawning a process requires system-level calls like
+<code>fork</code> or <code>spawn</code>, allocating process identifiers
+(PIDs), and initializing isolated memory segments.</p>
+<p>If your application handles short-lived, transient tasks where
+workers are created and destroyed dynamically, the startup latency of
+multiprocessing creates a substantial bottleneck. Multithreading allows
+for rapid worker creation and minimal teardown cost.</p>
+<h3 id="5-utilizing-c-extensions-that-release-the-gil">5. Utilizing C
+Extensions That Release the GIL</h3>
+<p>Certain high-performance libraries—such as NumPy, SciPy, OpenCV, and
+TensorFlow—are written in C, C++, or Fortran and are explicitly designed
+to release the Python GIL during heavy computational routines.</p>
+<p>When using these libraries, multithreading can actually be used for
+CPU-bound computations. The native code executes parallel operations
+across multiple CPU cores simultaneously without the overhead, process
+isolation, or data transfer limitations of the
+<code>multiprocessing</code> module.</p>
+<h3 id="6-responsive-graphical-user-interfaces-guis">6. Responsive
+Graphical User Interfaces (GUIs)</h3>
+<p>In desktop GUI frameworks like PyQt, Tkinter, or wxPython, the main
+thread must remain free to handle the event loop, redraw the interface,
+and process user clicks. If a long-running calculation or network fetch
+executes on the main thread, the interface freezes.</p>
+<p>Offloading these tasks to secondary threads keeps the UI responsive
+while allowing direct access to update state variables that the
+interface observes, avoiding the complex inter-process signaling
+required when using multiprocessing.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

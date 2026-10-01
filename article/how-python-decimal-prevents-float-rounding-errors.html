@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Decimal Prevents Float Rounding Errors - python</title>
+    <meta name="description" content="Standard Python floats frequently produce unexpected rounding errors because they rely on binary fractions to approximate decimal numbers, creating issues in precision-critical domains like finance. The decimal.Decimal module eliminates these rounding er">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-decimal-prevents-float-rounding-errors">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Decimal Prevents Float Rounding Errors - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-decimal-prevents-float-rounding-errors" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Standard Python floats frequently produce unexpected rounding errors because they rely on binary fractions to approximate decimal numbers, creating issues in precision-critical domains like finance. The decimal.Decimal module eliminates these rounding er" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-decimal-prevents-float-rounding-errors">How Python
+Decimal Prevents Float Rounding Errors</h1>
+<p>Standard Python floats frequently produce unexpected rounding errors
+because they rely on binary fractions to approximate decimal numbers,
+creating issues in precision-critical domains like finance. The
+<code>decimal.Decimal</code> module eliminates these rounding errors by
+implementing base-10 arithmetic directly in software, utilizing a
+tuple-based internal representation, and offering configurable precision
+and rounding modes. This article breaks down the mechanics behind binary
+floating-point limitations and details how the <code>Decimal</code>
+class achieves exact numerical accuracy.</p>
+<h2 id="the-cause-of-binary-float-inaccuracies">The Cause of Binary
+Float Inaccuracies</h2>
+<p>Standard Python numbers with decimal points use the IEEE 754 standard
+for floating-point arithmetic. Hardware processors natively represent
+these numbers in base 2 (binary).</p>
+<p>In base 10, a fraction can be represented cleanly as a terminating
+decimal only if its denominator's prime factors are 2, 5, or both.
+Similarly, in base 2, a fraction can only terminate if its denominator
+is a power of 2. Common decimal values like <code>0.1</code> (<span
+class="math inline">\(1/10\)</span>) or <code>0.2</code> (<span
+class="math inline">\(1/5\)</span>) result in infinite repeating
+fractions when converted to binary:</p>
+<p><span class="math display">\[0.1_{10} =
+0.0001100110011..._2\]</span></p>
+<p>Because computers have finite memory, a standard 64-bit float must
+truncate this sequence after 53 bits of precision. This truncation
+creates a microscopic approximation error:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Standard float calculation</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="fl">0.1</span> <span class="op">+</span> <span class="fl">0.2</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: 0.30000000000000004</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="fl">0.1</span> <span class="op">+</span> <span class="fl">0.2</span> <span class="op">==</span> <span class="fl">0.3</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: False</span></span></code></pre></div>
+<h2 id="how-decimaldecimal-solves-the-problem">How
+<code>decimal.Decimal</code> Solves the Problem</h2>
+<p>The <code>decimal</code> module implements the General Decimal
+Arithmetic Specification, which fundamentally changes how numbers are
+stored and calculated.</p>
+<h3 id="1-native-base-10-arithmetic">1. Native Base-10 Arithmetic</h3>
+<p>Instead of converting decimal numbers to binary fractions,
+<code>decimal.Decimal</code> performs operations in base 10. Internally,
+a <code>Decimal</code> object is decomposed into three components:</p>
+<ul>
+<li><strong>Sign</strong>: An integer (<code>0</code> for positive,
+<code>1</code> for negative).</li>
+<li><strong>Coefficient (Digits)</strong>: A tuple of decimal
+digits.</li>
+<li><strong>Exponent</strong>: An integer representing the power of 10
+applied to the coefficient.</li>
+</ul>
+<p>A number is evaluated as:</p>
+<p><span class="math display">\[(-1)^{\text{sign}} \times
+\text{coefficient} \times 10^{\text{exponent}}\]</span></p>
+<p>For example, <code>Decimal('0.1')</code> is stored essentially as
+<span class="math inline">\(1 \times 10^{-1}\)</span>. Because the base
+is 10, numbers like <code>0.1</code> and <code>0.2</code> are
+terminating values that require zero truncation or approximation.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> decimal <span class="im">import</span> Decimal</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> Decimal(<span class="st">&quot;0.1&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> Decimal(<span class="st">&quot;0.2&quot;</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(a <span class="op">+</span> b)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: 0.3</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(a <span class="op">+</span> b <span class="op">==</span> Decimal(<span class="st">&quot;0.3&quot;</span>))</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: True</span></span></code></pre></div>
+<h3 id="2-arbitrary-and-explicit-precision">2. Arbitrary and Explicit
+Precision</h3>
+<p>Hardware floats are restricted to fixed 64-bit widths, offering
+roughly 15 to 17 significant decimal digits of precision.</p>
+<p>The <code>decimal</code> module handles precision through a
+thread-local execution context (<code>decimal.Context</code>). The
+precision setting (<code>prec</code>) defaults to 28 decimal digits, but
+you can configure it to any arbitrary value needed for your
+application:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> decimal <span class="im">import</span> Decimal, getcontext</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Set precision to 50 decimal places</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>getcontext().prec <span class="op">=</span> <span class="dv">50</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> Decimal(<span class="dv">1</span>) <span class="op">/</span> Decimal(<span class="dv">7</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: 0.14285714285714285714285714285714285714285714285714</span></span></code></pre></div>
+<p>Because calculations run in software using arbitrary-precision
+integer algorithms under the hood, precision limits are constrained only
+by available system memory, not CPU registers.</p>
+<h3 id="3-predictable-rounding-controls">3. Predictable Rounding
+Controls</h3>
+<p>Binary floats rely on hardware-level rounding schemes that can be
+difficult to predict across different architectures. The
+<code>decimal</code> module exposes explicit rounding algorithms through
+the context, such as:</p>
+<ul>
+<li><code>ROUND_HALF_EVEN</code> (Banker's rounding, the default)</li>
+<li><code>ROUND_HALF_UP</code> (Standard commercial rounding)</li>
+<li><code>ROUND_FLOOR</code>, <code>ROUND_CEILING</code>, and
+<code>ROUND_DOWN</code></li>
+</ul>
+<p>This explicit control guarantees that when rounding must happen, it
+behaves identically across all platforms and environments.</p>
+<h2 id="essential-rule-avoid-passing-floats-to-decimal">Essential Rule:
+Avoid Passing Floats to Decimal</h2>
+<p>To prevent rounding errors, you must initialize <code>Decimal</code>
+objects using strings, integers, or tuples. Passing a native
+<code>float</code> directly into <code>Decimal()</code> copies the
+preexisting float approximation error into the <code>Decimal</code>
+object:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> decimal <span class="im">import</span> Decimal</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Incorrect: Imports the float&#39;s binary approximation</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>bad_decimal <span class="op">=</span> Decimal(<span class="fl">0.1</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(bad_decimal)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: 0.1000000000000000055511151231257827021181583404541015625</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Correct: Parses exact base-10 characters</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>good_decimal <span class="op">=</span> Decimal(<span class="st">&quot;0.1&quot;</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(good_decimal)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: 0.1</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

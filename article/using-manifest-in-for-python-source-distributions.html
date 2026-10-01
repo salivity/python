@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using MANIFEST.in for Python Source Distributions - python</title>
+    <meta name="description" content="When distributing Python projects, code alone is rarely sufficient; packages often require non-code assets such as configuration files, documentation, data sets, and templates. This article provides a focused explanation of the MANIFEST.in file, its role">
+    <link rel="canonical" href="https://salivity.github.io/python/article/using-manifest-in-for-python-source-distributions">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using MANIFEST.in for Python Source Distributions - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/using-manifest-in-for-python-source-distributions" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When distributing Python projects, code alone is rarely sufficient; packages often require non-code assets such as configuration files, documentation, data sets, and templates. This article provides a focused explanation of the MANIFEST.in file, its role" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="using-manifestin-for-python-source-distributions">Using
+MANIFEST.in for Python Source Distributions</h1>
+<p>When distributing Python projects, code alone is rarely sufficient;
+packages often require non-code assets such as configuration files,
+documentation, data sets, and templates. This article provides a focused
+explanation of the <code>MANIFEST.in</code> file, its role in packaging
+Python source distributions (sdists), the mechanics of how it controls
+file inclusion, and how it interacts with modern packaging
+configurations to ensure reproducible builds.</p>
+<h2 id="default-packaging-behavior">Default Packaging Behavior</h2>
+<p>When creating a Python source distribution using build backends such
+as <code>setuptools</code>, the packaging tool automatically includes a
+baseline set of files. By default, these typically consist of:</p>
+<ul>
+<li>Python source files discovered within specified packages or
+modules.</li>
+<li>Core metadata files such as <code>pyproject.toml</code>,
+<code>setup.py</code>, and <code>setup.cfg</code>.</li>
+<li>Standard project files like <code>README</code>,
+<code>LICENSE</code>, and <code>AUTHORS</code> (depending on file naming
+conventions).</li>
+<li>Files tracked by version control systems, if relevant build plugins
+(like <code>setuptools-scm</code>) are active.</li>
+</ul>
+<p>However, arbitrary assets—such as JSON schemas, HTML templates, SQL
+seed files, or C extension headers—are often ignored by the default
+packaging discovery mechanism.</p>
+<h2 id="the-purpose-of-manifestin">The Purpose of MANIFEST.in</h2>
+<p>A <code>MANIFEST.in</code> file is a text file located in the
+project's root directory that provides explicit instructions on which
+files and directories to include or exclude when generating a source
+distribution (<code>.tar.gz</code>).</p>
+<p>During the source distribution build process (such as executing
+<code>python -m build --sdist</code>), the build tool reads
+<code>MANIFEST.in</code> to modify the default list of files. It
+essentially acts as a rule-based filter that constructs the final
+distribution manifest (<code>SOURCES.txt</code>), guaranteeing that end
+users or build systems receiving the source tarball have all the
+ancillary files required to build, test, or install the package.</p>
+<h2 id="common-manifestin-directives">Common MANIFEST.in Directives</h2>
+<p><code>MANIFEST.in</code> uses a declarative syntax processed
+line-by-line from top to bottom. The most frequently used directives
+include:</p>
+<ul>
+<li><strong><code>include &lt;pattern&gt; ...</code></strong>: Adds
+individual files matching the specified shell patterns.<br />
+<em>Example:</em> <code>include config.yaml docs/*.txt</code></li>
+<li><strong><code>exclude &lt;pattern&gt; ...</code></strong>: Removes
+individual files matching the specified patterns.<br />
+<em>Example:</em> <code>exclude run_local.sh</code></li>
+<li><strong><code>recursive-include &lt;dir&gt; &lt;pattern&gt; ...</code></strong>:
+Recursively traverses <code>&lt;dir&gt;</code> and includes all files
+matching the pattern.<br />
+<em>Example:</em>
+<code>recursive-include mypackage/templates *.html *.css</code></li>
+<li><strong><code>recursive-exclude &lt;dir&gt; &lt;pattern&gt; ...</code></strong>:
+Recursively removes files under <code>&lt;dir&gt;</code> matching the
+pattern.<br />
+<em>Example:</em> <code>recursive-exclude tests *.pyc</code></li>
+<li><strong><code>graft &lt;dir&gt;</code></strong>: Unconditionally
+includes all files located under the directory tree
+<code>&lt;dir&gt;</code>.<br />
+<em>Example:</em> <code>graft docs</code></li>
+<li><strong><code>prune &lt;dir&gt;</code></strong>: Unconditionally
+excludes the entire directory tree <code>&lt;dir&gt;</code>.<br />
+<em>Example:</em> <code>prune docs/_build</code></li>
+<li><strong><code>global-include &lt;pattern&gt; ...</code></strong>:
+Adds all files across the entire workspace matching the pattern,
+regardless of directory location.<br />
+<em>Example:</em> <code>global-include *.typed</code></li>
+</ul>
+<p>Because rules are evaluated sequentially, later directives override
+earlier ones.</p>
+<h2 id="distinction-between-source-distributions-and-wheels">Distinction
+Between Source Distributions and Wheels</h2>
+<p>It is critical to distinguish between a source distribution
+(<code>sdist</code>) and a built distribution (<code>wheel</code>):</p>
+<ol type="1">
+<li><strong><code>MANIFEST.in</code> targets the sdist</strong>: It
+dictates what exists inside the source tarball. It does not directly
+configure what gets installed into Python's <code>site-packages</code>
+on an end user's system.</li>
+<li><strong><code>package_data</code> targets wheels and
+runtime</strong>: Non-code assets intended to be accessible at runtime
+must be bundled into the wheel. For <code>setuptools</code>, enabling
+<code>include_package_data = true</code> inside
+<code>pyproject.toml</code> or <code>setup.cfg</code> instructs the
+wheel builder to include any runtime package files already captured in
+the source distribution by <code>MANIFEST.in</code>.</li>
+</ol>
+<p>If a file is missing from <code>MANIFEST.in</code>, it will not be
+present in the source distribution, making it impossible for downstream
+builders to access or include it when compiling the package from
+source.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

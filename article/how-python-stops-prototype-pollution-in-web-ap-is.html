@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Stops Prototype Pollution in Web APIs - python</title>
+    <meta name="description" content="Prototype pollution is primarily known as a high-severity JavaScript vulnerability, but Python web APIs can face analogous threats through dynamic attribute manipulation, mass assignment, and object pollution. While Python does not use prototypal inherit">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-stops-prototype-pollution-in-web-ap-is">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Stops Prototype Pollution in Web APIs - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-stops-prototype-pollution-in-web-ap-is" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Prototype pollution is primarily known as a high-severity JavaScript vulnerability, but Python web APIs can face analogous threats through dynamic attribute manipulation, mass assignment, and object pollution. While Python does not use prototypal inherit" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-stops-prototype-pollution-in-web-apis">How Python
+Stops Prototype Pollution in Web APIs</h1>
+<p>Prototype pollution is primarily known as a high-severity JavaScript
+vulnerability, but Python web APIs can face analogous threats through
+dynamic attribute manipulation, mass assignment, and object pollution.
+While Python does not use prototypal inheritance, malicious JSON
+payloads can attempt to alter internal object attributes or class
+definitions if applications dynamically assign keys to objects without
+validation. Python neutralizes these risks through an immutable built-in
+type hierarchy, strict namespace controls, and robust deserialization
+practices implemented by modern web frameworks.</p>
+<h3 id="prototypal-vs-class-based-inheritance">Prototypal vs.
+Class-Based Inheritance</h3>
+<p>In JavaScript, objects inherit properties directly from prototypes,
+meaning modifying <code>Object.prototype</code> alters every object in
+the runtime environment. Python relies on a strict, class-based
+inheritance model governed by the Method Resolution Order (MRO).</p>
+<p>Instances inherit behavior from classes, but objects do not share a
+single dynamic prototype object that can be globally modified at runtime
+through standard assignment. Attempting to assign an attribute to a base
+object will not automatically cascade across unrelated instances,
+inherently preventing direct prototype pollution.</p>
+<h3 id="immutability-of-built-in-classes">Immutability of Built-in
+Classes</h3>
+<p>In Python, built-in types such as <code>object</code>,
+<code>dict</code>, <code>list</code>, and <code>str</code> are
+implemented in C and possess immutable namespaces:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>obj <span class="op">=</span> <span class="bu">object</span>()</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>obj.polluted <span class="op">=</span> <span class="va">True</span>  <span class="co"># Raises: AttributeError: &#39;object&#39; object has no attribute &#39;polluted&#39;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">object</span>.polluted <span class="op">=</span> <span class="va">True</span>  <span class="co"># Raises: TypeError: cannot set &#39;polluted&#39; attribute of immutable type &#39;object&#39;</span></span></code></pre></div>
+<p>Because an attacker cannot inject properties into base built-ins,
+system-wide behavior cannot be hijacked via native base classes.</p>
+<h3 id="protection-of-special-attributes">Protection of Special
+Attributes</h3>
+<p>Python objects use dunder (double underscore) attributes to manage
+metadata, such as <code>__class__</code>, <code>__dict__</code>, and
+<code>__mro__</code>. While attackers often target these attributes to
+achieve Remote Code Execution (RCE) in Server-Side Template Injection
+(SSTI) or deserialization exploits, standard Python operations limit
+write access to these internals:</p>
+<ul>
+<li><strong>Restricted <code>__class__</code> Assignment:</strong>
+Python prevents reassigning <code>__class__</code> if the memory layouts
+of the old and new classes are incompatible.</li>
+<li><strong>Protected <code>__dict__</code> References:</strong> While
+an instance's dynamic attributes reside in its <code>__dict__</code>,
+direct modification of a class's internal mapping proxy
+(<code>cls.__dict__</code>) is prohibited.</li>
+<li><strong>Explicit <code>setattr()</code> Behavior:</strong> While
+unsafe usage of <code>setattr(target, key, value)</code> with
+user-controlled input can overwrite instance attributes, it only affects
+that specific instance unless the target is explicitly a mutable custom
+class object.</li>
+</ul>
+<h3
+id="mitigating-dynamic-attribute-manipulation-with-__slots__">Mitigating
+Dynamic Attribute Manipulation with <code>__slots__</code></h3>
+<p>To explicitly block attribute injection on custom instances, Python
+provides <code>__slots__</code>. By defining <code>__slots__</code>, a
+class skips the creation of a dynamic <code>__dict__</code>, permitting
+only a predefined set of attributes:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> SecureProfile:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">__slots__</span> <span class="op">=</span> (<span class="st">&#39;username&#39;</span>, <span class="st">&#39;email&#39;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>profile <span class="op">=</span> SecureProfile()</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>profile.username <span class="op">=</span> <span class="st">&quot;alice&quot;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>profile.admin <span class="op">=</span> <span class="va">True</span>  <span class="co"># Raises: AttributeError: &#39;SecureProfile&#39; object has no attribute &#39;admin&#39;</span></span></code></pre></div>
+<p>Using <code>__slots__</code> ensures that arbitrary properties
+supplied in an API payload cannot be attached to internal objects.</p>
+<h3 id="framework-level-payload-validation">Framework-Level Payload
+Validation</h3>
+<p>Python web APIs avoid attribute manipulation largely through
+structural separation of incoming data from business logic objects.</p>
+<p>Modern frameworks like FastAPI, Django REST Framework, and libraries
+like Pydantic and Marshmallow enforce strict data validation:</p>
+<ul>
+<li><strong>Pydantic (FastAPI):</strong> Requests are validated against
+explicit schemas. By default, extra fields in a JSON request are ignored
+(<code>extra = 'ignore'</code>) or explicitly rejected
+(<code>extra = 'forbid'</code>).</li>
+<li><strong>Django Models:</strong> Mass assignment is mitigated by
+<code>ModelForm</code> definitions that require explicit
+<code>fields</code> declarations, preventing clients from modifying
+sensitive model fields such as <code>is_superuser</code>.</li>
+<li><strong>Safe Serialization:</strong> Standard JSON parsers
+(<code>json.loads</code>) deserialize payloads into standard Python
+dictionaries rather than dynamic custom classes, ensuring untrusted keys
+remain inert data instead of executable attributes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

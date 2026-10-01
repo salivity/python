@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In-Place File Updates with Python mmap.ACCESS_WRITE - python</title>
+    <meta name="description" content="Python's mmap module allows applications to map files directly into virtual memory, treating disk-backed storage as a contiguous byte array. By configuring a memory-mapped file with mmap.ACCESSWRITE, developers grant write-through permissions to the mapp">
+    <link rel="canonical" href="https://salivity.github.io/python/article/in-place-file-updates-with-python-mmap-access-write">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="In-Place File Updates with Python mmap.ACCESS_WRITE - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/in-place-file-updates-with-python-mmap-access-write" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python's mmap module allows applications to map files directly into virtual memory, treating disk-backed storage as a contiguous byte array. By configuring a memory-mapped file with mmap.ACCESSWRITE, developers grant write-through permissions to the mapp" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="in-place-file-updates-with-python-mmapaccess_write">In-Place
+File Updates with Python mmap.ACCESS_WRITE</h1>
+<p>Python's <code>mmap</code> module allows applications to map files
+directly into virtual memory, treating disk-backed storage as a
+contiguous byte array. By configuring a memory-mapped file with
+<code>mmap.ACCESS_WRITE</code>, developers grant write-through
+permissions to the mapping, allowing any modifications made to the
+in-memory byte buffer to directly update the underlying file on disk.
+This article explains the underlying mechanism of
+<code>mmap.ACCESS_WRITE</code>, how the operating system handles
+synchronized disk writes, and how to execute efficient, in-place data
+updates in Python without rewriting entire files.</p>
+<h3 id="understanding-memory-mapping-and-access_write">Understanding
+Memory Mapping and <code>ACCESS_WRITE</code></h3>
+<p>Standard file I/O operations require copying data between kernel
+buffers and user-space memory using system calls like
+<code>read()</code> and <code>write()</code>. When updating large files,
+conventional approaches typically involve reading data into memory,
+modifying it, and rewriting portions or the entirety of the file back to
+disk.</p>
+<p>The <code>mmap</code> module bypasses conventional I/O by utilizing
+the operating system's virtual memory subsystem. When a file is mapped
+using <code>mmap.ACCESS_WRITE</code>, the OS associates virtual memory
+addresses with the file's physical pages on the storage medium. Under
+this access flag:</p>
+<ul>
+<li><strong>Direct Buffer Mutability:</strong> The Python buffer behaves
+like a mutable bytearray where indices and slices can be updated
+directly.</li>
+<li><strong>Shared/Write-Through Mapping:</strong> Unlike
+<code>mmap.ACCESS_COPY</code> (which isolates modifications using
+copy-on-write memory), <code>mmap.ACCESS_WRITE</code> marks memory pages
+as "dirty" when modified, signaling the OS kernel to flush changes back
+to the actual storage block.</li>
+<li><strong>Minimal Memory Overhead:</strong> Pages are loaded into RAM
+on demand (page faults) and written back as needed, preventing high
+memory consumption even on massive multi-gigabyte files.</li>
+</ul>
+<h3 id="how-in-place-updates-work-in-practice">How In-Place Updates Work
+in Practice</h3>
+<p>To use <code>mmap.ACCESS_WRITE</code>, the target file must first be
+opened in a read-write binary mode (<code>r+b</code>). Attempting to map
+a read-only file descriptor with write access raises an
+<code>OSError</code> or <code>PermissionError</code>.</p>
+<p>Here is a practical demonstration of performing an in-place
+update:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mmap</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a sample binary file</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>filename <span class="op">=</span> <span class="st">&quot;data.bin&quot;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(filename, <span class="st">&quot;wb&quot;</span>) <span class="im">as</span> f:</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    f.write(<span class="st">b&quot;USER_ID:0000;STATUS:PENDING;END&quot;</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Open for reading and writing in binary mode</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(filename, <span class="st">&quot;r+b&quot;</span>) <span class="im">as</span> f:</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Map the entire file with write access</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> mmap.mmap(f.fileno(), length<span class="op">=</span><span class="dv">0</span>, access<span class="op">=</span>mmap.ACCESS_WRITE) <span class="im">as</span> mm:</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Locate the target sequence</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        target <span class="op">=</span> <span class="st">b&quot;PENDING&quot;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        pos <span class="op">=</span> mm.find(target)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> pos <span class="op">!=</span> <span class="op">-</span><span class="dv">1</span>:</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Perform an in-place update</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>            replacement <span class="op">=</span> <span class="st">b&quot;SUCCESS&quot;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>            mm[pos:pos <span class="op">+</span> <span class="bu">len</span>(target)] <span class="op">=</span> replacement</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Explicitly commit changes from memory to disk</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>            mm.flush()</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Verification</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(filename, <span class="st">&quot;rb&quot;</span>) <span class="im">as</span> f:</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(f.read())  <span class="co"># Outputs: b&#39;USER_ID:0000;STATUS:SUCCESS;</span><span class="re">END</span><span class="co">&#39;</span></span></code></pre></div>
+<h3 id="page-synchronization-and-durability">Page Synchronization and
+Durability</h3>
+<p>When bytes in an <code>ACCESS_WRITE</code> mapping are updated, the
+OS marks the corresponding virtual memory page as dirty. The actual disk
+update occurs asynchronously through the operating system's background
+page-flushing mechanisms.</p>
+<p>To ensure durability before closing the map, Python provides the
+<code>flush()</code> method. Invoking <code>mm.flush()</code> triggers
+the underlying <code>msync()</code> (on POSIX) or
+<code>FlushViewOfFile()</code> (on Windows) system call, forcing the
+operating system to immediately synchronize modified memory pages to the
+physical disk.</p>
+<h3 id="critical-constraints">Critical Constraints</h3>
+<ul>
+<li><strong>Fixed Dimensions:</strong> Memory-mapped updates cannot
+change the overall file size. The replacement data must strictly match
+the byte length of the segment being overwritten. Inserting or removing
+bytes requires truncating or expanding the file via
+<code>os.ftruncate()</code> or standard file APIs before remapping.</li>
+<li><strong>Mode Consistency:</strong> The file descriptor provided to
+<code>mmap.mmap()</code> must possess matching write permissions; using
+modes such as <code>"rb"</code> will conflict with
+<code>mmap.ACCESS_WRITE</code>.</li>
+<li><strong>Platform Differences:</strong> On POSIX systems,
+<code>mmap.ACCESS_WRITE</code> sets the underlying mapping to
+<code>MAP_SHARED</code>, whereas Windows utilizes
+<code>PAGE_READWRITE</code> to ensure disk-level synchronization.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

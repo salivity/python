@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python functools cache vs lru_cache Differences - python</title>
+    <meta name="description" content="Python 3.9 introduced functools.cache as a modern, lightweight alternative to the long-standing functools.lrucache decorator. While both tools provide memoization to store and reuse the return values of expensive function calls, they differ fundamentally">
+    <link rel="canonical" href="https://salivity.github.io/python/article/python-functools-cache-vs-lru-cache-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Python functools cache vs lru_cache Differences - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/python-functools-cache-vs-lru-cache-differences" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python 3.9 introduced functools.cache as a modern, lightweight alternative to the long-standing functools.lrucache decorator. While both tools provide memoization to store and reuse the return values of expensive function calls, they differ fundamentally" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="python-functools-cache-vs-lru_cache-differences">Python
+functools cache vs lru_cache Differences</h1>
+<p>Python 3.9 introduced <code>functools.cache</code> as a modern,
+lightweight alternative to the long-standing
+<code>functools.lru_cache</code> decorator. While both tools provide
+memoization to store and reuse the return values of expensive function
+calls, they differ fundamentally in memory management, execution
+overhead, and API simplicity. This guide outlines the key technical
+differences between the two decorators and explains when to use
+each.</p>
+<h3 id="1-cache-size-and-eviction-policy">1. Cache Size and Eviction
+Policy</h3>
+<p>The most significant distinction between the two decorators is how
+they manage cache size and data eviction:</p>
+<ul>
+<li><strong><code>functools.lru_cache</code></strong>: Implements a
+Least Recently Used (LRU) eviction strategy. By default, it stores up to
+128 entries (<code>maxsize=128</code>). When the cache reaches capacity,
+it automatically discards the least recently accessed items to make room
+for new results. You can customize this threshold by setting
+<code>maxsize</code> to any integer.</li>
+<li><strong><code>functools.cache</code></strong>: Has an unbounded
+cache size. It never evicts old entries, functioning identically to
+<code>functools.lru_cache(maxsize=None)</code>. The cache grows
+indefinitely for every unique set of arguments passed to the decorated
+function.</li>
+</ul>
+<h3 id="2-performance-and-overhead">2. Performance and Overhead</h3>
+<p>Because <code>functools.cache</code> does not enforce a maximum size,
+it eliminates the need to track access order:</p>
+<ul>
+<li><strong>Lower Overhead</strong>: <code>functools.cache</code> uses a
+simpler underlying C implementation that skips the logic required to
+maintain an LRU doubly linked list. As a result, it is slightly faster
+than <code>lru_cache</code> in terms of execution time.</li>
+<li><strong>Locking and Mutexes</strong>: While both implementations are
+thread-safe, <code>functools.cache</code> incurs less lock contention
+because it only inserts items into a dictionary without constantly
+updating access markers.</li>
+</ul>
+<h3 id="3-memory-safety">3. Memory Safety</h3>
+<ul>
+<li><strong><code>functools.lru_cache</code></strong>: Safe for
+long-running processes (such as web services or workers) where functions
+receive a wide or unpredictable variety of arguments. The bounded size
+ensures memory usage remains predictable and capped.</li>
+<li><strong><code>functools.cache</code></strong>: Poses a risk of
+memory leaks if used with functions that take varied or infinite
+argument combinations (e.g., timestamps, unique IDs, or raw user
+queries). Because entries are never cleared automatically, memory
+consumption will steadily increase until the process terminates.</li>
+</ul>
+<h3 id="4-syntax-and-arguments">4. Syntax and Arguments</h3>
+<ul>
+<li><strong><code>functools.cache</code></strong>: Designed without
+configuration parameters. It is applied cleanly as a bare decorator:
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functools <span class="im">import</span> cache</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">@cache</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> factorial(n):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> n <span class="op">*</span> factorial(n <span class="op">-</span> <span class="dv">1</span>) <span class="cf">if</span> n <span class="cf">else</span> <span class="dv">1</span></span></code></pre></div></li>
+<li><strong><code>functools.lru_cache</code></strong>: Accepts
+configuration parameters, including <code>maxsize</code> and
+<code>typed</code>. Setting <code>typed=True</code> caches distinct
+results for arguments of different types (e.g., treating <code>3</code>
+and <code>3.0</code> as separate keys):
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functools <span class="im">import</span> lru_cache</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="at">@lru_cache</span>(maxsize<span class="op">=</span><span class="dv">256</span>, typed<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> compute_data(value):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> value <span class="op">*</span> <span class="dv">2</span></span></code></pre></div></li>
+</ul>
+<h3 id="when-to-use-each">When to Use Each</h3>
+<ul>
+<li><strong>Use <code>functools.cache</code></strong> for recursive
+algorithms (like dynamic programming, tree traversals, or combinatorics)
+and functions with a strictly finite, small set of possible inputs where
+maximum speed is desired.</li>
+<li><strong>Use <code>functools.lru_cache</code></strong> for networked
+applications, database queries, web endpoints, or any scenario where
+inputs are diverse, unpredictable, or running indefinitely in
+production.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

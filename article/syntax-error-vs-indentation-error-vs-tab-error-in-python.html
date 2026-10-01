@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyntaxError vs IndentationError vs TabError in Python - python</title>
+    <meta name="description" content="When writing Python code, parsing errors halt program execution before the runtime begins. Python uses an exception hierarchy to categorize these parsing mistakes: SyntaxError represents general structural or grammatical rule violations, IndentationError">
+    <link rel="canonical" href="https://salivity.github.io/python/article/syntax-error-vs-indentation-error-vs-tab-error-in-python">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SyntaxError vs IndentationError vs TabError in Python - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/syntax-error-vs-indentation-error-vs-tab-error-in-python" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When writing Python code, parsing errors halt program execution before the runtime begins. Python uses an exception hierarchy to categorize these parsing mistakes: SyntaxError represents general structural or grammatical rule violations, IndentationError" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1
+id="syntaxerror-vs-indentationerror-vs-taberror-in-python">SyntaxError
+vs IndentationError vs TabError in Python</h1>
+<p>When writing Python code, parsing errors halt program execution
+before the runtime begins. Python uses an exception hierarchy to
+categorize these parsing mistakes: <code>SyntaxError</code> represents
+general structural or grammatical rule violations,
+<code>IndentationError</code> is a specific subclass denoting improper
+block alignment, and <code>TabError</code> is a narrower subclass of
+<code>IndentationError</code> triggered by mixing tabs and spaces.
+Understanding the boundaries between these three exceptions allows
+developers to quickly isolate and resolve code formatting and parsing
+problems.</p>
+<h2 id="the-exception-hierarchy">The Exception Hierarchy</h2>
+<p>In Python, these errors do not exist as independent, disconnected
+classes. Instead, they form a strict parent-child inheritance
+hierarchy:</p>
+<pre class="text"><code>SyntaxError
+ └── IndentationError
+      └── TabError</code></pre>
+<p>Because of this structure, every <code>TabError</code> is an
+<code>IndentationError</code>, and every <code>IndentationError</code>
+is a <code>SyntaxError</code>. However, the reverse is not true.</p>
+<h2 id="syntaxerror">SyntaxError</h2>
+<p>A <code>SyntaxError</code> occurs when the Python parser encounters
+code that violates the core formal grammar of the language. The parser
+cannot tokenize or structure the code into an Abstract Syntax Tree
+(AST), making execution impossible.</p>
+<p>Common causes include:</p>
+<ul>
+<li>Omitting colons after control flow statements (<code>if</code>,
+<code>for</code>, <code>def</code>, <code>class</code>).</li>
+<li>Unbalanced brackets, braces, or parentheses.</li>
+<li>Misspelled keywords or invalid assignments (e.g., assigning a value
+to a literal like <code>5 = x</code>).</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Causes SyntaxError: invalid syntax</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calculate_total(a, b)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">+</span> b</span></code></pre></div>
+<h2 id="indentationerror">IndentationError</h2>
+<p>Because Python relies on whitespace to define code blocks instead of
+curly braces or keywords, indentation is part of the language's syntax.
+An <code>IndentationError</code> is a subclass of
+<code>SyntaxError</code> raised when the parser expects a block to begin
+or end, but the spacing does not match the logical flow of the code.</p>
+<p>Common causes include:</p>
+<ul>
+<li>Forgetting to indent after a statement ending with a colon.</li>
+<li>Indenting code where no new block is expected.</li>
+<li>Mismatching indentation levels within the same block.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Causes IndentationError: expected an indented block after &#39;if&#39; statement</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">True</span>:</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;Condition met&quot;</span>)</span></code></pre></div>
+<h2 id="taberror">TabError</h2>
+<p>A <code>TabError</code> is a specialized subclass of
+<code>IndentationError</code>. It occurs specifically when a file uses
+an inconsistent mix of tabs and spaces for indentation within the same
+block of code.</p>
+<p>Python 3 strictly forbids mixing tabs and spaces for indentation in
+the same logical block because different text editors and environments
+interpret tab widths differently (e.g., 2, 4, or 8 spaces), which can
+obscure the true structural hierarchy of the program.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Causes TabError: inconsistent use of tabs and spaces in indentation</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> process_data():</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> <span class="dv">10</span>      <span class="co"># Indented with 4 spaces</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> <span class="dv">20</span>      <span class="co"># Indented with 1 tab</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x <span class="op">+</span> y</span></code></pre></div>
+<h2 id="comparison-summary">Comparison Summary</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Error Type</th>
+<th style="text-align: left;">Direct Parent</th>
+<th style="text-align: left;">Cause</th>
+<th style="text-align: left;">Example Trigger</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td
+style="text-align: left;"><strong><code>SyntaxError</code></strong></td>
+<td style="text-align: left;"><code>Exception</code></td>
+<td style="text-align: left;">General violation of Python grammar
+rules.</td>
+<td style="text-align: left;">Missing colon, unmatched parenthesis.</td>
+</tr>
+<tr>
+<td
+style="text-align: left;"><strong><code>IndentationError</code></strong></td>
+<td style="text-align: left;"><code>SyntaxError</code></td>
+<td style="text-align: left;">Incorrect alignment or missing/unexpected
+indentation levels.</td>
+<td style="text-align: left;">Failing to indent inside a function
+body.</td>
+</tr>
+<tr>
+<td
+style="text-align: left;"><strong><code>TabError</code></strong></td>
+<td style="text-align: left;"><code>IndentationError</code></td>
+<td style="text-align: left;">Mixing tabs and spaces within the same
+code block.</td>
+<td style="text-align: left;">Using spaces on one line and tabs on the
+next.</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

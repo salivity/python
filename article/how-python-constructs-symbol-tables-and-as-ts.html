@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Python Constructs Symbol Tables and ASTs - python</title>
+    <meta name="description" content="This article examines the compilation pipeline of CPython, clarifying the relationship between syntax analysis, Abstract Syntax Tree (AST) creation, and symbol table (symtable) construction. While it is a common misconception that the symbol table is gen">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-python-constructs-symbol-tables-and-as-ts">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Python Constructs Symbol Tables and ASTs - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-python-constructs-symbol-tables-and-as-ts" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines the compilation pipeline of CPython, clarifying the relationship between syntax analysis, Abstract Syntax Tree (AST) creation, and symbol table (symtable) construction. While it is a common misconception that the symbol table is gen" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-python-constructs-symbol-tables-and-asts">How Python
+Constructs Symbol Tables and ASTs</h1>
+<p>This article examines the compilation pipeline of CPython, clarifying
+the relationship between syntax analysis, Abstract Syntax Tree (AST)
+creation, and symbol table (<code>symtable</code>) construction. While
+it is a common misconception that the symbol table is generated prior to
+the AST, CPython actually builds the symbol table <em>from</em> the AST.
+Below is a detailed breakdown of how the parser processes source text,
+why the AST must precede the symbol table, and how the
+<code>symtable</code> is built to resolve lexical scoping.</p>
+<h2 id="the-parsing-pipeline-sequence">The Parsing Pipeline
+Sequence</h2>
+<p>In modern CPython (version 3.9 and later), source code undergoes a
+strictly ordered transformation before being converted into
+bytecode:</p>
+<ol type="1">
+<li><strong>Tokenization:</strong> The lexer breaks the raw source code
+string into individual lexical tokens.</li>
+<li><strong>Parsing &amp; AST Construction:</strong> The PEG (Parsing
+Expression Grammar) parser analyzes the token stream and directly
+generates an Abstract Syntax Tree.</li>
+<li><strong>Symbol Table Construction:</strong> The
+<code>symtable</code> algorithm walks the completed AST to analyze scope
+and variable bindings.</li>
+<li><strong>Bytecode Compilation:</strong> The compiler consumes both
+the AST and the symbol table to emit code objects.</li>
+</ol>
+<p>Prior to Python 3.9, an intermediate Concrete Syntax Tree (CST or
+parse tree) was generated before the AST, but at no point in Python’s
+history has the <code>symtable</code> been constructed prior to
+generating a syntax tree.</p>
+<h2 id="why-the-ast-precedes-the-symbol-table">Why the AST Precedes the
+Symbol Table</h2>
+<p>A symbol table requires full structural and hierarchical knowledge of
+an entire code block to resolve names correctly. Python's scoping rules
+cannot be determined in a single-pass streaming parser:</p>
+<ul>
+<li><strong>Late Declarations:</strong> Statements like
+<code>global x</code> or <code>nonlocal x</code> can appear at the very
+bottom of a function body, yet they fundamentally alter the scope of
+every appearance of <code>x</code> earlier in that function.</li>
+<li><strong>Nested Scopes:</strong> Classes, functions, generator
+expressions, and comprehensions each create their own distinct scope
+boundaries.</li>
+<li><strong>Contextual Variable Roles:</strong> An identifier’s role
+(whether it is an assignment target, a deletion, or a parameter) depends
+entirely on its position in the grammatical structure.</li>
+</ul>
+<p>Because a parser processes tokens sequentially, it does not possess
+the complete context of a block until parsing for that block finishes.
+Constructing an AST first produces an explicit, navigable hierarchy that
+allows the symbol analysis phase to inspect code structures
+holistically.</p>
+<h2 id="how-the-symbol-table-is-built-from-the-ast">How the Symbol Table
+Is Built from the AST</h2>
+<p>Once the parser returns the root <code>ast.Module</code> node,
+CPython invokes <code>PySymtable_BuildObject()</code> in
+<code>Python/symtable.c</code>. This process performs a two-pass
+traversal over the AST.</p>
+<h3 id="1-ast-traversal-pass-one">1. AST Traversal (Pass One)</h3>
+<p>CPython recursively visits every AST node using visitor functions
+such as <code>symtable_visit_stmt</code> and
+<code>symtable_visit_expr</code>:</p>
+<ul>
+<li><strong>Entering Scopes:</strong> When encountering nodes like
+<code>FunctionDef</code>, <code>AsyncFunctionDef</code>,
+<code>ClassDef</code>, or comprehensions, the algorithm creates a new
+<code>PySTEntryObject</code> representing a new lexical scope. These
+entries form a tree corresponding to the lexical nesting of the
+AST.</li>
+<li><strong>Recording Symbols:</strong> As expressions and statements
+are visited, identifiers are registered in the current scope's symbol
+table with explicit flags. For instance:
+<ul>
+<li>An assignment (<code>a = 1</code>) marks <code>a</code> with
+<code>DEF_LOCAL</code>.</li>
+<li>A lookup (<code>print(a)</code>) marks <code>a</code> with
+<code>USE</code>.</li>
+<li>A <code>global a</code> statement marks <code>a</code> with
+<code>DEF_GLOBAL</code>.</li>
+<li>A parameter definition marks the name with
+<code>DEF_PARAM</code>.</li>
+</ul></li>
+</ul>
+<h3 id="2-scope-resolution-and-analysis-pass-two">2. Scope Resolution
+and Analysis (Pass Two)</h3>
+<p>After the AST traversal identifies all symbols and explicit
+directives in a scope, <code>symtable_analyze()</code> resolves the
+scope of each variable:</p>
+<ul>
+<li>Any variable assigned to in a function block without a
+<code>global</code> or <code>nonlocal</code> directive is marked as
+local (<code>DEF_LOCAL</code>).</li>
+<li>Variables marked <code>USE</code> that have no local binding are
+resolved outward across enclosing scopes (cells and free variables) or
+classified as global/builtin.</li>
+<li>Scope consistency is validated; for example, using a variable both
+as a parameter and marking it <code>nonlocal</code> raises a
+<code>SyntaxError</code> at this stage.</li>
+</ul>
+<h2 id="accessing-the-symbol-table-in-python">Accessing the Symbol Table
+in Python</h2>
+<p>Python exposes this internal structure through the standard library's
+<code>symtable</code> module. You can observe the dependency of the
+symbol table on the AST by inspecting code programmatically:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> symtable</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>source_code <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="st">def calculate(value):</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="st">    total = value * 2</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="st">    return total</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Internally, symtable compiles the source to an AST, then produces the table</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>table <span class="op">=</span> symtable.symtable(source_code, filename<span class="op">=</span><span class="st">&quot;&lt;string&gt;&quot;</span>, compile_type<span class="op">=</span><span class="st">&quot;exec&quot;</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>function_scope <span class="op">=</span> table.get_children()[<span class="dv">0</span>]</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Scope Name: </span><span class="sc">{</span>function_scope<span class="sc">.</span>get_name()<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Locals: </span><span class="sc">{</span>function_scope<span class="sc">.</span>get_locals()<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;Parameters: </span><span class="sc">{</span>function_scope<span class="sc">.</span>get_parameters()<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>The output reveals the variables bound to the function scope:</p>
+<ul>
+<li><strong>Scope Name:</strong> <code>calculate</code></li>
+<li><strong>Locals:</strong> <code>('value', 'total')</code></li>
+<li><strong>Parameters:</strong> <code>('value',)</code></li>
+</ul>
+<p>The Python parser creates the AST as its direct output; it does not
+build the symbol table beforehand. The AST serves as the prerequisite
+foundation that allows the symbol table generator to accurately inspect,
+navigate, and resolve Python's lexical scopes.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

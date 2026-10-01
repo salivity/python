@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Parse TOML in Python 3.11 Using tomllib - python</title>
+    <meta name="description" content="Python 3.11 introduced tomllib to the standard library, providing native support for parsing TOML (Tom's Obvious, Minimal Language) documents without third-party dependencies. This article explains how tomllib works, demonstrates how to parse TOML from s">
+    <link rel="canonical" href="https://salivity.github.io/python/article/how-to-parse-toml-in-python-3-11-using-tomllib">
+    <link rel="search" type="application/opensearchdescription+xml" title="python" href="/python/opensearch.xml">
+    <link rel="icon" href="/python/favicon.ico">
+    <link rel="stylesheet" href="/python/css/style.css">
+    <link media="print" rel="stylesheet" href="/python/css/print.css">
+    <script src="/python/js/fuse.min.js"></script>
+    <script src="/python/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Parse TOML in Python 3.11 Using tomllib - python" />
+    <meta property="og:url" content="https://salivity.github.io/python/article/how-to-parse-toml-in-python-3-11-using-tomllib" />
+    <meta property="og:image" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/python/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Python 3.11 introduced tomllib to the standard library, providing native support for parsing TOML (Tom's Obvious, Minimal Language) documents without third-party dependencies. This article explains how tomllib works, demonstrates how to parse TOML from s" />
+    <link rel="manifest" href="/python/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/python/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>python</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/python/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-parse-toml-in-python-311-using-tomllib">How to Parse TOML
+in Python 3.11 Using tomllib</h1>
+<p>Python 3.11 introduced <code>tomllib</code> to the standard library,
+providing native support for parsing TOML (Tom's Obvious, Minimal
+Language) documents without third-party dependencies. This article
+explains how <code>tomllib</code> works, demonstrates how to parse TOML
+from strings and files, details how TOML data types map to Python native
+types, and covers error handling and module limitations.</p>
+<h3 id="loading-toml-from-files-and-strings">Loading TOML from Files and
+Strings</h3>
+<p>The <code>tomllib</code> module provides two primary functions for
+parsing: <code>load()</code> for reading binary streams and
+<code>loads()</code> for parsing string inputs.</p>
+<p>Unlike standard text parsers that accept plain text file streams,
+<code>tomllib.load()</code> requires the file to be opened in binary
+read mode (<code>"rb"</code>). This requirement ensures strict adherence
+to the TOML specification, which mandates UTF-8 encoding.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tomllib</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Reading from a TOML file</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(<span class="st">&quot;config.toml&quot;</span>, <span class="st">&quot;rb&quot;</span>) <span class="im">as</span> f:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    config <span class="op">=</span> tomllib.load(f)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(config)</span></code></pre></div>
+<p>To parse a TOML document that is already loaded in memory as a
+string, use <code>tomllib.loads()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tomllib</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>toml_string <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="st">[database]</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="st">server = &quot;192.168.1.1&quot;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="st">ports = [ 8000, 8001, 8002 ]</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="st">connection_max = 5000</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="st">enabled = true</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> tomllib.loads(toml_string)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(data[<span class="st">&quot;database&quot;</span>][<span class="st">&quot;server&quot;</span>])  <span class="co"># Output: 192.168.1.1</span></span></code></pre></div>
+<h3 id="type-mapping">Type Mapping</h3>
+<p><code>tomllib</code> automatically translates TOML specifications
+into corresponding native Python data structures:</p>
+<ul>
+<li><strong>Tables and Inline Tables:</strong> Convert to standard
+Python <code>dict</code> objects.</li>
+<li><strong>Arrays:</strong> Convert to Python <code>list</code>
+objects, including nested arrays and arrays of tables.</li>
+<li><strong>Strings:</strong> Convert to <code>str</code>.</li>
+<li><strong>Integers and Floats:</strong> Convert to Python
+<code>int</code> and <code>float</code>. You can optionally pass
+<code>parse_float</code> to <code>load()</code> or <code>loads()</code>
+to customize float parsing (for example, using
+<code>decimal.Decimal</code>).</li>
+<li><strong>Booleans:</strong> Convert to <code>bool</code>
+(<code>True</code> or <code>False</code>).</li>
+<li><strong>Dates and Times:</strong> Parse directly into
+<code>datetime.date</code>, <code>datetime.time</code>, or
+timezone-aware <code>datetime.datetime</code> objects depending on the
+TOML format used.</li>
+</ul>
+<h3 id="customizing-float-parsing">Customizing Float Parsing</h3>
+<p>By default, floating-point numbers are converted to Python
+<code>float</code> instances. To preserve exact precision, such as when
+dealing with financial data, configure the parser to use
+<code>decimal.Decimal</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> decimal <span class="im">import</span> Decimal</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tomllib</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>toml_data <span class="op">=</span> <span class="st">&#39;price = 19.99&#39;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>parsed <span class="op">=</span> tomllib.loads(toml_data, parse_float<span class="op">=</span>Decimal)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">type</span>(parsed[<span class="st">&quot;price&quot;</span>]))  <span class="co"># Output: &lt;class &#39;decimal.Decimal&#39;&gt;</span></span></code></pre></div>
+<h3 id="error-handling">Error Handling</h3>
+<p>When given invalid syntax, <code>tomllib</code> raises a
+<code>tomllib.TOMLDecodeError</code>. This exception indicates
+formatting issues such as unclosed quotes, duplicate table definitions,
+or type mismatches:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tomllib</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>invalid_toml <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="st">[server]</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="st">port = &quot;unclosed string</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    tomllib.loads(invalid_toml)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> tomllib.TOMLDecodeError <span class="im">as</span> e:</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Failed to parse TOML: </span><span class="sc">{</span>e<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<h3 id="read-only-design">Read-Only Design</h3>
+<p>The <code>tomllib</code> module is strictly a parser and does not
+include functionality to write or serialize Python dictionaries back
+into TOML format (there is no <code>dump()</code> or
+<code>dumps()</code> function). If an application requires generating or
+modifying TOML files, external libraries such as <code>tomli-w</code> or
+<code>tomlkit</code> must be used.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/python'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/python/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/python/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>
